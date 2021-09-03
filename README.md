@@ -1,2 +1,363 @@
-# sail
-Deploy WordPress to DigitalOcean with Sail
+# Deploy WordPress to DigitalOcean with Sail
+
+Sail is a free CLI tool to deploy, manage and scale WordPress applications
+in the DigitalOcean cloud.
+
+Contents:
+
+* [Installing Sail](#installing-sail)
+	+ [Using Homebrew (Linux, MacOS, WSL on Windows)](#using-homebrew-linux-macos-wsl-on-windows)
+	+ [From PyPI](#from-pypi)
+	+ [From Source](#from-source)
+* [Getting a DigitalOcean API Token](#getting-a-digitalocean-api-token)
+	+ [Acount](#acount)
+	+ [API Token](#api-token)
+* [Creating a New Sail Project](#creating-a-new-sail-project)
+	+ [Selecting a Droplet Size and Region](#selecting-a-droplet-size-and-region)
+* [Domains and DNS](#domains-and-dns)
+	+ [SSL and HTTPS](#ssl-and-https)
+	+ [Primary Domains](#primary-domains)
+* [Deploying Changes](#deploying-changes)
+	+ [Downloading Changes from Production](#downloading-changes-from-production)
+* [Creating a Backup](#creating-a-backup)
+* [Accessing the Server and Application](#accessing-the-server-and-application)
+* [Accessing Logs](#accessing-logs)
+* [Integrating with Git](#integrating-with-git)
+* [Migrating existing projects to Sail](#migrating-existing-projects-to-sail)
+* [License and Contributing](#license-and-contributing)
+
+## Installing Sail
+
+### Using Homebrew (Linux, MacOS, WSL on Windows)
+
+The easiest and preferred way to install Sail and keep it up to date, is through
+the [Homebrew](https://brew.sh/) package manager. It works on MacOS, Linux, and
+Windows (via WSL):
+
+```
+brew install sail
+```
+
+If you're new to Howebrew, [installing it](https://brew.sh/) is quite a breeze as well.
+
+### From PyPI
+
+If you already use Python and pip, you can obtain the latest version of Sail
+from PyPI:
+
+```
+pip install sailed.io
+```
+
+### From Source
+
+You will need Python 3.6+ with `pip` and `setuptools` available. Download
+the source files from GitHub, install dependencies and run the Sail installation:
+
+```
+pip install -r requirements.txt
+python setup.py install
+```
+
+Consider installing Sail in a virtual environment, to make sure dependencies
+aren't broken for other Python software on the system:
+
+```
+python3 -m venv .env
+.env/bin/pip install -r requirements.txt
+.env/bin/python setup.py install
+ln -s .env/bin/sail /usr/local/bin/sail
+```
+
+## Getting a DigitalOcean API Token
+
+Sail uses the DigitalOcean API to interact with cloud services, for which you'll need
+a DigitalOcean account, as well as a read-write API token.
+
+### Acount
+
+If you don't already have an account, you can sign up for DigitalOcean
+using [our affiliate link](https://m.do.co/c/e56ab924a5b6) which grants you
+$100 in free credits, and a small commission to our project account. If you would
+rather not sign up using an affiliate link, just browse to `www.digitalocean.com`
+
+### API Token
+
+To create a DigitalOcean API token, sign in to your account, browse to
+**API > Tokens/Keys**, and hit the **Generate New Token** button. Give it a
+descriptive name, for example "sail", and make sure both **Read** and **Write**
+scopes are selected.
+
+After generating the token, it'll show up in the list of personal acckss tokens,
+you'll see the token itself directly below the token name. **Copy** that token
+and store it in a safe place.
+
+## Creating a New Sail Project
+
+Create an empty directory for your new project, and from there run:
+
+```
+sail init --provider-token=<YOUR_TOKEN> --email=<ADMIN_EMAIL>
+```
+
+This will initialize your project, provision services, and download your first
+working copy of your new WordPress application. Once successful, you'll see
+the URL and the wp-admin credentials.
+
+If you're planning to use Sail for multiple projects, you should consider saving
+your provider token and admin e-mail address to `sail config` as defaults:
+
+```
+sail config provider-token <YOUR_TOKEN>
+sail config email <ADMIN_EMAIL>
+```
+
+This way you can simply:
+
+```
+sail init
+```
+
+If you'd like to migrate an existing WordPress application into a Sail-powered
+project, you'll still need to provision a new project first. For more information
+take a look at [Migrating existing projects to Sail](#migrating-existing-projects-to-sail).
+
+### Selecting a Droplet Size and Region
+
+By default Sail will deploy a small `s-1vcpu-1gb-intel` droplet in
+the `ams3` (Amsterdam 3) region. You can change these with the `--size` and
+`--region` arguments respectively:
+
+```
+sail init --size=s-2vcpu-4gb-amd --region=sfo2
+```
+
+You can grab a list of valid sizes and regions with `sail sizes` and
+`sail regions` respectively.
+
+## Domains and DNS
+
+Sail provisions your new site with a `random-hash.sailed.io` subdomain. This is
+used internally by Sail and Sail Services. You can add your own custom domains
+to your application with Sail:
+
+```
+sail domain add example.org
+```
+
+This will create a DNS record on your DigitalOcean account, pointing to your
+application droplet. You can add multiple domains and subdomains by providing
+a space-separated list.
+
+When the records are added, you'll need to change the name server
+records for your domain, at your domain registrar, to point to DigitalOcean:
+
+* ns1.digitalocean.com
+* ns2.digitalocean.com
+* ns3.digitalocean.com
+
+Here's [a tutorial](https://www.digitalocean.com/community/tutorials/how-to-point-to-digitalocean-nameservers-from-common-domain-registrars)
+on how to do that for common domain registrars.
+
+**Note**: When moving DNS from another provider to DigitalOcean, don't forget to
+copy all existing records from that provider, including MX, TXT and CNAME records.
+
+If you fail to do this, you may break some third-party services, such as e-mail,
+transactional mail, Google search console verification, and others.
+
+While not officially supported, you can add a subdomain to your Sail application
+while leaving your DNS hosted elsewhere. To do this, add a CNAME record for your
+subdomain at your DNS provider, and point it to your .sailed.io subdomain.
+
+### SSL and HTTPS
+
+After the name server records are updated and your domain is pointing to your
+WordPress application, you can ask Sail to request and install a free SSL certificate
+from Let's Encrypt:
+
+```
+sail domain make-https example.org www.example.org
+```
+
+Issued certificates will be installed and renewed automatically on your droplet.
+
+### Primary Domains
+
+After the domains have been added and SSL'd, you can change the primary domain
+of your WordPress application with Sail:
+
+```
+sail domain make-primary example.org
+```
+
+## Deploying Changes
+
+Any change that you make to your local working copy of a Sail project, can be
+deployed to production with `sail deploy`:
+
+```
+sail deploy
+```
+
+By default this will omit the wp-content/uploads directory, but could be included
+with the `--with-uploads` flag. This is particularly useful when importing
+existing applications to Sail.
+
+**TODO**: Rolling back a deploy
+
+### Downloading Changes from Production
+
+In some cases your production code could be altered, for example when you update
+WordPress core, a theme or plugin. You can pull these changes down do your
+local copy with `sail download`:
+
+```
+sail download
+```
+
+Similar to deploying, if you would like to pull down all of wp-content/uploads
+as well, just add the `--with-uploads` flag.
+
+By default, downloading with Sail will not delete files from your working
+copy, which do not exist on your production server. If a plugin or theme is
+deleted in production, you'll have to use the `--delete` flag to pull
+those changes back to your working copy.
+
+## Creating a Backup
+
+You can backup your WordPress application with Sail:
+
+```
+sail backup
+```
+
+This will download all your application files, your uploads, as well as a full
+dump of your MySQL database tables, compress and archive them to your
+local `.backups` directory.
+
+Don't forget to backup your backups.
+
+**TODO**: Restoring a backup
+
+## Accessing the Server and Application
+
+You have **full root access** to every server you provision with Sail. There is
+no password for security reasons, but your root SSH key is saved to `.sail/ssh.key`
+after provisioning your application.
+
+You can use this key directly with SSH or GUI SFTP software. Sail provides a
+handful of useful commands too:
+
+Open an interactive SSH shell to your application:
+
+```
+sail ssh
+```
+
+This will open a session as the `www-data` user, inside the application container
+on the `/var/www/public` directory. If you'd rather open a root session on your
+host droplet, just add `--root` or `--host` to the command.
+
+The host server will contain the original `/var/www` directory, with all your
+application releases, as well as your SSH service configuration in /etc/ssh. So
+it's not all that useful, though you can use it to reboot your server for example.
+
+The remaining services run inside a container named `sail`, which you can access
+from the host droplet with Docker:
+
+```
+docker exec -it sail bash
+```
+
+There you will have access to /etc/nginx, /etc/php, /etc/mysql and everything
+else. Remember: with great power comes great responsibility.
+
+Here are a few other useful things you can do with Sail.
+
+Run a WP-CLI command or spawn a WP-CLI interactive shell:
+
+```
+sail wp option get home
+sail wp shell
+```
+
+Spawn an interactive MySQL shell:
+
+```
+sail mysql
+```
+
+Open your browser to your application's wp-login.php location:
+
+```
+sail admin
+```
+
+## Accessing Logs
+
+You can query your Nginx, PHP and system logs directly from Sail:
+
+```
+sail logs
+sail logs --nginx
+sail logs --php
+```
+
+Add `--follow` or `-f` to tail-follow the logs, really useful while debugging.
+
+## Integrating with Git
+
+It is always a great idea to use Git or other modern source code management systems
+when working with WordPress applications. Sail does not depend on any particular
+flavor, nor does it require the use of one at all.
+
+However, if you do choose to work with one, make sure you ignore
+the `.sail` and `.backups` directories from source control. It's a good idea to
+ignore all dot-files anyway. You will probably not want your `wp-content/uploads`
+directory in source control either.
+
+Here's an example .gitignore file:
+
+```
+.*
+wp-content/uploads
+wp-content/upgrade
+```
+
+Note, that during a deploy, **everything** in your working copy, except dot files
+and uploads, will be shipped to your production server's public directory, even
+files that are not under source control.
+
+**TODO**: Deploy on push with GitHub Actions
+
+## Migrating existing projects to Sail
+
+Provisioning new sites with Sail is great, but often times you'll want to
+migrate an existing WordPress application to DigitalOcean with Sail. Here's
+a useful checklist to help you out.
+
+1. Provision a new application with Sail
+1. Download a full backup from your current provider
+1. Copy the application files and wp-content/uploads, but **not your wp-config.php** to your new Sail working copy
+1. Merge the wp-config.php file by hand, database credentials should remain the ones provided by Sail, everything else is up to you
+1. Copy the database .sql file to your working copy, and give it a random secure name, for example: db-fe12cj81rb191.sql
+1. **Do not** call it database.sql, or backup.sql or anything else that can easily be guessed
+1. Use `sail deploy --with-uploads` to push your application files, uploads, and database export file to production
+1. Use `sail wp db import db-fe12cj81rb191.sql` to import your database to your production MySQL instance
+1. Delete the database file from your working copy and `sail deploy` again
+1. Add your domains and select a primary one with `sail domain add` and `sail domain make-primary`
+1. Run `sail ssh` and make sure everything is looking good
+
+If everything is looking good, you should point your domain to Sail as described
+in the [Domains and DNS](#domains-and-dns) section. After DNS propagation is complete
+you should be able to request and install new SSL certificates for your application.
+
+## License and Contributing
+
+The Sail CLI client is free and open source, distributed under the GNU General Public License version 3. Feel free to contribute by opening an issue or pull request on our [GitHub project](https://github.com/kovshenin/sail).
+
+The Sail API server is proprietary and runs on the sailed.io domain. It is used by most core Sail CLI commands and features, including but not limited to provisioning, deploying, domain management and more.
+
+### Legal
+
+This software is provided **as is**, without warranty of any kind. Sail authors and contributors are **not responsible** for any loss of content, profits, revenue, cost savings, data, or content, or any other direct or indirect damages that may result from using the software or services provided by sailed.io. DigitalOcean terms of service can be found [here](https://www.digitalocean.com/legal/terms-of-service-agreement/). DigitalOcean is a trademark of DigitalOcean, LLC.
