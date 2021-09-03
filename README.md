@@ -18,6 +18,7 @@ Contents:
 	+ [SSL and HTTPS](#ssl-and-https)
 	+ [Primary Domains](#primary-domains)
 * [Deploying Changes](#deploying-changes)
+	+ [Rolling Back](#rolling-back)
 	+ [Downloading Changes from Production](#downloading-changes-from-production)
 * [Creating a Backup](#creating-a-backup)
 * [Accessing the Server and Application](#accessing-the-server-and-application)
@@ -203,7 +204,35 @@ By default this will omit the wp-content/uploads directory, but could be include
 with the `--with-uploads` flag. This is particularly useful when importing
 existing applications to Sail.
 
-**TODO**: Rolling back a deploy
+### Rolling Back
+
+In most failed deployment situations, it often makes sense to correct the mistake
+in your working copy and deploy again. However, sometimes you working copy might
+be dirty or in an unknown state, in which case the easiest and fastest way to
+resolve the problem would be a rollback.
+
+A rollback simply changes the web root symlink on the production server to point to a
+release deployed earlier. This means that your working copy does not need to
+be transferred to production at all.
+
+```
+sail rollback <release>
+```
+
+To get a list of available releases, use:
+
+```
+sail rollback --releases
+```
+
+Sail keeps the last five releases on your production server, and deletes the older
+ones every time you deploy. These can be found in the /var/www/releases directory
+on your droplet.
+
+Note that after a successful rollback, the production data will most likely be
+different from your working copy, so it might be a good idea to save the state
+of your working copy to your source repository, then download the live application
+files from production, as explained in the next section.
 
 ### Downloading Changes from Production
 
