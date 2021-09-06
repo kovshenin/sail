@@ -1,6 +1,6 @@
 # Deploy WordPress to DigitalOcean with Sail
 
-Sail is a free CLI tool to deploy, manage and scale WordPress applications
+[Sail](https://sailed.io) is a free CLI tool to deploy, manage and scale WordPress applications
 in the DigitalOcean cloud.
 
 Contents:
