@@ -21,6 +21,7 @@ Contents:
 	+ [Rolling Back](#rolling-back)
 	+ [Downloading Changes from Production](#downloading-changes-from-production)
 * [Creating a Backup](#creating-a-backup)
+	+ [Exporting and Importing the Database](#exporting-and-importing-the-database)
 * [Accessing the Server and Application](#accessing-the-server-and-application)
 * [Accessing Logs](#accessing-logs)
 * [Integrating with Git](#integrating-with-git)
@@ -204,6 +205,9 @@ By default this will omit the wp-content/uploads directory, but could be include
 with the `--with-uploads` flag. This is particularly useful when importing
 existing applications to Sail.
 
+You can run deploy with the `--dry-run` flag to get a list of file changes, which
+will be written to the production server during the deploy.
+
 ### Rolling Back
 
 In most failed deployment situations, it often makes sense to correct the mistake
@@ -252,6 +256,9 @@ copy, which do not exist on your production server. If a plugin or theme is
 deleted in production, you'll have to use the `--delete` flag to pull
 those changes back to your working copy.
 
+Similar to deploy, the `--dry-run` flag will display a list of file changes that
+will occur during a download.
+
 ## Creating a Backup
 
 You can backup your WordPress application with Sail:
@@ -267,6 +274,23 @@ local `.backups` directory.
 Don't forget to backup your backups.
 
 **TODO**: Restoring a backup
+
+### Exporting and Importing the Database
+
+Download a full database dump from production:
+
+```
+sail db export
+```
+
+This will write a compressed .sql.gz file to your .backups directory. Such files
+can be imported back to production:
+
+```
+sail db import .backups/filename.sql.gz
+```
+
+Regular .sql files can be imported too.
 
 ## Accessing the Server and Application
 
@@ -313,7 +337,7 @@ sail wp shell
 Spawn an interactive MySQL shell:
 
 ```
-sail mysql
+sail db cli
 ```
 
 Open your browser to your application's wp-login.php location:
@@ -369,13 +393,9 @@ a useful checklist to help you out.
 1. Download a full backup from your current provider
 1. Copy the application files and wp-content/uploads, but **not your wp-config.php** to your new Sail working copy
 1. Merge the wp-config.php file by hand, database credentials should remain the ones provided by Sail, everything else is up to you
-1. Copy the database .sql file to your working copy, and give it a random secure name, for example: db-fe12cj81rb191.sql
-1. **Do not** call it database.sql, or backup.sql or anything else that can easily be guessed
-1. Use `sail deploy --with-uploads` to push your application files, uploads, and database export file to production
-1. Use `sail wp db import db-fe12cj81rb191.sql` to import your database to your production MySQL instance
-1. Delete the database file from your working copy and `sail deploy` again
+1. Import the database .sql file from your local computer with `sail db import path/to/database.sql`
+1. Use `sail deploy --with-uploads` to push your application files and uploads to production
 1. Add your domains and select a primary one with `sail domain add` and `sail domain make-primary`
-1. Run `sail ssh` and make sure everything is looking good
 
 If everything is looking good, you should point your domain to Sail as described
 in the [Domains and DNS](#domains-and-dns) section. After DNS propagation is complete
