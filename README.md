@@ -47,7 +47,7 @@ If you already use Python and pip, you can obtain the latest version of Sail
 from PyPI:
 
 ```
-pip install sailed.io
+pip3 install sailed.io
 ```
 
 ### From Source
@@ -56,8 +56,8 @@ You will need Python 3.6+ with `pip` and `setuptools` available. Download
 the source files from GitHub, install dependencies and run the Sail installation:
 
 ```
-pip install -r requirements.txt
-python setup.py install
+pip3 install -r requirements.txt
+python3 setup.py install
 ```
 
 Consider installing Sail in a virtual environment, to make sure dependencies
