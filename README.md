@@ -10,7 +10,7 @@ Contents:
 	+ [From PyPI](#from-pypi)
 	+ [From Source](#from-source)
 * [Getting a DigitalOcean API Token](#getting-a-digitalocean-api-token)
-	+ [Acount](#acount)
+	+ [Account](#account)
 	+ [API Token](#api-token)
 * [Creating a New Sail Project](#creating-a-new-sail-project)
 	+ [Selecting a Droplet Size and Region](#selecting-a-droplet-size-and-region)
@@ -76,7 +76,7 @@ ln -s .env/bin/sail /usr/local/bin/sail
 Sail uses the DigitalOcean API to interact with cloud services, for which you'll need
 a DigitalOcean account, as well as a read-write API token.
 
-### Acount
+### Account
 
 If you don't already have an account, you can sign up for DigitalOcean
 using [our affiliate link](https://m.do.co/c/e56ab924a5b6) which grants you
