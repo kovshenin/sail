@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Added: New `--skip-dns` flag for `domain add` and `domain delete` which skips making any DNS changes
+
 ## [0.9.11] - 2021-09-06
 
 * Added: New `destroy` command to shutdown and delete a droplet

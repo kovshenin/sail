@@ -78,8 +78,9 @@ def make_https(domains, agree_tos):
 	click.echo('- Don\'t forget to: sail domain make-primary')
 
 @domain.command()
+@click.option('--skip-dns', is_flag=True, help='Do not add or update DNS records')
 @click.argument('domains', nargs=-1)
-def add(domains):
+def add(domains, skip_dns):
 	'''Add a new domain, with DNS records pointing to your site'''
 	root = util.find_root()
 	sail_config = util.get_sail_config()
@@ -87,7 +88,7 @@ def add(domains):
 	if not domains:
 		raise click.ClickException('At least one domain is required')
 
-	response = util.request('/domains/', json={'domains': domains})
+	response = util.request('/domains/', json={'domains': domains, 'skip_dns': skip_dns})
 
 	for domain, data in response['feedback'].items():
 		click.echo()
@@ -96,14 +97,15 @@ def add(domains):
 			click.echo('- %s' % line)
 
 @domain.command()
+@click.option('--skip-dns', is_flag=True, help='Do not delete DNS records')
 @click.argument('domains', nargs=-1)
-def delete(domains):
+def delete(domains, skip_dns):
 	'''Delete a domain and all DNS records'''
 	'''Add a new domain, with DNS records pointing to your site'''
 	root = util.find_root()
 	sail_config = util.get_sail_config()
 
-	response = util.request('/domains/', json={'domains': domains}, method='DELETE')
+	response = util.request('/domains/', json={'domains': domains, 'skip_dns': skip_dns}, method='DELETE')
 
 	for domain, data in response['feedback'].items():
 		click.echo()
