@@ -14,6 +14,6 @@ def cli(debug):
 	util.debug(debug)
 
 # Command groups
-from sail import provision, deploy, database
-from sail import admin, backup, domain, logs
+from sail import provision, deploy, database, backups
+from sail import admin, domain, logs
 from sail import ssh, wp, config
