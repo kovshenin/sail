@@ -21,6 +21,7 @@ Contents:
 	+ [Rolling Back](#rolling-back)
 	+ [Downloading Changes from Production](#downloading-changes-from-production)
 * [Creating a Backup](#creating-a-backup)
+	* [Restoring a Backup](#restoring-a-backup)
 	+ [Exporting and Importing the Database](#exporting-and-importing-the-database)
 * [Accessing the Server and Application](#accessing-the-server-and-application)
 * [Accessing Logs](#accessing-logs)
@@ -273,7 +274,23 @@ local `.backups` directory.
 
 Don't forget to backup your backups.
 
-**TODO**: Restoring a backup
+### Restoring a Backup
+
+Backup files created by Sail can easily be restored back to production:
+
+```
+sail restore .backups/backup-filename.tar.gz
+```
+
+Note that this is not an atomic operation (like deploy) as it restores files
+directly to the public folder on production. Uploads and the database are also
+restored from the backup archive, these can be skipped with `--skip-uploads`
+and `--skip-db` respectively.
+
+A restored backup will not appear as a new release, so it can't easily be rolled
+back. It also does not affect the local working copy, which can become dirty as
+a result of this operation. It is recommended to use `sail download` after each
+restore.
 
 ### Exporting and Importing the Database
 
