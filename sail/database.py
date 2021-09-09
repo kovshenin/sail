@@ -61,6 +61,9 @@ def import_cmd(path):
 	if p.returncode != 0:
 		raise click.ClickException('An error occurred in rsync. Please try again.')
 
+	# TODO: Maybe do an atomic import which deletes tables that no longer exist
+	# by doing a rename.
+
 	click.echo('- Importing database into MySQL')
 	cat_bin = 'zcat' if is_gz else 'cat'
 

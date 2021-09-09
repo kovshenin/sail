@@ -162,7 +162,6 @@ def backup():
 	root = util.find_root()
 	sail_config = util.get_sail_config()
 
-	click.echo()
 	click.echo('# Backing up')
 
 	app_id = sail_config['app_id']
