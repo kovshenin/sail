@@ -60,40 +60,23 @@ def restore(path, yes, skip_db, skip_uploads):
 	else:
 		click.echo('- Importing uploads')
 
-		# Upload uploads
-		p = subprocess.Popen([
-			'rsync', ('-rtlv' if util.debug() else '-rtl'), '--delete',
-			'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-			'--filter', '- .*', # Exclude all dotfiles
-			'%s/uploads/' % progress_dir,
-			'root@%s.sailed.io:/var/www/uploads/' % app_id,
-		])
+		args = ['-rtl', '--delete', '--rsync-path', 'sudo -u www-data rsync']
+		source = '%s/uploads/' % progress_dir
+		destination = 'root@%s.sailed.io:/var/www/uploads/' % app_id
+		returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
 
-		while p.poll() is None:
-			util.loader()
-
-		if p.returncode != 0:
+		if returncode != 0:
 			shutil.rmtree(progress_dir)
 			raise click.ClickException('An error occurred during restore. Please try again.')
 
 	click.echo('- Importing application files')
 
-	# Upload application files
-	p = subprocess.Popen([
-		'rsync', ('-rtlv' if util.debug() else '-rtl'), '--delete',
-		'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-		'--filter', '- .*', # Exclude all dotfiles
-		'--filter', '- wp-content/debug.log',
-		'--filter', '- wp-content/uploads',
-		'--filter', '- wp-content/cache',
-		'%s/www/' % progress_dir,
-		'root@%s.sailed.io:/var/www/public/' % app_id,
-	])
+	args = ['-rtl', '--delete', '--rsync-path', 'sudo -u www-data rsync']
+	source = '%s/www/' % progress_dir
+	destination = 'root@%s.sailed.io:/var/www/public/' % app_id
+	returncode, stdout, stderr = util.rsync(args, source, destination)
 
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	if returncode != 0:
 		shutil.rmtree(progress_dir)
 		raise click.ClickException('An error occurred during restore. Please try again.')
 
@@ -101,17 +84,13 @@ def restore(path, yes, skip_db, skip_uploads):
 		click.echo('- Skipping database import')
 	else:
 		click.echo('- Uploading database backup')
-		p = subprocess.Popen([
-			'rsync', ('-tv' if util.debug() else '-t'),
-			'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-			'%s/database.sql.gz' % progress_dir,
-			'root@%s.sailed.io:/var/www/%s' % (app_id, database_filename),
-		])
 
-		while p.poll() is None:
-			util.loader()
+		args = ['-t']
+		source = '%s/database.sql.gz' % progress_dir
+		destination = 'root@%s.sailed.io:/var/www/%s' % (app_id, database_filename)
+		returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
 
-		if p.returncode != 0:
+		if returncode != 0:
 			shutil.rmtree(progress_dir)
 			raise click.ClickException('An error occurred in rsync. Please try again.')
 
@@ -175,42 +154,23 @@ def backup():
 
 	click.echo('- Downloading application files')
 
-	# Download files FROM production
-	p = subprocess.Popen([
-		'rsync', ('-rtlv' if util.debug() else '-rtl'),
-		'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-		'--filter', '- .*', # Exclude all dotfiles
-		'--filter', '- wp-content/debug.log',
-		'--filter', '- wp-content/uploads',
-		'--filter', '- wp-content/cache',
-		'--copy-dest', '%s/' % root,
-		'root@%s.sailed.io:/var/www/public/' % app_id,
-		'%s/www/' % progress_dir,
-	])
+	args = ['-rtl', '--copy-dest', '%s/' % root]
+	source = 'root@%s.sailed.io:/var/www/public/' % app_id
+	destination = '%s/www/' % progress_dir
+	returncode, stdout, stderr = util.rsync(args, source, destination)
 
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	if returncode != 0:
 		shutil.rmtree(progress_dir)
 		raise click.ClickException('An error occurred during backup. Please try again.')
 
 	click.echo('- Downloading uploads')
 
-	# Download files FROM production
-	p = subprocess.Popen([
-		'rsync', ('-rtlv' if util.debug() else '-rtl'),
-		'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-		'--filter', '- .*', # Exclude all dotfiles
-		'--copy-dest', '%s/wp-content/uploads/' % root,
-		'root@%s.sailed.io:/var/www/uploads/' % app_id,
-		'%s/uploads/' % progress_dir,
-	])
+	args = ['-rtl', '--copy-dest', '%s/wp-content/uploads/' % root]
+	source = 'root@%s.sailed.io:/var/www/uploads/' % app_id
+	destination = '%s/uploads/' % progress_dir
+	returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
 
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	if returncode != 0:
 		shutil.rmtree(progress_dir)
 		raise click.ClickException('An error occurred during backup. Please try again.')
 
@@ -234,17 +194,12 @@ def backup():
 
 	click.echo('- Export completed, downloading database')
 
-	p = subprocess.Popen([
-		'rsync', ('-tv' if util.debug() else '-t'),
-		'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-		'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], database_filename),
-		'%s/database.sql.gz' % progress_dir
-	])
+	args = ['-t']
+	source = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], database_filename)
+	destination = '%s/database.sql.gz' % progress_dir
+	returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
 
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	if returncode != 0:
 		shutil.rmtree(progress_dir)
 		raise click.ClickException('An error occurred in rsync. Please try again.')
 

@@ -48,17 +48,12 @@ def import_cmd(path):
 	click.echo('# Importing WordPress database')
 	click.echo('- Uploading database file to production')
 
-	p = subprocess.Popen([
-		'rsync', ('-tv' if util.debug() else '-t'),
-		'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-		path,
-		'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], temp_name),
-	])
+	args = ['-t']
+	source = path
+	destination = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], temp_name)
+	returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
 
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	if returncode != 0:
 		raise click.ClickException('An error occurred in rsync. Please try again.')
 
 	# TODO: Maybe do an atomic import which deletes tables that no longer exist
@@ -130,17 +125,12 @@ def export():
 
 	click.echo('- Export completed, downloading')
 
-	p = subprocess.Popen([
-		'rsync', ('-tv' if util.debug() else '-t'),
-		'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-		'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], filename),
-		'%s/%s' % (backups_dir, filename)
-	])
+	args = ['-t']
+	source = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], filename)
+	destination = '%s/%s' % (backups_dir, filename)
+	returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
 
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	if returncode != 0:
 		raise click.ClickException('An error occurred in rsync. Please try again.')
 
 	click.echo('- Cleaning up production')

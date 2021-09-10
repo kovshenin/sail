@@ -35,7 +35,6 @@ def init(provider_token, email, size, region, force):
 	if not email:
 		raise click.ClickException('You need to provide an admin e-mail address with --email, or set a default one with: sail config email <e-mail>')
 
-	click.echo()
 	click.secho('# Initializing', bold=True)
 
 	app = util.request('/init/', json={
@@ -95,25 +94,12 @@ def init(provider_token, email, size, region, force):
 	click.echo()
 	click.secho('# Downloading files from production', bold=True)
 
-	# Download files FROM production
-	p = subprocess.Popen([
-		'rsync', ('-rv' if util.debug() else '-r'),
-		'-e', 'ssh -i %s/.sail/ssh.key -o UserKnownHostsFile=%s/.sail/known_hosts -o IdentitiesOnly=yes -o IdentityFile=%s/.sail/ssh.key' % (root, root, root),
-		'--filter', '- .*', # Exclude all dotfiles
-		'--filter', '- wp-content/debug.log',
-		'--filter', '- wp-content/uploads',
-		'--filter', '- wp-content/cache',
-		'root@%s.sailed.io:/var/www/public/' % app_id,
-		'%s/' % root,
-	])
+	args = ['-r']
+	source = 'root@%s.sailed.io:/var/www/public/' % app_id
+	destination = '%s/' % root
+	returncode, stdout, stderr = util.rsync(args, source, destination)
 
-	# ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-	# TODO: Add a --debug flag to hide/show these
-
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	if returncode != 0:
 		raise click.ClickException('An error occurred during download. Please try again.')
 
 	click.echo('- Files download completed')

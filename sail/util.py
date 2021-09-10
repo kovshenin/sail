@@ -1,7 +1,7 @@
 import sail
 
 import time, pathlib, os
-import json, click, requests
+import json, click, requests, shlex, subprocess
 
 _debug = False
 def debug(set=None):
@@ -171,3 +171,61 @@ def get_sail_default(name):
 			return data[name]
 	except:
 		return None
+
+def rsync(args, source, destination, **kwargs):
+	root = find_root()
+	args = args[:]
+
+	if debug():
+		args.extend(['-v'])
+
+	filters = [
+		'- /wp-content/debug.log',
+		'- /wp-content/uploads',
+		'- /wp-content/cache',
+		'- /wp-content/upgrade',
+	]
+
+	if 'filters' in kwargs:
+		filters = kwargs.get('filters', [])
+
+	if filters is None:
+		filters = []
+
+	# Force exclude all dot-files
+	filters.insert(0, '- .*')
+
+	args.insert(0, 'rsync')
+	ssh_args = ['ssh',
+		'-i', '%s/.sail/ssh.key' % root,
+		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'IdentitiesOnly=yes',
+		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+	]
+
+	args.extend(['-e', shlex.join(ssh_args)])
+
+	# Add all filters in order
+	for filter in filters:
+		args.extend(['--filter', filter])
+
+	args.extend([source, destination])
+
+	if debug():
+		dlog('Rsync: %s' % repr(args))
+
+	# Download files FROM production
+	p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
+
+	while True:
+		try:
+			stdout, stderr = p.communicate(timeout=0.2)
+			break
+		except subprocess.TimeoutExpired:
+			loader()
+
+	if debug():
+		dlog('Rsync stdout: %s' % stdout)
+		dlog('Rsync stderr: %s' % stderr)
+
+	return (p.returncode, stdout, stderr)
