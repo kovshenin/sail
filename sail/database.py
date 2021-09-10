@@ -51,7 +51,7 @@ def import_cmd(path):
 	args = ['-t']
 	source = path
 	destination = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], temp_name)
-	returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
+	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
 		raise click.ClickException('An error occurred in rsync. Please try again.')
@@ -128,7 +128,7 @@ def export():
 	args = ['-t']
 	source = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], filename)
 	destination = '%s/%s' % (backups_dir, filename)
-	returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
+	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
 		raise click.ClickException('An error occurred in rsync. Please try again.')

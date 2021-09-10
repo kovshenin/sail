@@ -172,25 +172,28 @@ def get_sail_default(name):
 	except:
 		return None
 
-def rsync(args, source, destination, **kwargs):
+def rsync(args, source, destination, default_filters=True, extend_filters=[]):
 	root = find_root()
 	args = args[:]
 
 	if debug():
 		args.extend(['-v'])
 
-	filters = [
-		'- /wp-content/debug.log',
-		'- /wp-content/uploads',
-		'- /wp-content/cache',
-		'- /wp-content/upgrade',
-	]
+	filters = []
 
-	if 'filters' in kwargs:
-		filters = kwargs.get('filters', [])
+	if type(default_filters) != bool:
+		raise Exception('default_filters expected to be bool')
 
-	if filters is None:
-		filters = []
+	if default_filters:
+		filters = [
+			'- /wp-content/debug.log',
+			'- /wp-content/uploads',
+			'- /wp-content/cache',
+			'- /wp-content/upgrade',
+		]
+
+	if extend_filters:
+		filters.extend(extend_filters)
 
 	# Force exclude all dot-files
 	filters.insert(0, '- .*')

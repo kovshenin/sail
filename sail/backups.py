@@ -63,7 +63,7 @@ def restore(path, yes, skip_db, skip_uploads):
 		args = ['-rtl', '--delete', '--rsync-path', 'sudo -u www-data rsync']
 		source = '%s/uploads/' % progress_dir
 		destination = 'root@%s.sailed.io:/var/www/uploads/' % app_id
-		returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
+		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 		if returncode != 0:
 			shutil.rmtree(progress_dir)
@@ -88,7 +88,7 @@ def restore(path, yes, skip_db, skip_uploads):
 		args = ['-t']
 		source = '%s/database.sql.gz' % progress_dir
 		destination = 'root@%s.sailed.io:/var/www/%s' % (app_id, database_filename)
-		returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
+		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 		if returncode != 0:
 			shutil.rmtree(progress_dir)
@@ -168,7 +168,7 @@ def backup():
 	args = ['-rtl', '--copy-dest', '%s/wp-content/uploads/' % root]
 	source = 'root@%s.sailed.io:/var/www/uploads/' % app_id
 	destination = '%s/uploads/' % progress_dir
-	returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
+	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
 		shutil.rmtree(progress_dir)
@@ -197,7 +197,7 @@ def backup():
 	args = ['-t']
 	source = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], database_filename)
 	destination = '%s/database.sql.gz' % progress_dir
-	returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
+	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
 		shutil.rmtree(progress_dir)
