@@ -102,6 +102,7 @@ def init(provider_token, email, size, region, force):
 		'--filter', '- .*', # Exclude all dotfiles
 		'--filter', '- wp-content/debug.log',
 		'--filter', '- wp-content/uploads',
+		'--filter', '- wp-content/cache',
 		'root@%s.sailed.io:/var/www/public/' % app_id,
 		'%s/' % root,
 	])
