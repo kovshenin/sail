@@ -1,27 +1,73 @@
 from sail import cli, util
 
 import subprocess, time
-import click
+import click, pathlib
+
+def _get_extend_filters(paths, prefix=None):
+	root = util.find_root()
+
+	extend_filters = []
+	if not paths:
+		return []
+
+	if prefix:
+		prefixed_root = root.rstrip('/') + '/' + prefix.strip('/')
+
+	for entry in paths:
+		_entry = pathlib.Path(entry)
+
+		# Requested root directory, remove all filters.
+		if str(_entry.resolve()) == root:
+			return []
+
+		try:
+			relative = _entry.resolve().relative_to(root)
+		except ValueError:
+			raise click.ClickException('Could not resolve path: %s' % entry)
+
+		if prefix:
+			try:
+				relative = _entry.resolve().relative_to(prefixed_root)
+			except ValueError:
+				continue # The item is in root, but not in relative root, skip
+
+			if str(relative) == '.':
+				continue
+
+		for parent in reversed(relative.parents):
+			if str(parent) == '.':
+				continue
+			extend_filters.append('+ /%s' % parent)
+
+		if _entry.is_dir():
+			extend_filters.append('+ /%s/***' % relative)
+		else:
+			extend_filters.append('+ /%s' % relative)
+
+	# Skip everything else.
+	if len(extend_filters) > 0:
+		extend_filters.append('- *')
+
+	return extend_filters
 
 @cli.command()
+@click.argument('path', nargs=-1, required=False)
 @click.option('--with-uploads', is_flag=True, help='Include the wp-content/uploads directory')
-@click.option('--delete', is_flag=True, help='Delete files from production that do not exist in your working copy')
 @click.option('--dry-run', is_flag=True, help='Show changes about to be deployed to production')
-def deploy(with_uploads, delete, dry_run):
-	'''Deploy your working copy to production'''
+def deploy(with_uploads, dry_run, path):
+	'''Deploy your working copy to production. If path is not specified then all application files are deployed.'''
 	root = util.find_root()
 	sail_config = util.get_sail_config()
 
 	app_id = sail_config['app_id']
 	release_name = str(int(time.time()))
-	delete = ['--delete'] if delete else []
 
 	if dry_run:
 		click.echo('# Comparing files')
 
 		destination = 'root@%s.sailed.io:/var/www/public/' % app_id
 		source = '%s/' % root
-		files = _diff(source, destination)
+		files = _diff(source, destination, _get_extend_filters(path))
 		empty = True
 
 		colors = {'created': 'green', 'deleted': 'red', 'updated': 'yellow'}
@@ -39,13 +85,32 @@ def deploy(with_uploads, delete, dry_run):
 		return
 
 	click.echo('# Deploying to production')
+	click.echo('- Preparing release directory')
+
+	p = subprocess.Popen(['ssh',
+		'-i', '%s/.sail/ssh.key' % root,
+		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'IdentitiesOnly=yes',
+		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'root@%s.sailed.io' % sail_config['app_id'],
+		'mkdir -p /var/www/releases/%s && rsync -rogtl /var/www/public/ /var/www/releases/%s' % (release_name, release_name)
+	])
+
+	while p.poll() is None:
+		util.loader()
+
+	if p.returncode != 0:
+		raise click.ClickException('An error occurred in SSH. Please try again.')
+
 	click.echo('- Uploading application files to production')
 
-	args = ['-rtl', '--rsync-path', 'sudo -u www-data rsync',
-		'--copy-dest', '/var/www/public/'] + delete
-	source = '%s/' % root
-	destination = 'root@%s.sailed.io:/var/www/releases/%s' % (app_id, release_name)
-	returncode, stdout, stderr = util.rsync(args, source, destination)
+	returncode, stdout, stderr = util.rsync(
+		args=['-rtl', '--rsync-path', 'sudo -u www-data rsync',
+			'--copy-dest', '/var/www/public/', '--delete'],
+		source='%s/' % root,
+		destination='root@%s.sailed.io:/var/www/releases/%s' % (app_id, release_name),
+		extend_filters=_get_extend_filters(path)
+	)
 
 	if returncode != 0:
 		raise click.ClickException('An error occurred during upload. Please try again.')
@@ -54,10 +119,13 @@ def deploy(with_uploads, delete, dry_run):
 		click.echo('- Uploading wp-content/uploads')
 
 		# Send uploads to production
-		args = ['-rtl', '--rsync-path', 'sudo -u www-data rsync'] + delete
-		source = '%s/wp-content/uploads/' % root
-		destination = 'root@%s.sailed.io:/var/www/uploads/' % app_id
-		returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
+		returncode, stdout, stderr = util.rsync(
+			args=['-rtl', '--rsync-path', 'sudo -u www-data rsync', '--delete'],
+			source='%s/wp-content/uploads/' % root,
+			destination='root@%s.sailed.io:/var/www/uploads/' % app_id,
+			default_filters=False,
+			extend_filters=_get_extend_filters(path, 'wp-content/uploads')
+		)
 
 		if returncode != 0:
 			raise click.ClickException('An error occurred during upload. Please try again.')
@@ -188,14 +256,14 @@ def download(yes, with_uploads, delete, dry_run):
 		# Download uploads from production
 		source = 'root@%s.sailed.io:/var/www/uploads/' % app_id
 		destination = '%s/wp-content/uploads/' % root
-		returncode, stdout, stderr = util.rsync(args, source, destination, filters=None)
+		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 		if returncode != 0:
 			raise click.ClickException('An error occurred during download. Please try again.')
 
 	click.echo('- Files download completed')
 
-def _diff(source, destination):
+def _diff(source, destination, extend_filters=[]):
 	'''Compare application files between environments'''
 	root = util.find_root()
 
@@ -203,7 +271,7 @@ def _diff(source, destination):
 		raise click.ClickException('Can not compare apples to apples')
 
 	args = ['-rlci', '--delete', '--dry-run']
-	returncode, stdout, stderr = util.rsync(args, source, destination)
+	returncode, stdout, stderr = util.rsync(args, source, destination, extend_filters=extend_filters)
 
 	if returncode != 0:
 		raise click.ClickException('An error occurred in rsync. Please try again.')
