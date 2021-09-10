@@ -31,7 +31,7 @@ def list():
 
 @domain.command()
 @click.argument('domain', nargs=1)
-@click.option('--force', 'force', is_flag=True)
+@click.option('--force', is_flag=True, help='Make primary again, even if the domain is already set as the primary one')
 @click.option('--skip-replace', is_flag=True, help='Skip running search-replace routines for home, siteurl, and other URLs')
 def make_primary(domain, force, skip_replace):
 	'''Set a domain as primary, update siteurl/home, search-replace all links'''
