@@ -3,7 +3,7 @@ import sys, pathlib
 sys.path.append(str(pathlib.Path(__file__).parent.parent.parent.resolve()))
 from sail import cli
 
-import io
+import io, os
 import click
 import unittest
 import subprocess
@@ -23,69 +23,166 @@ _execlp = Mock(side_effect=_execlp_side_effect)
 @patch('os.execlp', _execlp)
 @unittest.skipIf(__name__ != '__main__', 'Slow test, must run explicitly')
 class TestEnd2End(unittest.TestCase):
+	@classmethod
+	def setUpClass(cls):
+		cls.runner = CliRunner(mix_stderr=False)
+		cls.fs = cls.runner.isolated_filesystem()
+		cls.fs.__enter__()
+		cls.home = None
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.fs.__exit__(None, None, None)
+
 	def setUp(self):
-		pass
+		self.home = self.__class__.home
 
-	def test_end2end(self):
-		runner = CliRunner(mix_stderr=False)
+	def test_000_config(self):
+		result = self.runner.invoke(cli, ['config', 'api-base', 'http://127.0.0.1:5000/api/1.0/'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Option api-base set', result.output)
 
-		with runner.isolated_filesystem():
-			result = runner.invoke(cli, ['config', 'api-base', 'http://127.0.0.1:5000/api/1.0/'])
-			self.assertEqual(result.exit_code, 0)
-			self.assertIn('Option api-base set', result.output)
+	def test_001_init(self):
+		result = self.runner.invoke(cli, ['init'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Success. The ship has sailed!', result.output)
 
-			# Init
-			result = runner.invoke(cli, ['init'])
-			print(result.output)
-			self.assertIn('Success. The ship has sailed!', result.output)
-			self.assertEqual(result.exit_code, 0)
+	def test_002_wp_home(self):
+		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'home'])
+		self.assertEqual(result.exit_code, 0)
+		self.__class__.home = result.output.strip()
 
-			result = runner.invoke(cli, ['wp', 'option', 'get', 'home'])
-			print(result.output)
-			self.assertEqual(result.exit_code, 0)
-			home = result.output.strip()
+	def test_003_wp_media_import(self):
+		result = self.runner.invoke(cli, ['wp', 'media', 'import', 'https://s.w.org/style/images/wp-header-logo.png'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Imported file', result.output)
 
-			# Import some media
-			result = runner.invoke(cli, ['wp', 'media', 'import', 'https://s.w.org/style/images/wp-header-logo.png'])
-			print(result.output)
-			self.assertEqual(result.exit_code, 0)
-			self.assertIn('Imported file', result.output)
+	def test_004_download(self):
+		result = self.runner.invoke(cli, ['download', '-y'])
+		self.assertEqual(result.exit_code, 0)
 
-			# Download
-			result = runner.invoke(cli, ['download', '-y'])
-			print(result.output)
-			self.assertEqual(result.exit_code, 0)
+		# Uploaded file shouldn't be here as we skip uploads by default
+		found = subprocess.check_output(['find', '.', '-type', 'f', '-name', 'wp-header-logo.png'], encoding='utf8')
+		self.assertNotIn('wp-header-logo.png', found)
 
-			# Uploaded file shouldn't be here as we skip uploads by default
-			found = subprocess.check_output(['find', '.', '-type', 'f', '-name', 'wp-header-logo.png'], encoding='utf8')
-			self.assertNotIn('wp-header-logo.png', found)
+		# With uploads now
+		result = self.runner.invoke(cli, ['download', '-y', '--with-uploads'])
+		self.assertEqual(result.exit_code, 0)
 
-			# With uploads now
-			result = runner.invoke(cli, ['download', '-y', '--with-uploads'])
-			print(result.output)
-			self.assertEqual(result.exit_code, 0)
+		# File should now be downloaded.
+		found = subprocess.check_output(['find', '.', '-type', 'f', '-name', 'wp-header-logo.png'], encoding='utf8')
+		self.assertIn('wp-header-logo.png', found)
 
-			# File should now be downloaded.
-			found = subprocess.check_output(['find', '.', '-type', 'f', '-name', 'wp-header-logo.png'], encoding='utf8')
-			self.assertIn('wp-header-logo.png', found)
+	def test_005_php(self):
+		with open('test.php', 'w') as f:
+			f.write('<?php\necho "%s";' % self.home)
 
-			# Test PHP
-			with open('test.php', 'w') as f:
-				f.write('<?php\necho "%s";' % home)
+		# Deploy the test file
+		result = self.runner.invoke(cli, ['deploy'])
+		self.assertEqual(result.exit_code, 0)
 
-			# Deploy the test file
-			result = runner.invoke(cli, ['deploy'])
-			print(result.output)
-			self.assertEqual(result.exit_code, 0)
+		response = requests.get('%s/test.php' % self.home)
+		self.assertTrue(response.ok)
+		self.assertEqual(self.home, response.text)
 
-			response = requests.get('%s/test.php' % home)
-			self.assertTrue(response.ok)
-			self.assertEqual(home, response.text)
+	def test_006_deploy(self):
+		with open('test1.php', 'w') as f:
+			f.write('1')
+		with open('test2.php', 'w') as f:
+			f.write('2')
 
-			# Clean up
-			result = runner.invoke(cli, ['destroy', '-y'])
-			print(result.output)
-			self.assertEqual(result.exit_code, 0)
+		# Make sure dry-run is working
+		result = self.runner.invoke(cli, ['deploy', '--dry-run'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(requests.get('%s/test1.php' % self.home).ok)
+
+		# Test partial deploys
+		result = self.runner.invoke(cli, ['deploy', 'test2.php'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(requests.get('%s/test1.php' % self.home).ok)
+		self.assertTrue(requests.get('%s/test2.php' % self.home).ok)
+
+		result = self.runner.invoke(cli, ['deploy', 'test1.php'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertTrue(requests.get('%s/test1.php' % self.home).ok)
+
+		os.unlink('test1.php')
+		result = self.runner.invoke(cli, ['deploy'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(requests.get('%s/test1.php' % self.home).ok)
+		self.assertTrue(requests.get('%s/test2.php' % self.home).ok)
+
+		with open('test3.php', 'w') as f:
+			f.write('3')
+		with open('wp-content/test3.php', 'w') as f:
+			f.write('also 3')
+		with open('wp-content/plugins/test3.php', 'w') as f:
+			f.write('three here as well')
+
+		result = self.runner.invoke(cli, ['deploy', 'wp-content'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(requests.get('%s/test3.php' % self.home).ok)
+		self.assertTrue(requests.get('%s/wp-content/test3.php' % self.home).ok)
+		self.assertTrue(requests.get('%s/wp-content/plugins/test3.php' % self.home).ok)
+
+		os.unlink('wp-content/plugins/test3.php')
+		result = self.runner.invoke(cli, ['deploy', 'wp-content/plugins'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(requests.get('%s/test3.php' % self.home).ok)
+		self.assertTrue(requests.get('%s/wp-content/test3.php' % self.home).ok)
+		self.assertFalse(requests.get('%s/wp-content/plugins/test3.php' % self.home).ok)
+
+		# Test wp-content/upload deploys --with-uploads
+		with open('wp-content/uploads/test4.txt', 'w') as f:
+			f.write('4')
+		with open('wp-content/uploads/test5.txt', 'w') as f:
+			f.write('5')
+
+		result = self.runner.invoke(cli, ['deploy'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(requests.get('%s/wp-content/uploads/test4.txt' % self.home).ok)
+		self.assertFalse(requests.get('%s/wp-content/uploads/test5.txt' % self.home).ok)
+
+		result = self.runner.invoke(cli, ['deploy', 'wp-content/uploads'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(requests.get('%s/wp-content/uploads/test4.txt' % self.home).ok)
+		self.assertFalse(requests.get('%s/wp-content/uploads/test5.txt' % self.home).ok)
+
+		result = self.runner.invoke(cli, ['deploy', 'wp-content/uploads/test4.txt'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(requests.get('%s/wp-content/uploads/test4.txt' % self.home).ok)
+		self.assertFalse(requests.get('%s/wp-content/uploads/test5.txt' % self.home).ok)
+
+		result = self.runner.invoke(cli, ['deploy', 'wp-content/uploads/test4.txt', '--with-uploads'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertTrue(requests.get('%s/wp-content/uploads/test4.txt' % self.home).ok)
+		self.assertFalse(requests.get('%s/wp-content/uploads/test5.txt' % self.home).ok)
+
+		result = self.runner.invoke(cli, ['deploy', 'wp-content/uploads', '--with-uploads'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertTrue(requests.get('%s/wp-content/uploads/test4.txt' % self.home).ok)
+		self.assertTrue(requests.get('%s/wp-content/uploads/test5.txt' % self.home).ok)
+
+		# Test both app and uploads deploys
+		with open('test6.txt', 'w') as f:
+			f.write('6')
+		with open('wp-content/uploads/test7.txt', 'w') as f:
+			f.write('7')
+		with open('test8.txt', 'w') as f:
+			f.write('8')
+		with open('wp-content/uploads/test9.txt', 'w') as f:
+			f.write('9')
+
+		result = self.runner.invoke(cli, ['deploy', '--with-uploads', 'test6.txt', 'wp-content/uploads/test7.txt'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertTrue(requests.get('%s/test6.txt' % self.home).ok)
+		self.assertTrue(requests.get('%s/wp-content/uploads/test7.txt' % self.home).ok)
+		self.assertFalse(requests.get('%s/test8.txt' % self.home).ok)
+		self.assertFalse(requests.get('%s/wp-content/uploads/test9.txt' % self.home).ok)
+
+	def test_007_destroy(self):
+		result = self.runner.invoke(cli, ['destroy', '-y'])
+		self.assertEqual(result.exit_code, 0)
 
 if __name__ == '__main__':
 	unittest.main()
