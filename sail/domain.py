@@ -32,14 +32,19 @@ def list():
 @domain.command()
 @click.argument('domain', nargs=1)
 @click.option('--force', 'force', is_flag=True)
-def make_primary(domain, force):
+@click.option('--skip-replace', is_flag=True, help='Skip running search-replace routines for home, siteurl, and other URLs')
+def make_primary(domain, force, skip_replace):
 	'''Set a domain as primary, update siteurl/home, search-replace all links'''
 	root = util.find_root()
 	sail_config = util.get_sail_config()
 
 	click.echo('# Updating primary domain')
 
-	response = util.request('/domains/make-primary/', json={'domain': domain, 'force': bool(force)})
+	response = util.request('/domains/make-primary/', json={
+		'domain': domain,
+		'force': bool(force),
+		'skip_replace': bool(skip_replace),
+	})
 	task_id = response['task_id']
 
 	click.echo('- Scheduled make-primary for %s' % domain)
