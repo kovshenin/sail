@@ -2,6 +2,7 @@ from sail import cli, util
 
 import click, pathlib, json
 import os, shlex
+import webbrowser
 
 @cli.command('config')
 @click.argument('name', required=True, nargs=1)
@@ -69,3 +70,10 @@ def wp(command):
 		'root@%s.sailed.io' % sail_config['app_id'],
 		'docker exec -it sail sudo -u www-data bash -c "cd ~/public; wp %s"' % command
 	)
+
+@cli.command()
+def admin():
+	'''Open your default web browser to the wp-login.php location of your site'''
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+	webbrowser.open(sail_config['login_url'])
