@@ -198,11 +198,12 @@ def rollback(release=None, releases=False):
 	click.echo('- Successfully rolled back to %s' % rollback_release)
 
 @cli.command()
+@click.argument('path', nargs=-1, required=False)
 @click.option('--yes', '-y', is_flag=True, help='Force Y on overwriting local copy')
 @click.option('--with-uploads', is_flag=True, help='Include the wp-content/uploads directory')
 @click.option('--delete', is_flag=True, help='Delete files from local copy that do not exist on production')
 @click.option('--dry-run', is_flag=True, help='Show changes about to be downloaded to the working copy')
-def download(yes, with_uploads, delete, dry_run):
+def download(path, yes, with_uploads, delete, dry_run):
 	'''Download files from production to your working copy'''
 	root = util.find_root()
 	sail_config = util.get_sail_config()
@@ -214,13 +215,14 @@ def download(yes, with_uploads, delete, dry_run):
 		)
 
 	app_id = sail_config['app_id']
+	delete = ['--delete'] if delete else []
 
 	if dry_run:
 		click.echo('# Comparing files')
 
 		source = 'root@%s.sailed.io:/var/www/public/' % app_id
 		destination = '%s/' % root
-		files = _diff(source, destination)
+		files = _diff(source, destination, _get_extend_filters(path))
 		empty = True
 
 		colors = {'created': 'green', 'deleted': 'red', 'updated': 'yellow'}
@@ -239,13 +241,12 @@ def download(yes, with_uploads, delete, dry_run):
 
 	click.echo('# Downloading application files from production')
 
-	source = 'root@%s.sailed.io:/var/www/public/' % app_id
-	destination = '%s/' % root
-	args = ['-rtl']
-	if delete:
-		args.append('--delete')
-
-	returncode, stdout, stderr = util.rsync(args, source, destination)
+	returncode, stdout, stderr = util.rsync(
+		args=['-rtl'] + delete,
+		source='root@%s.sailed.io:/var/www/public/' % app_id,
+		destination='%s/' % root,
+		extend_filters=_get_extend_filters(path)
+	)
 
 	if returncode != 0:
 		raise click.ClickException('An error occurred during download. Please try again.')
@@ -254,9 +255,13 @@ def download(yes, with_uploads, delete, dry_run):
 		click.echo('- Downloading wp-content/uploads')
 
 		# Download uploads from production
-		source = 'root@%s.sailed.io:/var/www/uploads/' % app_id
-		destination = '%s/wp-content/uploads/' % root
-		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
+		returncode, stdout, stderr = util.rsync(
+			args=['-rtl'] + delete,
+			source='root@%s.sailed.io:/var/www/uploads/' % app_id,
+			destination='%s/wp-content/uploads/' % root,
+			default_filters=False,
+			extend_filters=_get_extend_filters(path, 'wp-content/uploads')
+		)
 
 		if returncode != 0:
 			raise click.ClickException('An error occurred during download. Please try again.')
