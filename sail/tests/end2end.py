@@ -180,7 +180,81 @@ class TestEnd2End(unittest.TestCase):
 		self.assertFalse(requests.get('%s/test8.txt' % self.home).ok)
 		self.assertFalse(requests.get('%s/wp-content/uploads/test9.txt' % self.home).ok)
 
-	def test_007_destroy(self):
+	def test_007_download(self):
+		files = [
+			'download-1.txt',
+			'download-2.txt',
+			'wp-content/download-3.txt',
+			'wp-content/plugins/download-4.txt',
+			'wp-content/themes/download-5.txt',
+			'wp-content/uploads/download-6.txt',
+		]
+
+		for filename in files:
+			with open(filename, 'w') as f:
+				f.write(filename)
+
+		result = self.runner.invoke(cli, ['deploy', '--with-uploads'])
+		self.assertEqual(result.exit_code, 0)
+
+		# Delete all local files
+		for filename in files:
+			os.unlink(filename)
+
+		should_exist = []
+		def _assert_exists(files, should_exist):
+			for filename in files:
+				if filename not in should_exist:
+					self.assertFalse(os.path.exists(filename))
+				else:
+					self.assertTrue(os.path.exists(filename))
+
+		result = self.runner.invoke(cli, ['download', '--dry-run'])
+		self.assertEqual(result.exit_code, 0)
+		_assert_exists(files, should_exist)
+
+		result = self.runner.invoke(cli, ['download', '-y', 'wp-content/plugins'])
+		print(result.output)
+		print(result.stderr)
+		self.assertEqual(result.exit_code, 0)
+		should_exist.append('wp-content/plugins/download-4.txt')
+		_assert_exists(files, should_exist)
+
+		result = self.runner.invoke(cli, ['download', '-y', 'wp-content'])
+		self.assertEqual(result.exit_code, 0)
+		should_exist.append('wp-content/themes/download-5.txt')
+		should_exist.append('wp-content/download-3.txt')
+		_assert_exists(files, should_exist)
+
+		result = self.runner.invoke(cli, ['download', '-y', 'wp-content', '--with-uploads'])
+		self.assertEqual(result.exit_code, 0)
+		should_exist.append('wp-content/uploads/download-6.txt')
+		_assert_exists(files, should_exist)
+
+		# Test --delete
+		with open('download-7.txt', 'w') as f:
+			f.write('7')
+		with open('wp-content/uploads/download-8.txt', 'w') as f:
+			f.write('8')
+
+		# Without the --delete flag, 7 and 8 should remain intact
+		result = self.runner.invoke(cli, ['download', '-y', '--with-uploads'])
+		self.assertEqual(result.exit_code, 0)
+		should_exist.append('download-1.txt')
+		should_exist.append('download-2.txt')
+		_assert_exists(files, should_exist)
+
+		# These still exists
+		self.assertTrue(os.path.exists('download-7.txt'))
+		self.assertTrue(os.path.exists('wp-content/uploads/download-8.txt'))
+
+		# Add the --delete now, should be gone.
+		result = self.runner.invoke(cli, ['download', '-y', '--with-uploads', '--delete'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertFalse(os.path.exists('download-7.txt'))
+		self.assertFalse(os.path.exists('wp-content/uploads/download-8.txt'))
+
+	def test_999_destroy(self):
 		result = self.runner.invoke(cli, ['destroy', '-y'])
 		self.assertEqual(result.exit_code, 0)
 
