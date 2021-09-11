@@ -1,7 +1,7 @@
 # Deploy WordPress to DigitalOcean with Sail
 
 [Sail](https://sailed.io) is a free CLI tool to deploy, manage and scale WordPress applications
-in the DigitalOcean cloud.
+in the DigitalOcean cloud. For support and announcements [join our Slack](https://join.slack.com/t/sailed/shared_invite/zt-vgnf8dfb-oPH1ZY1IwFSg_WyECYh5ow).
 
 Contents:
 
@@ -27,6 +27,7 @@ Contents:
 * [Accessing Logs](#accessing-logs)
 * [Integrating with Git](#integrating-with-git)
 * [Migrating existing projects to Sail](#migrating-existing-projects-to-sail)
+* [Support](#support)
 * [License and Contributing](#license-and-contributing)
 
 ## Installing Sail
@@ -417,6 +418,11 @@ a useful checklist to help you out.
 If everything is looking good, you should point your domain to Sail as described
 in the [Domains and DNS](#domains-and-dns) section. After DNS propagation is complete
 you should be able to request and install new SSL certificates for your application.
+
+## Support
+
+Community support is available in [our Slack workspace](https://join.slack.com/t/sailed/shared_invite/zt-vgnf8dfb-oPH1ZY1IwFSg_WyECYh5ow).
+If you do not use Slack, feel free to open an issue here on GitHub.
 
 ## License and Contributing
 
