@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.9.12] - 2021-09-12
+
 * Added: New `--skip-dns` flag for `domain add` and `domain delete` which skips making any DNS changes
 * Added: Long-awaited `sail restore` command, to restore complete site backups to production
 * Added: New `--skip-replace` argument for `domain make-primary`, to skip the search-replace ops
