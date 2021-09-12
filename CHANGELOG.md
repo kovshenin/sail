@@ -10,7 +10,8 @@
 * Changed: `deploy` now prepares the new release directory with a copy from the live release
 * Changed: Added a new `util.rsync()` function to standardize usage across all commands
 * Changed: End-to-end test now includes multiple scenarios for `deploy` and `download` routines
-* Removed: `--delete` argument from `deploy` since it was not really implemented anyway
+* Changed: Slight refactoring, regrouping of commands, simpler ones went to a new misc.py instead of their own files
+* Removed: `--delete` argument from `deploy` since it was not really implemented (in a correct way) anyway
 
 ## [0.9.11] - 2021-09-06
 
