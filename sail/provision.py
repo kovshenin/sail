@@ -130,6 +130,57 @@ def init(provider_token, email, size, region, force):
 	click.echo('For support and documentation visit sailed.io')
 
 @cli.command()
+@click.argument('path', nargs=1, required=True)
+def blueprint(path):
+	'''Run a blueprint file against your application'''
+	import re
+	import yaml
+	import pathlib
+	import json
+
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+
+	path = pathlib.Path(path)
+	if not path.exists():
+		raise click.ClickException('File does not exist')
+
+	if not path.name.endswith('.yml') and not path.name.endswith('.yaml'):
+		raise click.ClickException('Blueprint files must be .yml or .yaml')
+
+	with path.open() as f:
+		s = f.read()
+
+	def _prompt(string, default=None, option=None):
+		return click.prompt(string, default)
+
+	def _parse_template(match):
+		code = match.group(1).strip()
+		if len(code) < 1:
+			return ''
+
+		code = 'r = %s' % code
+		_locals = {'prompt': _prompt, 'r': None}
+		exec(code, {'__builtins__': {}}, _locals)
+		r = _locals.get('r')
+
+		if type(r) not in [str, int]:
+			raise Exception('Invalid data type')
+
+		return json.dumps(r)
+
+	s = re.sub(r'{{(.+?)}}', _parse_template, s)
+	y = yaml.safe_load(s)
+
+	click.echo('# Applying blueprint: %s' % path.name)
+	response = util.request('/blueprint/', method='POST', json={'blueprint': y})
+	task_id = response['task_id']
+
+	util.wait_for_task(task_id, timeout=600, interval=5)
+
+	click.echo('- Blueprint applied successfully')
+
+@cli.command()
 @click.option('--yes', '-y', is_flag=True, help='Force Y on overwriting local copy')
 def destroy(yes):
 	'''Shutdown and destroy the production droplet'''

@@ -1,0 +1,44 @@
+---
+version: 1
+
+# Install plugins from the WordPress.org repo or custom sources.
+plugins:
+  woocommerce: latest
+  wordpress-seo: latest
+  hello-dolly:
+    url: https://downloads.wordpress.org/plugin/hello-dolly.1.7.2.zip
+
+# Install themes from the WordPress.org directory or custom sources.
+themes:
+  storefront: latest
+  twentyeleven: latest
+  publish:
+    url: https://downloads.wordpress.org/theme/publish.1.2.4.zip
+
+# Install Postfix and configure it to relay mail to a third-party SMTP server,
+# great for Mailgun, Gmail SMTP and other services.
+postfix:
+  mode: relay
+  host: {{ prompt('SMTP Host') }}
+  port: {{ prompt('Port', 587) }}
+  username: {{ prompt('Username') }}
+  password: {{ prompt('Password') }}
+  hello: {{ }}
+
+# Add a .github/workflows/deploy.yml file with a workflow that does a repo
+# checkout, installs Sail, decrypts .sail secrets and runs sail deploy when
+# pushed to the main branch.
+github:
+  workflow: deploy
+  passphrase: {{ prompt('GPG passphrase') }}
+  branch: main
+
+# Configure and launch a fail2ban service on this server.
+fail2ban:
+  wordpress-auth
+  wordpress-xmlrpc
+
+# Launch a Redis service on this server.
+redis:
+  maxmemory: {{ prompt('Redis maxmemory', '128mb') }}
+  policy: allkeys-lru
