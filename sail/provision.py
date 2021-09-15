@@ -129,8 +129,8 @@ def init(provider_token, email, size, region, force):
 	click.echo()
 	click.echo('For support and documentation visit sailed.io')
 
-@cli.command()
-@click.argument('path', nargs=1, required=True)
+@click.argument('path', nargs=-1, required=True)
+@cli.command(context_settings=dict(ignore_unknown_options=True))
 def blueprint(path):
 	'''Run a blueprint file against your application'''
 	import re
@@ -141,6 +141,24 @@ def blueprint(path):
 	root = util.find_root()
 	sail_config = util.get_sail_config()
 
+	_args = path
+	arguments = []
+	options = {}
+	flags = []
+
+	for arg in _args:
+		if not arg.startswith('-'):
+			arguments.append(arg)
+			continue
+
+		# option or flag
+		if '=' in arg:
+			k, v = arg.split('=')
+			options[k] = v
+		else:
+			flags.append(arg)
+
+	path = arguments[0] # TODO: Support multiple paths
 	path = pathlib.Path(path)
 	if not path.exists():
 		raise click.ClickException('File does not exist')
@@ -151,25 +169,26 @@ def blueprint(path):
 	with path.open() as f:
 		s = f.read()
 
-	def _prompt(string, default=None, option=None):
-		return click.prompt(string, default)
+	def _parse_variables(match):
+		name = match.group(1).strip()
+		if name in vars:
+			return json.dumps(vars[name])
+		return None
 
-	def _parse_template(match):
-		code = match.group(1).strip()
-		if len(code) < 1:
-			return ''
+	# Load user variables and fill from command line arguments if possible.
+	y = yaml.safe_load(s)
+	vars = {}
+	for var in y.get('vars', []):
+		option = var.get('option')
+		if options.get(option):
+			value = options.get(option)
+		else:
+			value = click.prompt(var['prompt'], default=var.get('default', None))
 
-		code = 'r = %s' % code
-		_locals = {'prompt': _prompt, 'r': None}
-		exec(code, {'__builtins__': {}}, _locals)
-		r = _locals.get('r')
+		vars[var['name']] = value
 
-		if type(r) not in [str, int]:
-			raise Exception('Invalid data type')
-
-		return json.dumps(r)
-
-	s = re.sub(r'{{(.+?)}}', _parse_template, s)
+	# Reload with substitutions.
+	s = re.sub(r'\${{([^}]+?)}}', _parse_variables, s)
 	y = yaml.safe_load(s)
 
 	click.echo('# Applying blueprint: %s' % path.name)

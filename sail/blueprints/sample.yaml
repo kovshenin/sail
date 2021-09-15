@@ -19,18 +19,17 @@ themes:
 # great for Mailgun, Gmail SMTP and other services.
 postfix:
   mode: relay
-  host: {{ prompt('SMTP Host') }}
-  port: {{ prompt('Port', 587) }}
-  username: {{ prompt('Username') }}
-  password: {{ prompt('Password') }}
-  hello: {{ }}
+  host: ${{ smtp_host }}
+  port: ${{ smtp_port }}
+  username: ${{ smtp_username }}
+  password: ${{ smtp_password }}
 
 # Add a .github/workflows/deploy.yml file with a workflow that does a repo
 # checkout, installs Sail, decrypts .sail secrets and runs sail deploy when
 # pushed to the main branch.
 github:
   workflow: deploy
-  passphrase: {{ prompt('GPG passphrase') }}
+  passphrase: ${{ gpg_passphrase }}
   branch: main
 
 # Configure and launch a fail2ban service on this server.
@@ -40,5 +39,33 @@ fail2ban:
 
 # Launch a Redis service on this server.
 redis:
-  maxmemory: {{ prompt('Redis maxmemory', '128mb') }}
+  maxmemory: ${{ redis_maxmemory }}
   policy: allkeys-lru
+
+# User variables, prompts, defaults and CLI options
+vars:
+- name: smtp_host
+  prompt: SMTP host
+  option: --smtp-host
+
+- name: smtp_port
+  prompt: SMTP port
+  default: 587
+  option: --smtp-port
+
+- name: smtp_username
+  prompt: SMTP username
+  option: --smtp-username
+
+- name: smtp_password
+  prompt: SMTP password
+  option: --smtp-password
+
+- name: gpg_passphrase
+  prompt: GPG passphrase to encrypt secrets for GitHub
+  option: --gpg-passphrase
+
+- name: redis_maxmemory
+  prompt: Maxmemory for Redis
+  default: 128mb
+  option: --redis-maxmemory
