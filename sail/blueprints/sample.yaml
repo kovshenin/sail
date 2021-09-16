@@ -38,7 +38,7 @@ define:
   WP_DEBUG: true
   WP_DEBUG_DISPLAY: true
   WP_POST_REVISIONS: 6
-  WP_HTTP_BLOCK_EXTERNAL: true
+  AUTOSAVE_INTERVAL: 120
 
 # Install Postfix and configure it to relay mail to a third-party SMTP server,
 # great for Mailgun, Gmail SMTP and other services.
