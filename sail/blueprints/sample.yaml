@@ -2,6 +2,7 @@
 version: 1
 
 # Install plugins from the WordPress.org repo or custom sources.
+# All plugins will be activated after all of them are installed.
 plugins:
   woocommerce: latest
   wordpress-seo: latest
@@ -9,11 +10,28 @@ plugins:
     url: https://downloads.wordpress.org/plugin/hello-dolly.1.7.2.zip
 
 # Install themes from the WordPress.org directory or custom sources.
+# The last theme in this list will be activated.
 themes:
   storefront: latest
   twentyeleven: latest
   publish:
     url: https://downloads.wordpress.org/theme/publish.1.2.4.zip
+
+# WordPress options
+options:
+  blogname: Blueprints Are Fun
+  blogdescription: Don't forget to change your tagline!
+  # This option will be input in JSON and correctly serialized into wp_options.
+  # It is also set to not autoload (autoload defaults to true). For existing
+  # options autoload will only changed if explicitly specified.
+  some_custom_option:
+    value: >
+      {"foo": "bar"}
+    type: json
+    autoload: false
+  # This option will be deleted.
+  fresh_site:
+    delete: true
 
 # Install Postfix and configure it to relay mail to a third-party SMTP server,
 # great for Mailgun, Gmail SMTP and other services.
