@@ -19,6 +19,7 @@ setup(
 	author_email=sail.__author_email__,
 	url=sail.__url__,
 	install_requires=install_reqs,
+	include_package_data=True,
 	packages=find_packages(),
 	entry_points={
 		'console_scripts': ['sail=sail:cli']
