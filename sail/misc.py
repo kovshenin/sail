@@ -62,7 +62,7 @@ def wp(command):
 
 	click.echo('Spawning SSH and running WP-CLI on %s.sailed.io' % sail_config['app_id'], err=True)
 
-	os.execlp('ssh', 'ssh', '-t',
+	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
@@ -110,7 +110,7 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, follow, lines):
 
 	settings = ' '.join(settings)
 
-	os.execlp('ssh', 'ssh', '-t',
+	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
@@ -134,7 +134,7 @@ def ssh(root):
 
 	click.echo('Spawning an interactive SSH shell for %s.sailed.io' % sail_config['app_id'])
 
-	os.execlp('ssh', 'ssh', '-t',
+	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
