@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.9.13] - 2021-09-17
+
+* Added: Blueprints are here! `sail blueprint path/to/blueprint.yaml` to apply
+* Added: End-to-end tests around blueprints, tweaked testing a bit, added GitHub workflows to run tests on push/PR
+* Changed: Fixed system journal requiring a restart for `sail logs` to work
+* Changed: Fixed .com.br and .com.tr now treated as TLDs when working with domains
+* Changed: Make sure new Droplet is assigned an actual IP address prior to using it
+* Changed: Updated readme to reflect BPs, added push-to-deploy links
+
 ## [0.9.12] - 2021-09-12
 
 * Added: New `--skip-dns` flag for `domain add` and `domain delete` which skips making any DNS changes
