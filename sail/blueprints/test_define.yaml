@@ -1,0 +1,7 @@
+---
+version: 1
+
+define:
+  TEST_BOOLEAN: true
+  TEST_STRING: This is a string
+  TEST_INTEGER: 123

@@ -1,0 +1,8 @@
+---
+version: 1
+
+themes:
+  twentyten: latest
+  twentyeleven: latest
+  publish:
+    url: https://downloads.wordpress.org/theme/publish.1.2.4.zip

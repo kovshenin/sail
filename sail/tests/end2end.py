@@ -8,8 +8,12 @@ import click
 import unittest
 import subprocess
 import requests
+import json
 from click.testing import CliRunner
 from unittest.mock import Mock, patch
+
+# Skip some tests if true
+work_in_progress = False
 
 # Some commands use os.execlp to pass control to the
 # child process, which stops test execution after the
@@ -53,16 +57,19 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Success. The ship has sailed!', result.output)
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_002_wp_home(self):
 		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'home'])
 		self.assertEqual(result.exit_code, 0)
 		self.__class__.home = result.output.strip()
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_003_wp_media_import(self):
 		result = self.runner.invoke(cli, ['wp', 'media', 'import', 'https://s.w.org/style/images/wp-header-logo.png'])
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Imported file', result.output)
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_004_download(self):
 		result = self.runner.invoke(cli, ['download', '-y'])
 		self.assertEqual(result.exit_code, 0)
@@ -79,6 +86,7 @@ class TestEnd2End(unittest.TestCase):
 		found = subprocess.check_output(['find', '.', '-type', 'f', '-name', 'wp-header-logo.png'], encoding='utf8')
 		self.assertIn('wp-header-logo.png', found)
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_005_php(self):
 		with open('test.php', 'w') as f:
 			f.write('<?php\necho "%s";' % self.home)
@@ -91,6 +99,7 @@ class TestEnd2End(unittest.TestCase):
 		self.assertTrue(response.ok)
 		self.assertEqual(self.home, response.text)
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_006_deploy(self):
 		with open('test1.php', 'w') as f:
 			f.write('1')
@@ -186,6 +195,7 @@ class TestEnd2End(unittest.TestCase):
 		self.assertFalse(requests.get('%s/test8.txt' % self.home).ok)
 		self.assertFalse(requests.get('%s/wp-content/uploads/test9.txt' % self.home).ok)
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_007_download(self):
 		files = [
 			'download-1.txt',
@@ -220,8 +230,6 @@ class TestEnd2End(unittest.TestCase):
 		_assert_exists(files, should_exist)
 
 		result = self.runner.invoke(cli, ['download', '-y', 'wp-content/plugins'])
-		print(result.output)
-		print(result.stderr)
 		self.assertEqual(result.exit_code, 0)
 		should_exist.append('wp-content/plugins/download-4.txt')
 		_assert_exists(files, should_exist)
@@ -259,6 +267,109 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(result.exit_code, 0)
 		self.assertFalse(os.path.exists('download-7.txt'))
 		self.assertFalse(os.path.exists('wp-content/uploads/download-8.txt'))
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_008_blueprint_vars(self):
+		result = self.runner.invoke(cli, ['blueprint', 'test_vars.yaml'], input='Simple\n\n')
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Test Simple', result.output)
+		self.assertIn('Test Default [123]', result.output)
+
+		# Test command-line options
+		result = self.runner.invoke(cli, ['blueprint', 'test_vars.yaml', '--test-simple=1', '--test-default=1'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertNotIn('Test Simple', result.output)
+		self.assertNotIn('Test Default', result.output)
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_009_blueprint_define(self):
+		result = self.runner.invoke(cli, ['blueprint', 'test_define.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Updating wp-config.php constants', result.output)
+
+		# Test results
+		result = self.runner.invoke(cli, ['wp', 'config', 'get', 'TEST_BOOLEAN', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('true', result.output)
+
+		result = self.runner.invoke(cli, ['wp', 'config', 'get', 'TEST_INTEGER', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('123', result.output)
+
+		result = self.runner.invoke(cli, ['wp', 'config', 'get', 'TEST_STRING', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('"This is a string"', result.output)
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_009_blueprint_plugins(self):
+		result = self.runner.invoke(cli, ['blueprint', 'test_plugins.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Installing plugins', result.output)
+		self.assertIn('wporg/debug-bar=latest', result.output)
+		self.assertIn('wporg/classic-editor=latest', result.output)
+		self.assertIn('thirdparty/hello-dolly', result.output)
+
+		# Test results
+		result = self.runner.invoke(cli, ['wp', 'plugin', 'list', '--skip-themes', '--skip-plugins', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+
+		plugins = json.loads(result.output)
+		plugins = [(p['name'], p['status']) for p in plugins]
+
+		self.assertIn(('hello-dolly', 'active'), plugins)
+		self.assertIn(('classic-editor', 'active'), plugins)
+		self.assertIn(('debug-bar', 'active'), plugins)
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_010_blueprint_themes(self):
+		result = self.runner.invoke(cli, ['blueprint', 'test_themes.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Installing themes', result.output)
+		self.assertIn('wporg/twentyten=latest', result.output)
+		self.assertIn('wporg/twentyeleven=latest', result.output)
+		self.assertIn('thirdparty/publish', result.output)
+
+		# Test results
+		result = self.runner.invoke(cli, ['wp', 'theme', 'list', '--skip-themes', '--skip-plugins', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+
+		themes = json.loads(result.output)
+		themes = [(t['name'], t['status']) for t in themes]
+
+		self.assertIn(('twentyten', 'inactive'), themes)
+		self.assertIn(('twentyeleven', 'inactive'), themes)
+		self.assertIn(('publish', 'active'), themes)
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_011_blueprint_options(self):
+		# Set an option
+		result = self.runner.invoke(cli, ['wp', 'option', 'update', 'test_delete_option', 'delete me'])
+		self.assertEqual(result.exit_code, 0)
+
+		result = self.runner.invoke(cli, ['blueprint', 'test_options.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Applying options', result.output)
+
+		# Test results
+		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'blogname', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('"Blueprints Are Fun"', result.output)
+
+		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'blogdescription', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('"Don&#039;t forget to change your tagline!"', result.output)
+
+		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'some_custom_option', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('{"foo":"bar"}', result.output)
+
+		# Never existed
+		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'test_delete_unknown_option'])
+		self.assertEqual(result.exit_code, 1)
+
+		# Should not exist
+		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'test_delete_option'])
+		self.assertEqual(result.exit_code, 1)
 
 	def test_999_destroy(self):
 		result = self.runner.invoke(cli, ['destroy', '-y'])
