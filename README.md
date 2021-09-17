@@ -3,6 +3,9 @@
 [Sail](https://sailed.io) is a free CLI tool to deploy, manage and scale WordPress applications
 in the DigitalOcean cloud. For support and announcements [join our Slack](https://join.slack.com/t/sailed/shared_invite/zt-vgnf8dfb-oPH1ZY1IwFSg_WyECYh5ow).
 
+![Unit Tests](https://github.com/kovshenin/sail/actions/workflows/unit-tests.yml/badge.svg)
+![End-to-End Tests](https://github.com/kovshenin/sail/actions/workflows/end2end-tests.yml/badge.svg)
+
 Contents:
 
 * [Installing Sail](#installing-sail)
