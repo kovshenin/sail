@@ -1,0 +1,18 @@
+---
+version: 1
+
+options:
+  blogname: Blueprints Are Fun
+  blogdescription: Don't forget to change your tagline!
+
+  some_custom_option:
+    value: >
+      {"foo": "bar"}
+    type: json
+    autoload: false
+
+  test_delete_unknown_option:
+    delete: true
+
+  test_delete_option:
+    delete: true
