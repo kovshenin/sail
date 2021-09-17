@@ -26,6 +26,7 @@ Contents:
 * [Accessing the Server and Application](#accessing-the-server-and-application)
 * [Accessing Logs](#accessing-logs)
 * [Integrating with Git](#integrating-with-git)
+* [Blueprints](#blueprints)
 * [Migrating existing projects to Sail](#migrating-existing-projects-to-sail)
 * [Support](#support)
 * [License and Contributing](#license-and-contributing)
@@ -399,7 +400,52 @@ Note, that during a deploy, **everything** in your working copy, except dot file
 and uploads, will be shipped to your production server's public directory, even
 files that are not under source control.
 
-**TODO**: Deploy on push with GitHub Actions
+If you're looking for **push-to-deploy** with Git and GitHub Actions, check out
+[this simple tutorial](https://konstantin.blog/2021/sail-push-to-deploy-github-actions/)
+or [this video](https://youtu.be/6JkD8ekkAy8?t=4563).
+
+## Blueprints
+
+Blueprints in Sail are YAML files, which define the environment, where the WordPress
+application is provisioned. This can include things like non-default plugins, themes,
+options, constants, as well as additional server software and configuration.
+
+To apply a blueprint, simply run:
+
+```
+sail blueprint path/to/blueprint.yaml
+```
+
+You can apply a blueprint during an `init` as well:
+
+```
+sail init --blueprint path/to/blueprint.yaml
+```
+
+Blueprints allow developers to define custom variables. Sail will either prompt
+for these variables, or look for them on the command line interface. For example:
+
+```
+options:
+  blogname: {{ blogname }}
+
+vars:
+- name: blogname
+  prompt: What is your site name
+  option: --blogname
+  default: Just another WordPress site
+```
+
+This will cause an interactive prompt when applying the blueprint, unless
+the value for that variable is passed in using the `--blogname` option on
+the command line:
+
+```
+sail blueprint path/to/blueprint.yaml --blogname="My New Blog"
+```
+
+Sail ships with some sample and common blueprints, available in the blueprints
+directory.
 
 ## Migrating existing projects to Sail
 
