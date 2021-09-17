@@ -160,6 +160,11 @@ def blueprint(path):
 
 	path = arguments[0] # TODO: Support multiple paths
 	path = pathlib.Path(path)
+
+	# Try Sail's internal library of BPs
+	if not path.exists() and path.parent == pathlib.Path('.'):
+		path = pathlib.Path(__file__).parent / 'blueprints' / path.name
+
 	if not path.exists():
 		raise click.ClickException('File does not exist')
 
