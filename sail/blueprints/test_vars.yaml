@@ -1,0 +1,12 @@
+---
+version: 1
+
+vars:
+- name: test_simple
+  prompt: Test Simple
+  option: --test-simple
+
+- name: test_default
+  prompt: Test Default
+  default: 123
+  option: --test-default

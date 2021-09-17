@@ -1,0 +1,100 @@
+---
+version: 1
+
+# Install plugins from the WordPress.org repo or custom sources.
+# All plugins will be activated after all of them are installed.
+plugins:
+  woocommerce: latest
+  wordpress-seo: latest
+  hello-dolly:
+    url: https://downloads.wordpress.org/plugin/hello-dolly.1.7.2.zip
+
+# Install themes from the WordPress.org directory or custom sources.
+# The last theme in this list will be activated.
+themes:
+  storefront: latest
+  twentyeleven: latest
+  publish:
+    url: https://downloads.wordpress.org/theme/publish.1.2.4.zip
+
+# WordPress options
+options:
+  blogname: Blueprints Are Fun
+  blogdescription: Don't forget to change your tagline!
+  # This option will be input in JSON and correctly serialized into wp_options.
+  # It is also set to not autoload (autoload defaults to true). For existing
+  # options autoload will only changed if explicitly specified.
+  some_custom_option:
+    value: >
+      {"foo": "bar"}
+    type: json
+    autoload: false
+  # This option will be deleted.
+  fresh_site:
+    delete: true
+
+# Set constants in wp-config.php
+define:
+  WP_DEBUG: true
+  WP_DEBUG_DISPLAY: true
+  WP_POST_REVISIONS: 6
+  AUTOSAVE_INTERVAL: 120
+
+# User variables, prompts, defaults and CLI options
+vars:
+- name: smtp_host
+  prompt: SMTP host
+  option: --smtp-host
+
+- name: smtp_port
+  prompt: SMTP port
+  default: 587
+  option: --smtp-port
+
+- name: smtp_username
+  prompt: SMTP username
+  option: --smtp-username
+
+- name: smtp_password
+  prompt: SMTP password
+  option: --smtp-password
+
+- name: gpg_passphrase
+  prompt: GPG passphrase to encrypt secrets for GitHub
+  option: --gpg-passphrase
+
+- name: redis_maxmemory
+  prompt: Maxmemory for Redis
+  default: 128mb
+  option: --redis-maxmemory
+
+################################################################################
+########### EVERYTHING BELOW THIS LINE IS NOT IMPLEMENTED. YET. ################
+################################################################################
+
+# Install Postfix and configure it to relay mail to a third-party SMTP server,
+# great for Mailgun, Gmail SMTP and other services.
+postfix:
+  mode: relay
+  host: ${{ smtp_host }}
+  port: ${{ smtp_port }}
+  username: ${{ smtp_username }}
+  password: ${{ smtp_password }}
+
+# Add a .github/workflows/deploy.yml file with a workflow that does a repo
+# checkout, installs Sail, decrypts .sail secrets and runs sail deploy when
+# pushed to the main branch.
+github:
+  workflow: deploy
+  passphrase: ${{ gpg_passphrase }}
+  branch: main
+
+# Configure and launch a fail2ban service on this server.
+fail2ban:
+  wordpress-auth
+  wordpress-xmlrpc
+
+# Launch a Redis service on this server.
+redis:
+  maxmemory: ${{ redis_maxmemory }}
+  policy: allkeys-lru

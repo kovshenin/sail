@@ -1,0 +1,8 @@
+---
+version: 1
+
+plugins:
+  debug-bar: latest
+  classic-editor: latest
+  hello-dolly:
+    url: https://downloads.wordpress.org/plugin/hello-dolly.1.7.2.zip

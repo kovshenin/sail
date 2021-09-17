@@ -129,6 +129,81 @@ def init(provider_token, email, size, region, force):
 	click.echo()
 	click.echo('For support and documentation visit sailed.io')
 
+@click.argument('path', nargs=-1, required=True)
+@cli.command(context_settings=dict(ignore_unknown_options=True))
+def blueprint(path):
+	'''Run a blueprint file against your application'''
+	import re
+	import yaml
+	import pathlib
+	import json
+
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+
+	_args = path
+	arguments = []
+	options = {}
+	flags = []
+
+	for arg in _args:
+		if not arg.startswith('-'):
+			arguments.append(arg)
+			continue
+
+		# option or flag
+		if '=' in arg:
+			k, v = arg.split('=')
+			options[k] = v
+		else:
+			flags.append(arg)
+
+	path = arguments[0] # TODO: Support multiple paths
+	path = pathlib.Path(path)
+
+	# Try Sail's internal library of BPs
+	if not path.exists() and path.parent == pathlib.Path('.'):
+		path = pathlib.Path(__file__).parent / 'blueprints' / path.name
+
+	if not path.exists():
+		raise click.ClickException('File does not exist')
+
+	if not path.name.endswith('.yml') and not path.name.endswith('.yaml'):
+		raise click.ClickException('Blueprint files must be .yml or .yaml')
+
+	with path.open() as f:
+		s = f.read()
+
+	def _parse_variables(match):
+		name = match.group(1).strip()
+		if name in vars:
+			return json.dumps(vars[name])
+		return None
+
+	# Load user variables and fill from command line arguments if possible.
+	y = yaml.safe_load(s)
+	vars = {}
+	for var in y.get('vars', []):
+		option = var.get('option')
+		if options.get(option):
+			value = options.get(option)
+		else:
+			value = click.prompt(var['prompt'], default=var.get('default', None))
+
+		vars[var['name']] = value
+
+	# Reload with substitutions.
+	s = re.sub(r'\${{([^}]+?)}}', _parse_variables, s)
+	y = yaml.safe_load(s)
+
+	click.echo('# Applying blueprint: %s' % path.name)
+	response = util.request('/blueprint/', method='POST', json={'blueprint': y})
+	task_id = response['task_id']
+
+	util.wait_for_task(task_id, timeout=600, interval=5)
+
+	click.echo('- Blueprint applied successfully')
+
 @cli.command()
 @click.option('--yes', '-y', is_flag=True, help='Force Y on overwriting local copy')
 def destroy(yes):
