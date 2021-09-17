@@ -38,7 +38,13 @@ class TestEnd2End(unittest.TestCase):
 		self.home = self.__class__.home
 
 	def test_000_config(self):
-		result = self.runner.invoke(cli, ['config', 'api-base', 'http://127.0.0.1:5000/api/1.0/'])
+		api_base = 'http://127.0.0.1:5000/api/1.0/'
+
+		# Allows running this on the production API server if explicitly asked.
+		if 'SAIL_API_BASE' in os.environ:
+			api_base = os.environ['SAIL_API_BASE']
+
+		result = self.runner.invoke(cli, ['config', 'api-base', api_base])
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Option api-base set', result.output)
 
