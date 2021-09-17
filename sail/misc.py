@@ -116,7 +116,7 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, follow, lines):
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
 		'root@%s.sailed.io' % sail_config['app_id'],
-		'journalctl --no-hostname %s' % settings
+		'journalctl --no-hostname --directory=/var/log/journal %s' % settings
 	)
 
 @cli.command()
