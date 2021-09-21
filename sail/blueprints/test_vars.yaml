@@ -1,6 +1,17 @@
 ---
 version: 1
 
+options:
+  sail_vars_test:
+    value: >
+      {
+        "test_simple": ${{ test_simple }},
+        "test_default": ${{ test_default }},
+        "test_type_bool": ${{ test_type_bool }},
+        "test_type_int": ${{ test_type_int }}
+      }
+    type: json
+
 vars:
 - name: test_simple
   prompt: Test Simple
@@ -10,3 +21,15 @@ vars:
   prompt: Test Default
   default: 123
   option: --test-default
+
+- name: test_type_bool
+  prompt: Test Type Boolean
+  default: true
+  type: bool
+  option: --test-type-bool
+
+- name: test_type_int
+  prompt: Test Type Integer
+  default: 123
+  type: int
+  option: --test-type-int

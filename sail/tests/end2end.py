@@ -270,16 +270,49 @@ class TestEnd2End(unittest.TestCase):
 
 	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_008_blueprint_vars(self):
-		result = self.runner.invoke(cli, ['blueprint', 'test_vars.yaml'], input='Simple\n\n')
+		result = self.runner.invoke(cli, ['blueprint', 'test_vars.yaml'], input='Simple\n\n\n\n')
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Test Simple', result.output)
 		self.assertIn('Test Default [123]', result.output)
+		self.assertIn('Test Type Boolean [True]', result.output)
+		self.assertIn('Test Type Integer [123]', result.output)
 
 		# Test command-line options
-		result = self.runner.invoke(cli, ['blueprint', 'test_vars.yaml', '--test-simple=1', '--test-default=1'])
+		result = self.runner.invoke(cli, ['blueprint', 'test_vars.yaml', '--test-simple=1',
+			'--test-default=1', '--test-type-bool=yes', '--test-type-int=456'])
+
 		self.assertEqual(result.exit_code, 0)
 		self.assertNotIn('Test Simple', result.output)
 		self.assertNotIn('Test Default', result.output)
+		self.assertNotIn('Test Type Boolean', result.output)
+		self.assertNotIn('Test Type Integer', result.output)
+
+		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'sail_vars_test', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		vars = json.loads(result.output)
+
+		self.assertEqual(vars['test_simple'], '1')
+		self.assertEqual(vars['test_default'], '1')
+		self.assertEqual(vars['test_type_bool'], True)
+		self.assertEqual(vars['test_type_int'], 456)
+
+		result = self.runner.invoke(cli, ['blueprint', 'test_vars.yaml', '--test-simple=1',
+			'--test-default=1', '--test-type-bool=nah', '--test-type-int=789'])
+
+		self.assertEqual(result.exit_code, 0)
+		self.assertNotIn('Test Simple', result.output)
+		self.assertNotIn('Test Default', result.output)
+		self.assertNotIn('Test Type Boolean', result.output)
+		self.assertNotIn('Test Type Integer', result.output)
+
+		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'sail_vars_test', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		vars = json.loads(result.output)
+
+		self.assertEqual(vars['test_simple'], '1')
+		self.assertEqual(vars['test_default'], '1')
+		self.assertEqual(vars['test_type_bool'], False)
+		self.assertEqual(vars['test_type_int'], 789)
 
 	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_009_blueprint_define(self):
