@@ -447,6 +447,10 @@ the command line:
 sail blueprint path/to/blueprint.yaml --blogname="My New Blog"
 ```
 
+**Note**: Some blueprints will create files and directories on your production
+server. It is highly recommend to `sail download` to make sure your working
+copy is in sync.
+
 ### Default Blueprints
 
 Sail ships with some sample and common blueprints, available in the blueprints
