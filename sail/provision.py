@@ -185,10 +185,35 @@ def blueprint(path):
 	vars = {}
 	for var in y.get('vars', []):
 		option = var.get('option')
+		_type = str
+
+		_map = {
+			'str': str,
+			'string': str,
+			'int': int,
+			'integer': int,
+			'float': float,
+			'bool': bool,
+			'boolean': bool,
+		}
+
+		if var.get('type') and var.get('type') in _map.keys():
+			_type = _map[var.get('type')]
+
 		if options.get(option):
 			value = options.get(option)
 		else:
-			value = click.prompt(var['prompt'], default=var.get('default', None))
+			value = click.prompt(var['prompt'], default=var.get('default', None), type=_type)
+
+		if _type == bool and type(value) is not bool:
+			truthy = ['yes', 'y', 'true', '1', 'affirmative']
+			value = True if value.lower() in truthy else False
+
+		elif _type == int or _type == float:
+			try:
+				value = _type(value)
+			except ValueError:
+				raise click.ClickException('Could not convert %s to %s' % (repr(value), repr(_type)))
 
 		vars[var['name']] = value
 
