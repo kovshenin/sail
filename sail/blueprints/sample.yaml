@@ -35,13 +35,19 @@ options:
 
 # Set constants in wp-config.php
 define:
-  WP_DEBUG: true
-  WP_DEBUG_DISPLAY: true
+  WP_DEBUG: ${{ wp_debug }}
+  WP_DEBUG_DISPLAY: ${{ wp_debug }}
   WP_POST_REVISIONS: 6
   AUTOSAVE_INTERVAL: 120
 
 # User variables, prompts, defaults and CLI options
 vars:
+- name: wp_debug
+  prompt: Would you like to enable debugging?
+  option: --wp-debug
+  default: false
+  type: bool
+
 - name: smtp_host
   prompt: SMTP host
   option: --smtp-host
