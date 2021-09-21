@@ -1,0 +1,8 @@
+---
+version: 1
+
+fail2ban:
+  wordpress-auth
+  wordpress-auth-long
+  wordpress-pingback
+  sshd

@@ -404,6 +404,28 @@ class TestEnd2End(unittest.TestCase):
 		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'test_delete_option'])
 		self.assertEqual(result.exit_code, 1)
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_012_blueprint_fail2ban(self):
+		result = self.runner.invoke(cli, ['blueprint', 'test_fail2ban.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Installing fail2ban', result.output)
+		self.assertIn('Configuring fail2ban rules', result.output)
+
+		# Running again should not install.
+		result = self.runner.invoke(cli, ['blueprint', 'test_fail2ban.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertNotIn('Installing fail2ban', result.output)
+		self.assertIn('Configuring fail2ban rules', result.output)
+
+		# Make sure mu-plugin is installed
+		result = self.runner.invoke(cli, ['wp', 'plugin', 'list', '--skip-themes', '--skip-plugins', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		plugins = json.loads(result.output)
+		plugins = [(p['name'], p['status']) for p in plugins]
+		self.assertIn(('0-sail-auth-syslog', 'must-use'), plugins)
+
+		# TODO: Check active jails and dpkg status when we have ssh [command]
+
 	def test_999_destroy(self):
 		result = self.runner.invoke(cli, ['destroy', '-y'])
 		self.assertEqual(result.exit_code, 0)
