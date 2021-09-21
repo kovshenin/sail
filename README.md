@@ -430,7 +430,7 @@ for these variables, or look for them on the command line interface. For example
 
 ```
 options:
-  blogname: {{ blogname }}
+  blogname: ${{ blogname }}
 
 vars:
 - name: blogname
