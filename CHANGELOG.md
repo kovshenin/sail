@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+* Added: A new `type` attribute to `vars` in blueprints, supports bool, int, float, str
 * Fixed: Plugin activation error when no custom plugins specified
 * Fixed: Theme activation mismatch in blueprints, when custom theme above wporg themes
 
