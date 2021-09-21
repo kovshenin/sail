@@ -452,10 +452,12 @@ sail blueprint path/to/blueprint.yaml --blogname="My New Blog"
 Sail ships with some sample and common blueprints, available in the blueprints
 directory:
 
-* **fail2ban.yaml** This installs and configures fail2ban with the default sshd
+* **fail2ban.yaml**: This installs and configures fail2ban with the default sshd
   jail, as well as a few custom WordPress jails to protect against password
   bruteforce attacks and XML-RPC pingback flood attacks. It also includes a
   WordPress mu-plugin that logs auth and XML-RPC attempts to syslog.
+* **sample.yaml**: This file contains all available blueprint components with
+  some usage examples and comments. Don't actually apply this file.
 
 ## Migrating existing projects to Sail
 
