@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+* Fixed: Plugin activation error when no custom plugins specified
+* Fixed: Theme activation mismatch in blueprints, when custom theme above wporg themes
+
 ## [0.9.13] - 2021-09-17
 
 * Added: Blueprints are here! `sail blueprint path/to/blueprint.yaml` to apply
