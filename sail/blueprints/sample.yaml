@@ -52,6 +52,15 @@ fail2ban:
   wordpress-pingback
   sshd
 
+# Install Postfix and configure it to relay mail to a third-party SMTP server,
+# great for Mailgun, Gmail SMTP and other services.
+postfix:
+  mode: relay
+  host: ${{ smtp_host }}
+  port: ${{ smtp_port }}
+  username: ${{ smtp_username }}
+  password: ${{ smtp_password }}
+
 # User variables, prompts, defaults and CLI options
 vars:
 - name: wp_debug
@@ -89,15 +98,6 @@ vars:
 ################################################################################
 ########### EVERYTHING BELOW THIS LINE IS NOT IMPLEMENTED. YET. ################
 ################################################################################
-
-# Install Postfix and configure it to relay mail to a third-party SMTP server,
-# great for Mailgun, Gmail SMTP and other services.
-postfix:
-  mode: relay
-  host: ${{ smtp_host }}
-  port: ${{ smtp_port }}
-  username: ${{ smtp_username }}
-  password: ${{ smtp_password }}
 
 # Add a .github/workflows/deploy.yml file with a workflow that does a repo
 # checkout, installs Sail, decrypts .sail secrets and runs sail deploy when

@@ -460,6 +460,9 @@ directory:
   jail, as well as a few custom WordPress jails to protect against password
   bruteforce attacks and XML-RPC pingback flood attacks. It also includes a
   WordPress mu-plugin that logs auth and XML-RPC attempts to syslog.
+* **postfix.yaml**: Installs and configures a Postfix server to queue messages
+  locally and relay them to an external SMTP service. Great for Mailgun, Gmail SMTP
+  and other mail delivery services.
 * **sample.yaml**: This file contains all available blueprint components with
   some usage examples and comments. Don't actually apply this file.
 
