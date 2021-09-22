@@ -1,0 +1,35 @@
+---
+version: 1
+
+# Test DNS records
+dns:
+- domain: ${{ domain }}
+  name: foo
+  type: A
+  value: 127.0.0.1
+  exists: skip
+
+- domain: ${{ domain }}
+  name: bar
+  type: A
+  value: 127.0.0.1
+  exists: skip
+
+- domain: ${{ domain }}
+  name: baz
+  type: MX
+  value: mxa.mailgun.org.
+  priority: 10
+  exists: skip
+
+- domain: ${{ domain }}
+  name: qux
+  type: CNAME
+  value: sailed.io.
+  exists: skip
+
+vars:
+- name: domain
+  prompt: Domain Name
+  type: string
+  option: --domain

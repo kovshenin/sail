@@ -426,6 +426,84 @@ class TestEnd2End(unittest.TestCase):
 
 		# TODO: Check active jails and dpkg status when we have ssh [command]
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_013_blueprint_postfix(self):
+		result = self.runner.invoke(cli, ['blueprint', 'postfix.yaml',
+			'--smtp-host=smtp.gmail.com',
+			'--smtp-port=578',
+			'--smtp-username=foo',
+			'--smtp-password=bar',
+			'--from-name=From',
+			'--from-email=me@example.org',
+		])
+
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Installing postfix', result.output)
+		self.assertIn('Configuring postfix', result.output)
+
+		# Running again should not install.
+		result = self.runner.invoke(cli, ['blueprint', 'postfix.yaml',
+			'--smtp-host=smtp.gmail.com',
+			'--smtp-port=578',
+			'--smtp-username=foo',
+			'--smtp-password=bar',
+			'--from-name=A Unit Test',
+			'--from-email=me@example.org',
+		])
+
+		self.assertEqual(result.exit_code, 0)
+		self.assertNotIn('Installing postfix', result.output)
+		self.assertIn('Configuring postfix', result.output)
+
+		# Make sure mu-plugin is installed
+		result = self.runner.invoke(cli, ['wp', 'plugin', 'list', '--skip-themes', '--skip-plugins', '--format=json'])
+		self.assertEqual(result.exit_code, 0)
+		plugins = json.loads(result.output)
+		plugins = [(p['name'], p['status']) for p in plugins]
+		self.assertIn(('1-sail-mail-from', 'must-use'), plugins)
+
+		result = self.runner.invoke(cli, ['download', '-y', 'wp-content'])
+		self.assertEqual(result.exit_code, 0)
+
+		with open('wp-content/mu-plugins/1-sail-mail-from.php', 'r') as f:
+			contents = f.read()
+
+		self.assertIn('A Unit Test', contents)
+		self.assertIn('me@example.org', contents)
+
+		# TODO: Check configs and dpkg status when we have ssh [command]
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_014_blueprint_dns(self):
+		# Make sure domain doesn't exist.
+		result = self.runner.invoke(cli, ['domain', 'delete', 'saildemo.com'])
+
+		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
+		self.assertEqual(result.exit_code, 1)
+		self.assertIn('domain does not exist', result.output)
+
+		result = self.runner.invoke(cli, ['domain', 'add', 'saildemo.com'])
+		self.assertEqual(result.exit_code, 0)
+
+		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertNotIn('domain does not exist', result.output)
+
+		self.assertIn('Creating A record for foo.saildemo.com', result.output)
+		self.assertIn('Creating A record for bar.saildemo.com', result.output)
+		self.assertIn('Creating MX record for baz.saildemo.com', result.output)
+		self.assertIn('Creating CNAME record for qux.saildemo.com', result.output)
+		self.assertIn('Blueprint applied successfully', result.output)
+
+		# Applying again should not alter the records.
+		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Skipping A record for foo.saildemo.com', result.output)
+		self.assertIn('Skipping A record for bar.saildemo.com', result.output)
+		self.assertIn('Skipping MX record for baz.saildemo.com', result.output)
+		self.assertIn('Skipping CNAME record for qux.saildemo.com', result.output)
+		self.assertIn('Blueprint applied successfully', result.output)
+
 	def test_999_destroy(self):
 		result = self.runner.invoke(cli, ['destroy', '-y'])
 		self.assertEqual(result.exit_code, 0)
