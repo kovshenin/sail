@@ -53,13 +53,26 @@ fail2ban:
   sshd
 
 # Install Postfix and configure it to relay mail to a third-party SMTP server,
-# great for Mailgun, Gmail SMTP and other services.
+# great for Mailgun, Gmail SMTP and other services. You can add an optional
+# from_name and from_email keys to force the From: header used with wp_mail().
+# Note that some SMTP services overwrite the From header anyway.
 postfix:
   mode: relay
   host: ${{ smtp_host }}
   port: ${{ smtp_port }}
   username: ${{ smtp_username }}
   password: ${{ smtp_password }}
+  from_name: ${{ from_name }}
+  from_email: ${{ from_email }}
+
+# Add DNS records to your domain hosted with DigitalOcean. Full example
+# available in mailgun-dns.yaml.
+dns:
+- domain: ${{ domain }}
+  name: '@'
+  type: TXT
+  value: v=spf1 include:mailgun.org ~all
+  exists: skip
 
 # User variables, prompts, defaults and CLI options
 vars:
