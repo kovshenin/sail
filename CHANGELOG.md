@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.9.14] - 2021-09-22
+
 * Added: New `mailgun.yaml` and `mailgun-dns.yaml` blueprints to deploy a [working Mailgun configuration](https://konstantin.blog/2021/mailgun-wordpress-sail-cli/)
 * Added: New `postfix` blueprint component and postfix.yaml default BP
 * Added: New `fail2ban` blueprint component and fail2ban.yaml default BP
