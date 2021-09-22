@@ -464,6 +464,8 @@ directory:
 * **postfix.yaml**: Installs and configures a Postfix server to queue messages
   locally and relay them to an external SMTP service. Great for Mailgun, Gmail SMTP
   and other mail delivery services.
+* **mailgun.yaml** and **mailgun-dns.yaml**: DNS validation and full Postifx
+  configuration for Mailgun transactional e-mail service.
 * **sample.yaml**: This file contains all available blueprint components with
   some usage examples and comments. Don't actually apply this file.
 

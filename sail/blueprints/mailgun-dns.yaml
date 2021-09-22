@@ -1,0 +1,52 @@
+---
+version: 1
+
+# Add Mailgun DNS records
+dns:
+- domain: ${{ domain }}
+  name: '@'
+  type: TXT
+  value: v=spf1 include:mailgun.org ~all
+  exists: skip
+
+- domain: ${{ domain }}
+  name: ${{ dkim_name }}
+  type: TXT
+  value: ${{ dkim_value }}
+  exists: skip
+
+- domain: ${{ domain }}
+  name: '@'
+  type: MX
+  value: mxa.mailgun.org.
+  priority: 10
+  exists: skip
+
+- domain: ${{ domain }}
+  name: '@'
+  type: MX
+  value: mxb.mailgun.org.
+  priority: 10
+  exists: skip
+
+- domain: ${{ domain }}
+  name: email
+  type: CNAME
+  value: mailgun.org.
+  exists: skip
+
+vars:
+- name: domain
+  prompt: Domain Name
+  type: string
+  option: --domain
+
+- name: dkim_name
+  prompt: DKIM Record Name
+  type: string
+  option: --dkim-name
+
+- name: dkim_value
+  prompt: DKIM Record Value
+  type: string
+  option: --dkim-value

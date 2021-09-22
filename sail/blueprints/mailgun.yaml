@@ -1,0 +1,30 @@
+---
+version: 1
+
+# Configure Postfix for Mailgun
+postfix:
+  mode: relay
+  host: smtp.mailgun.org
+  port: 587
+  username: ${{ username }}
+  password: ${{ password }}
+  from_name: ${{ from_name }}
+  from_email: ${{ from_email }}
+
+vars:
+- name: username
+  prompt: Mailgun SMTP Login
+  type: string
+
+- name: password
+  prompt: Mailgun SMTP Password
+  type: string
+
+- name: from_name
+  prompt: From name (for outgoing mail)
+  option: --from-name
+  default: WordPress
+
+- name: from_email
+  prompt: From e-mail (for outgoing mail)
+  option: --from-email
