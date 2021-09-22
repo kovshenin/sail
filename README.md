@@ -370,12 +370,13 @@ sail admin
 
 ## Accessing Logs
 
-You can query your Nginx, PHP and system logs directly from Sail:
+You can query your Nginx, PHP, mail and system logs directly from Sail:
 
 ```
 sail logs
 sail logs --nginx
 sail logs --php
+sail logs --postfix
 ```
 
 Add `--follow` or `-f` to tail-follow the logs, really useful while debugging.

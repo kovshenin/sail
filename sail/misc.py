@@ -84,9 +84,10 @@ def admin():
 @click.option('--nginx-access', is_flag=True)
 @click.option('--nginx-error', '--nginx-errors', is_flag=True)
 @click.option('--php-error', '--php-errors', is_flag=True)
+@click.option('--postfix', '--mail', is_flag=True)
 @click.option('--follow', '-f', is_flag=True)
 @click.option('--lines', '-n', type=int)
-def logs(nginx, php, nginx_access, nginx_error, php_error, follow, lines):
+def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, lines):
 	'''Query and follow logs from the production server'''
 	root = util.find_root()
 	sail_config = util.get_sail_config()
@@ -107,6 +108,15 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, follow, lines):
 		settings.append('--lines %d' % lines)
 	else:
 		settings.append('--lines 30')
+
+	if postfix:
+		settings.append('-t postfix/qmgr')
+		settings.append('-t postfix/pickup')
+		settings.append('-t postfix/master')
+		settings.append('-t postfix/smtp')
+		settings.append('-t postfix/cleanup')
+		settings.append('-t postfix/postsuper')
+		settings.append('-t postfix/postqueue')
 
 	settings = ' '.join(settings)
 

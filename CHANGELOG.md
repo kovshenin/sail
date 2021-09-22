@@ -5,6 +5,7 @@
 * Added: New `postfix` blueprint component and postfix.yaml default BP
 * Added: New `fail2ban` blueprint component and fail2ban.yaml default BP
 * Added: A new `type` attribute to `vars` in blueprints, supports bool, int, float, str
+* Added: New `--postfix` or `--mail` flags to `sail logs` to query postfix items in syslog
 * Fixed: Plugin activation error when no custom plugins specified
 * Fixed: Theme activation mismatch in blueprints, when custom theme above wporg themes
 
