@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+* Added: New `gmail-dns.yaml` blueprint to add Google Mail / Workspace MX records
+* Changed: Remove associated sailed.io DNS record on destroy
+
 ## [0.9.14] - 2021-09-22
 
 * Added: New `mailgun.yaml` and `mailgun-dns.yaml` blueprints to deploy a [working Mailgun configuration](https://konstantin.blog/2021/mailgun-wordpress-sail-cli/)
