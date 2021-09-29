@@ -1,7 +1,8 @@
 # Deploy WordPress to DigitalOcean with Sail
 
 [Sail](https://sailed.io) is a free CLI tool to deploy, manage and scale WordPress applications
-in the DigitalOcean cloud. For support and announcements [join our Slack](https://join.slack.com/t/sailed/shared_invite/zt-vgnf8dfb-oPH1ZY1IwFSg_WyECYh5ow).
+in the DigitalOcean cloud. Visit [our knowledgebase](https://sailed.io/kb/) for the complete
+documentation. For support and announcements [join our Slack](https://join.slack.com/t/sailed/shared_invite/zt-vgnf8dfb-oPH1ZY1IwFSg_WyECYh5ow).
 
 ![Unit Tests](https://github.com/kovshenin/sail/actions/workflows/unit-tests.yml/badge.svg)
 ![End-to-End Tests](https://github.com/kovshenin/sail/actions/workflows/end2end-tests.yml/badge.svg)
@@ -96,7 +97,7 @@ To create a DigitalOcean API token, sign in to your account, browse to
 descriptive name, for example "sail", and make sure both **Read** and **Write**
 scopes are selected.
 
-After generating the token, it'll show up in the list of personal acckss tokens,
+After generating the token, it'll show up in the list of personal access tokens,
 you'll see the token itself directly below the token name. **Copy** that token
 and store it in a safe place.
 
@@ -489,6 +490,7 @@ you should be able to request and install new SSL certificates for your applicat
 
 ## Support
 
+[Our knowledgebase](https://sailed.io/kb/) should be your primary source for help and support.
 Community support is available in [our Slack workspace](https://join.slack.com/t/sailed/shared_invite/zt-vgnf8dfb-oPH1ZY1IwFSg_WyECYh5ow).
 If you do not use Slack, feel free to open an issue here on GitHub.
 
