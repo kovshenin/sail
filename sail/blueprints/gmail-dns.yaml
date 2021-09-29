@@ -1,0 +1,45 @@
+---
+version: 1
+
+# Add Gmail MX records
+dns:
+- domain: ${{ domain }}
+  name: '@'
+  type: MX
+  value: aspmx.l.google.com.
+  priority: 1
+  exists: skip
+
+- domain: ${{ domain }}
+  name: '@'
+  type: MX
+  value: alt1.aspmx.l.google.com.
+  priority: 5
+  exists: skip
+
+- domain: ${{ domain }}
+  name: '@'
+  type: MX
+  value: alt2.aspmx.l.google.com.
+  priority: 5
+  exists: skip
+
+- domain: ${{ domain }}
+  name: '@'
+  type: MX
+  value: alt3.aspmx.l.google.com.
+  priority: 10
+  exists: skip
+
+- domain: ${{ domain }}
+  name: '@'
+  type: MX
+  value: alt4.aspmx.l.google.com.
+  priority: 10
+  exists: skip
+
+vars:
+- name: domain
+  prompt: Domain Name
+  type: string
+  option: --domain
