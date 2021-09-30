@@ -449,11 +449,12 @@ def _profile(stdscr, data, totals):
 			continue
 
 		if r == 'pop':
+			stdscr.erase()
+
 			# Pop back to the main view
 			if len(view_stack) < 1:
 				current_view = _render_view_main
 				args = [stdscr, data, totals]
-				stdscr.erase()
 				continue
 
 			# Pop back to the previous symbol
