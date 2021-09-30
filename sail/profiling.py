@@ -302,7 +302,8 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=1):
 		elif c == ord('q'):
 			return 'exit'
 
-			# TODO: handle resize
+		elif c == curses.KEY_RESIZE:
+			return 'resize'
 
 def _render_view_main(stdscr, data, totals, selected=1, sort=1):
 	rows, cols = stdscr.getmaxyx()
@@ -416,7 +417,6 @@ def _render_view_main(stdscr, data, totals, selected=1, sort=1):
 
 		elif c == curses.KEY_RESIZE:
 			return 'resize'
-			# TODO: handle resize
 
 def _profile(stdscr, data, totals):
 	curs_set(False)
@@ -462,6 +462,7 @@ def _profile(stdscr, data, totals):
 			continue
 
 		if r == 'resize':
+			stdscr.erase()
 			continue
 
 		if r[0] == 'sort':
