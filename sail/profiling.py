@@ -156,7 +156,7 @@ def _render_sticky_header(pad, columns, data, cols, offset_y):
 
 	pad.attroff(curses.color_pair(3) if curses.has_colors() else curses.A_REVERSE)
 
-def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=1):
+def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 	rows, cols = stdscr.getmaxyx()
 
 	columns = [
@@ -305,7 +305,7 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=1):
 		elif c == curses.KEY_RESIZE:
 			return 'resize'
 
-def _render_view_main(stdscr, data, totals, selected=1, sort=1):
+def _render_view_main(stdscr, data, totals, selected=1, sort=2):
 	rows, cols = stdscr.getmaxyx()
 
 	columns = [
@@ -427,7 +427,7 @@ def _profile(stdscr, data, totals):
 	current_view = _render_view_main
 	args = [stdscr, data, totals]
 	kwargs = {'selected': 1}
-	sort = 1
+	sort = 2
 	view_stack = []
 
 	if curses.has_colors():
