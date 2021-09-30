@@ -72,25 +72,25 @@ def profile(path):
 	wrapper(_profile, data=data, totals=totals)
 
 def _render_summary(pad, totals):
-	pad.addstr(0, 0, 'Run: ', curses.A_DIM)
-	pad.addstr('#12448')
-	pad.addstr(' Wall Time: ', curses.A_DIM)
-	pad.addstr('{:,} ms'.format(totals['wt']))
-	pad.addstr(' Peak Memory: ', curses.A_DIM)
-	pad.insstr('{:,.2f} mb'.format(totals['pmu']/1024/1024))
+	pad.addstr(0, 0, 'Run: ', curses.color_pair(1))
+	pad.addstr('#12448', curses.color_pair(2))
+	pad.addstr(' Wall Time: ', curses.color_pair(1))
+	pad.addstr('{:,} ms'.format(totals['wt']), curses.color_pair(2))
+	pad.addstr(' Peak Memory: ', curses.color_pair(1))
+	pad.insstr('{:,.2f} mb'.format(totals['pmu']/1024/1024), curses.color_pair(2))
 
-	pad.addstr(1, 0, 'URL: ', curses.A_DIM)
-	pad.addstr(1, 5, '/wp-admin/admin-ajax.php?_doing_cron=123781293712&_t=1991299921&action=none&cache-buster=chuck-norris')
+	pad.addstr(1, 0, 'URL: ', curses.color_pair(1))
+	pad.addstr(1, 5, '/wp-admin/admin-ajax.php?_doing_cron=123781293712&_t=1991299921&action=none&cache-buster=chuck-norris', curses.color_pair(2))
 
-	pad.addstr(2, 0, 'Method: ', curses.A_DIM)
-	pad.addstr('POST')
+	pad.addstr(2, 0, 'Method: ', curses.color_pair(1))
+	pad.addstr('POST', curses.color_pair(2))
 
-	pad.addstr(' Function Calls: ', curses.A_DIM)
-	pad.addstr('{:,}'.format(totals['ct']))
-	pad.addstr(' Queries: ', curses.A_DIM)
-	pad.addstr('357')
-	pad.addstr(' HTTP Reqs: ', curses.A_DIM)
-	pad.addstr('2')
+	pad.addstr(' Function Calls: ', curses.color_pair(1))
+	pad.addstr('{:,}'.format(totals['ct']), curses.color_pair(2))
+	pad.addstr(' Queries: ', curses.color_pair(1))
+	pad.addstr('357', curses.color_pair(2))
+	pad.addstr(' HTTP Reqs: ', curses.color_pair(1))
+	pad.addstr('2', curses.color_pair(2))
 
 def _render_listview(pad, columns, data, cols, selected = 0):
 	y = -1
@@ -98,15 +98,15 @@ def _render_listview(pad, columns, data, cols, selected = 0):
 		y += 1
 
 		if y == selected:
-			pad.attron(curses.A_REVERSE | curses.A_DIM)
+			pad.attron(curses.color_pair(4) if curses.has_colors() else curses.A_REVERSE)
 		else:
-			pad.attroff(curses.A_REVERSE | curses.A_DIM)
+			pad.attroff(curses.color_pair(4) if curses.has_colors() else curses.A_REVERSE)
 
 		if 'header' in entry:
-			pad.attron(curses.A_REVERSE)
+			pad.attron(curses.color_pair(3) if curses.has_colors() else curses.A_REVERSE)
 			pad.hline(y, 0, ' ', cols)
 			pad.addstr(y, 0, '  ' + entry['header'])
-			pad.attroff(curses.A_REVERSE)
+			pad.attroff(curses.color_pair(3) if curses.has_colors() else curses.A_REVERSE)
 			continue
 
 		if 'space' in entry:
@@ -122,11 +122,11 @@ def _render_listview(pad, columns, data, cols, selected = 0):
 
 def _render_footer(pad, selected, max, cols):
 	max -= 1 # selected is 0-based
-	pad.attron(curses.A_DIM)
+	pad.attron(curses.color_pair(1))
 	pad.hline(0, 0, '-', cols)
 	label = ' %d/%d %d%% ' % (selected, max, selected/max * 100)
 	pad.insstr(0, cols - len(label) - 1, label )
-	pad.attroff(curses.A_DIM)
+	pad.attroff(curses.color_pair(1))
 
 def _render_sticky_header(pad, columns, data, cols, offset_y):
 	header = None
@@ -140,7 +140,7 @@ def _render_sticky_header(pad, columns, data, cols, offset_y):
 	if not header:
 		return
 
-	pad.attron(curses.A_REVERSE)
+	pad.attron(curses.color_pair(3) if curses.has_colors() else curses.A_REVERSE)
 	pad.hline(0, 0, ' ', cols)
 	# pad.addstr(0, 0, 'Off: %d, sel: %d, i: %d' % (offset_y, selected, i))
 	pad.addstr(0, 0, '  ' + header['header'])
@@ -154,7 +154,7 @@ def _render_sticky_header(pad, columns, data, cols, offset_y):
 
 		pad.insstr(0, cols - sum([i['width'] for i in columns]) - 2, label.rjust(column['width']))
 
-	pad.attroff(curses.A_REVERSE)
+	pad.attroff(curses.color_pair(3) if curses.has_colors() else curses.A_REVERSE)
 
 def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=1):
 	rows, cols = stdscr.getmaxyx()
@@ -269,14 +269,14 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=1):
 			selected = len(listview_data) - 1
 
 		# Sorting
-		elif c == curses.KEY_RIGHT:
+		elif c == curses.KEY_RIGHT or c == ord('>'):
 			next = min(sort + 1, len(columns) - 1)
 			if next == sort:
 				continue
 
 			return ('sort', next)
 
-		elif c == curses.KEY_LEFT:
+		elif c == curses.KEY_LEFT or c == ord('<'):
 			prev = max(sort - 1, 0)
 			if prev == sort:
 				continue
@@ -392,14 +392,14 @@ def _render_view_main(stdscr, data, totals, selected=1, sort=1):
 			selected = len(listview_data) - 1
 
 		# Sorting
-		elif c == curses.KEY_RIGHT:
+		elif c == curses.KEY_RIGHT or c == ord('>'):
 			next = min(sort + 1, len(columns) - 1)
 			if next == sort:
 				continue
 
 			return ('sort', next)
 
-		elif c == curses.KEY_LEFT:
+		elif c == curses.KEY_LEFT or c == ord('<'):
 			prev = max(sort - 1, 0)
 			if prev == sort:
 				continue
@@ -419,13 +419,22 @@ def _render_view_main(stdscr, data, totals, selected=1, sort=1):
 			return 'resize'
 
 def _profile(stdscr, data, totals):
-	curs_set(False)
+	try:
+		curs_set(False)
+	except curses.error:
+		pass
 
 	current_view = _render_view_main
 	args = [stdscr, data, totals]
 	kwargs = {'selected': 1}
 	sort = 1
 	view_stack = []
+
+	if curses.has_colors():
+		curses.init_pair(1, 247, curses.COLOR_BLACK)
+		curses.init_pair(2, 255, curses.COLOR_BLACK)
+		curses.init_pair(3, 0, 245)
+		curses.init_pair(4, 0, 255)
 
 	while True:
 		stdscr.refresh()
@@ -438,14 +447,22 @@ def _profile(stdscr, data, totals):
 
 		# Exit
 		if r == 'exit' or r is None:
+			print('\n')
+			stdscr.erase()
 			break
 
 		# Escape back to main view
 		if r == 'view_main':
-			symbol_stack = []
+			stdscr.erase()
+
+			if view_stack:
+				current_view, args, kwargs = view_stack.pop(0)
+				view_stack = []
+				continue
+
 			current_view = _render_view_main
 			args = [stdscr, data, totals]
-			stdscr.erase()
+			kwargs = {}
 			continue
 
 		if r == 'pop':
