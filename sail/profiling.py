@@ -159,14 +159,7 @@ def _render_sticky_header(pad, columns, data, cols, offset_y):
 def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 	rows, cols = stdscr.getmaxyx()
 
-	columns = [
-		{'key': 'ct', 'label': 'Count', 'width': 10},
-		{'key': 'wt', 'label': 'iWT', 'width': 10},
-		{'key': 'excl_wt', 'label': 'eWT', 'width': 10},
-		{'key': 'mu', 'label': 'iMEM', 'width': 10},
-		{'key': 'excl_mu', 'label': 'eMEM', 'width': 10},
-	]
-
+	columns = _columns();
 	for column in columns:
 		column['width'] = max(len(column['label']), len('{:,}'.format(max([i[column['key']] for _, i in data.items()])))) + 2
 
@@ -220,6 +213,7 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 
 	visible = rows - 6
 	offset_y = 0
+	refresh = True
 
 	while True:
 		if selected > visible + offset_y:
@@ -227,49 +221,21 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 		elif selected <= offset_y:
 			offset_y = selected - 1
 
-		_render_listview(listview, columns, listview_data, cols, selected)
-		listview.refresh(offset_y,0, 4,0, rows - 2, cols - 1)
+		if refresh:
+			_render_listview(listview, columns, listview_data, cols, selected)
+			listview.refresh(offset_y,0, 4,0, rows - 2, cols - 1)
 
-		_render_sticky_header(sticky_header, columns, listview_data, cols, offset_y)
-		sticky_header.refresh(0,0, 4,0, 6, cols -1)
+			_render_sticky_header(sticky_header, columns, listview_data, cols, offset_y)
+			sticky_header.refresh(0,0, 4,0, 6, cols -1)
 
-		_render_footer(footer, selected, len(listview_data), cols)
-		footer.refresh(0,0, rows-1,0, rows-1,cols-1)
+			_render_footer(footer, selected, len(listview_data), cols)
+			footer.refresh(0,0, rows-1,0, rows-1,cols-1)
 
 		c = stdscr.getch()
-		if c == curses.KEY_UP:
-			previous = selected - 1
-			while 'header' in listview_data[previous] or 'space' in listview_data[previous]:
-				previous -= 1
-
-			if previous < 1:
-				previous = selected
-
-			selected = previous
-		elif c == curses.KEY_DOWN:
-			next = selected + 1
-			while next < len(listview_data) and ('header' in listview_data[next] or 'space' in listview_data[next]):
-				next += 1
-
-			if next >= len(listview_data):
-				next = selected
-
-			selected = next
-		elif c == curses.KEY_PPAGE:
-			# TODO: skip headers
-			selected = max([selected - visible, 0])
-		elif c == curses.KEY_NPAGE:
-			# TODO: skip headers
-			selected = min([selected + visible, len(listview_data) - 1])
-		elif c == curses.KEY_HOME:
-			# TODO: skip headers
-			selected = 1
-		elif c == curses.KEY_END:
-			# TODO: skip headers
-			selected = len(listview_data) - 1
+		selected, refresh = _handle_scroll(c, listview_data, visible, selected, refresh)
 
 		# Sorting
-		elif c == curses.KEY_RIGHT or c == ord('>'):
+		if c == curses.KEY_RIGHT or c == ord('>'):
 			next = min(sort + 1, len(columns) - 1)
 			if next == sort:
 				continue
@@ -308,14 +274,7 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 def _render_view_main(stdscr, data, totals, selected=1, sort=2):
 	rows, cols = stdscr.getmaxyx()
 
-	columns = [
-		{'key': 'ct', 'label': 'Count', 'width': 10},
-		{'key': 'wt', 'label': 'iWT', 'width': 10},
-		{'key': 'excl_wt', 'label': 'eWT', 'width': 10},
-		{'key': 'mu', 'label': 'iMEM', 'width': 10},
-		{'key': 'excl_mu', 'label': 'eMEM', 'width': 10},
-	]
-
+	columns = _columns()
 	for column in columns:
 		column['width'] = max(len(column['label']), len('{:,}'.format(max([i[column['key']] for _, i in data.items()])))) + 2
 
@@ -343,6 +302,7 @@ def _render_view_main(stdscr, data, totals, selected=1, sort=2):
 
 	offset_y = 0
 	visible = rows - 6
+	refresh = True
 
 	while True:
 		if selected > visible + offset_y:
@@ -350,49 +310,22 @@ def _render_view_main(stdscr, data, totals, selected=1, sort=2):
 		elif selected <= offset_y:
 			offset_y = selected - 1
 
-		_render_listview(listview, columns, listview_data, cols, selected)
-		listview.refresh(offset_y,0, 4,0, rows-2,cols-1)
+		if refresh:
+			_render_listview(listview, columns, listview_data, cols, selected)
+			listview.refresh(offset_y,0, 4,0, rows-2,cols-1)
 
-		_render_sticky_header(sticky_header, columns, listview_data, cols, offset_y)
-		sticky_header.refresh(0,0, 4,0, 6,cols-1)
+			_render_sticky_header(sticky_header, columns, listview_data, cols, offset_y)
+			sticky_header.refresh(0,0, 4,0, 6,cols-1)
 
-		_render_footer(footer, selected, len(listview_data), cols)
-		footer.refresh(0,0, rows-1,0, rows-1,cols-1)
+			_render_footer(footer, selected, len(listview_data), cols)
+			footer.refresh(0,0, rows-1,0, rows-1,cols-1)
+			refresh = False
 
 		c = stdscr.getch()
-		if c == curses.KEY_UP:
-			previous = selected - 1
-			while 'header' in listview_data[previous] or 'space' in listview_data[previous]:
-				previous -= 1
-
-			if previous < 1:
-				previous = selected
-
-			selected = previous
-		elif c == curses.KEY_DOWN:
-			next = selected + 1
-			while next < len(listview_data) and ('header' in listview_data[next] or 'space' in listview_data[next]):
-				next += 1
-
-			if next >= len(listview_data):
-				next = selected
-
-			selected = next
-		elif c == curses.KEY_PPAGE:
-			# TODO: skip headers
-			selected = max([selected - visible, 0])
-		elif c == curses.KEY_NPAGE:
-			# TODO: skip headers
-			selected = min([selected + visible, len(listview_data) - 1])
-		elif c == curses.KEY_HOME:
-			# TODO: skip headers
-			selected = 1
-		elif c == curses.KEY_END:
-			# TODO: skip headers
-			selected = len(listview_data) - 1
+		selected, refresh = _handle_scroll(c, listview_data, visible, selected, refresh)
 
 		# Sorting
-		elif c == curses.KEY_RIGHT or c == ord('>'):
+		if c == curses.KEY_RIGHT or c == ord('>'):
 			next = min(sort + 1, len(columns) - 1)
 			if next == sort:
 				continue
@@ -506,3 +439,64 @@ def _profile(stdscr, data, totals):
 		stdscr.refresh()
 		stdscr.getch()
 		break
+
+def _columns():
+	return [
+		{'key': 'ct', 'label': 'Count', 'width': 10},
+		{'key': 'wt', 'label': 'iWT', 'width': 10},
+		{'key': 'excl_wt', 'label': 'eWT', 'width': 10},
+		{'key': 'mu', 'label': 'iMEM', 'width': 10},
+		{'key': 'excl_mu', 'label': 'eMEM', 'width': 10},
+	]
+
+def _is_valid(items, i):
+	return 'header' not in items[i] and 'space' not in items[i]
+
+def _closest_valid(items, current, step=1):
+	i = current
+	while True:
+		i += step
+
+		if i > len(items) - 1 or i < 0:
+			return current
+
+		if _is_valid(items, i):
+			return i
+
+def _handle_scroll(c, listview_data, visible, selected, refresh):
+	_refresh = refresh
+
+	if c == curses.KEY_UP:
+		prev = _closest_valid(listview_data, selected, -1)
+		_refresh = prev != selected
+		selected = prev
+	elif c == curses.KEY_DOWN:
+		next = _closest_valid(listview_data, selected, +1)
+		_refresh = next != selected
+		selected = next
+	elif c == curses.KEY_PPAGE:
+		prev = max([selected - visible, 0])
+		if not _is_valid(listview_data, prev):
+			prev = _closest_valid(listview_data, prev, +1)
+		_refresh = prev != selected
+		selected = prev
+	elif c == curses.KEY_NPAGE:
+		next = min([selected + visible, len(listview_data) - 1])
+		if not _is_valid(listview_data, next):
+			next = _closest_valid(listview_data, next, -1)
+		_refresh = next != selected
+		selected = next
+	elif c == curses.KEY_HOME:
+		home = 0
+		if not _is_valid(listview_data, home):
+			home = _closest_valid(listview_data, home, +1)
+		_refresh = home != selected
+		selected = home
+	elif c == curses.KEY_END:
+		end = len(listview_data) - 1
+		if not _is_valid(listview_data, end):
+			end = _closest_valid(listview_data, end, -1)
+		_refresh = end != selected
+		selected = end
+
+	return selected, refresh or _refresh
