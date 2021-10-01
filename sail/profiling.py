@@ -234,6 +234,10 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 
 		for parent in entry['parents']:
 			item = {'function': parent, 'label': parent}
+
+			if '#' in parent:
+				item['label'], item['args'] = parent.split('#', 1)
+
 			for col in columns:
 				item[col['key']] = data[parent][col['key']]
 
