@@ -6,6 +6,7 @@ import webbrowser
 
 from curses import wrapper, curs_set
 import curses
+import textwrap
 from random import randrange
 
 @cli.command('profile')
@@ -18,7 +19,9 @@ def profile(path):
 	with path.open('r') as f:
 		xhprof_data = json.load(f)
 
-	totals = {'ct': 0, 'wt': 0, 'ut': 0, 'st': 0, 'cpu': 0, 'mu': 0, 'pmu': 0, 'samples': 0}
+	totals = {'ct': 0, 'wt': 0, 'ut': 0, 'st': 0, 'cpu': 0, 'mu': 0, 'pmu': 0, 'samples': 0,
+		'queries': 0, 'http_reqs': 0}
+
 	metrics = []
 	for key in totals.keys():
 		if key in xhprof_data['main()']:
@@ -40,6 +43,13 @@ def profile(path):
 
 		for metric in metrics:
 			data[child][metric] += info[metric]
+
+		# More counts
+		func = child.split('#', 1)[0]
+		if func in ['mysqli_query', 'mysql_query', 'mysqli::query']:
+			totals['queries'] += data[child]['ct']
+		elif func in ['curl_exec']:
+			totals['http_reqs'] += data[child]['ct']
 
 	for metric in metrics:
 		totals[metric] = data['main()'][metric]
@@ -88,9 +98,9 @@ def _render_summary(pad, totals):
 	pad.addstr(' Function Calls: ', curses.color_pair(1))
 	pad.addstr('{:,}'.format(totals['ct']), curses.color_pair(2))
 	pad.addstr(' Queries: ', curses.color_pair(1))
-	pad.addstr('357', curses.color_pair(2))
+	pad.addstr('{:,}'.format(totals['queries']), curses.color_pair(2))
 	pad.addstr(' HTTP Reqs: ', curses.color_pair(1))
-	pad.addstr('2', curses.color_pair(2))
+	pad.addstr('{:,}'.format(totals['http_reqs']), curses.color_pair(2))
 
 def _render_listview(pad, columns, data, cols, selected = 0):
 	y = -1
@@ -113,8 +123,27 @@ def _render_listview(pad, columns, data, cols, selected = 0):
 			pad.hline(y, 0, ' ', cols)
 			continue
 
+		if 'meta' in entry:
+			if y != selected:
+				pad.attron(curses.color_pair(5))
+			pad.hline(y, 0, ' ', cols)
+			pad.insstr(y, 0, '  ' + entry['meta'])
+			if y != selected:
+				pad.attroff(curses.color_pair(5))
+
+			continue
+
+		label = entry['label']
+		args = entry.get('args')
+
 		pad.hline(y, 0, ' ', cols)
-		pad.addstr(y, 0, '  ' + entry['function'])
+		pad.addstr(y, 0, '  ' + label)
+		if args:
+			if y != selected:
+				pad.attron(curses.color_pair(5))
+			pad.insstr(' => ' + args)
+			if y != selected:
+				pad.attroff(curses.color_pair(5))
 		for column in reversed(columns):
 			pad.insstr(y, cols - sum([i['width'] for i in columns]) - 2, '{:,}'.format(entry[column['key']]).rjust(column['width']))
 
@@ -169,11 +198,33 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 
 	entry = data[symbol]
 
-	item = {'function': symbol}
+	item = {'function': symbol, 'label': symbol}
+
+	meta = None
+	expand_meta_for = [
+		'mysqli_query',
+		'mysql_query',
+		'curl_exec',
+		'mysqli::query'
+	]
+
+	if '#' in symbol:
+		item['label'], args = symbol.split('#', 1)
+
+		if item['label'] in expand_meta_for:
+			meta = []
+			for line in textwrap.wrap(args, cols - 4):
+				meta.append({'meta': line})
+		else:
+			item['args'] = args
+
 	for col in columns:
 		item[col['key']] = entry[col['key']]
 
 	listview_data.append(item)
+	if meta:
+		listview_data.append({'space': ''})
+		listview_data.extend(meta)
 
 	if len(set(entry['parents'])):
 		listview_data.append({'space': ''})
@@ -181,7 +232,7 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 		parents = []
 
 		for parent in entry['parents']:
-			item = {'function': parent}
+			item = {'function': parent, 'label': parent}
 			for col in columns:
 				item[col['key']] = data[parent][col['key']]
 
@@ -195,7 +246,11 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 		children = []
 
 		for child in entry['children']:
-			item = {'function': child}
+			item = {'function': child, 'label': child}
+
+			if '#' in child:
+				item['label'], item['args'] = child.split('#', 1)
+
 			for col in columns:
 				item[col['key']] = data[child][col['key']]
 
@@ -256,7 +311,7 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 			return 'pop' # previous symbol or main
 
 		elif c == curses.KEY_ENTER or c == 13 or c == 10:
-			if 'header' in listview_data[selected] or 'space' in listview_data[selected]:
+			if 'function' not in listview_data[selected]:
 				continue
 
 			# First item is the function itself, don't select it.
@@ -286,7 +341,11 @@ def _render_view_main(stdscr, data, totals, selected=1, sort=2):
 	columns[sort]['sort'] = True
 
 	for func, info in sorted(data.items(), key=lambda x: x[1][sort_key], reverse=True):
-		item = {'function': func}
+		item = {'function': func, 'label': func}
+
+		if '#' in func:
+			item['label'], item['args'] = func.split('#', 1)
+
 		for col in columns:
 			item[col['key']] = info[col['key']]
 
@@ -368,6 +427,7 @@ def _profile(stdscr, data, totals):
 		curses.init_pair(2, 255, curses.COLOR_BLACK)
 		curses.init_pair(3, 0, 245)
 		curses.init_pair(4, 0, 255)
+		curses.init_pair(5, 247, curses.COLOR_BLACK)
 
 	while True:
 		stdscr.refresh()
