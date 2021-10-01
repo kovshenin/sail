@@ -205,7 +205,8 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 		'mysqli_query',
 		'mysql_query',
 		'curl_exec',
-		'mysqli::query'
+		'mysqli::query',
+		'{closure}',
 	]
 
 	if '#' in symbol:
