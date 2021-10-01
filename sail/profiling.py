@@ -1,26 +1,106 @@
 from sail import cli, util
 
 import click, pathlib, json
-import os
-import webbrowser
+import os, re
+import requests
+import time
 
 from curses import wrapper, curs_set
 import curses
 import textwrap
 from random import randrange
+from urllib.parse import urlparse
+from datetime import datetime
+import subprocess
 
 @cli.command('profile')
 @click.argument('path', nargs=1)
 def profile(path):
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+
+	if 'profile_key' not in sail_config:
+		raise click.ClickException('Profile key not found in .sail/config.json')
+
+	profiles_dir = pathlib.Path(root + '/.profiles')
+	profiles_dir.mkdir(parents=True, exist_ok=True)
+
+	if path.startswith('http://') or path.startswith('https://'):
+		url = urlparse(path)
+		host = '%s.sailed.io' % sail_config['app_id']
+		query = url.query
+		nocache = 'SAIL_NO_CACHE=%d' % time.time()
+		query = nocache if not query else query + '&' + nocache
+		query = '?' + query
+
+		click.echo('# Profiling')
+		click.echo('- Server: %s' % host)
+		click.echo('- Host: %s' % url.netloc)
+		click.echo('- Request: GET %s%s' % (url.path, query))
+
+		headers = {
+			'Host': url.netloc,
+			'X-Sail-Profile': sail_config['profile_key'],
+		}
+
+		request = requests.Request('GET', '%s://%s%s%s' % (url.scheme, host, url.path, query), headers=headers)
+		request = request.prepare()
+		session = requests.Session()
+
+		try:
+			response = session.send(request)
+		except:
+			raise click.ClickException('Could not make profiling request.')
+
+		if 'X-Sail-Profile' not in response.headers:
+			raise click.ClickException('X-Sail-Profile header not found in response. Check your profile key.')
+
+		filename = response.headers['X-Sail-Profile']
+		dest_filename = datetime.now().strftime('%Y-%m-%d-%H%M%S.xhprof.json')
+		click.echo('- Downloading profile from %s' % filename)
+
+		args = ['-t']
+		source = 'root@%s.sailed.io:%s' % (sail_config['app_id'], filename)
+		destination = '%s/%s' % (profiles_dir, dest_filename)
+		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
+
+		if returncode != 0:
+			raise click.ClickException('An error occurred in rsync. Please try again.')
+
+		click.echo('- Cleaning up production')
+
+		p = subprocess.Popen(['ssh',
+			'-i', '%s/.sail/ssh.key' % root,
+			'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+			'-o', 'IdentitiesOnly=yes',
+			'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+			'root@%s.sailed.io' % sail_config['app_id'],
+			'rm %s' % filename
+		])
+
+		while p.poll() is None:
+			util.loader()
+
+		if p.returncode != 0:
+			raise click.ClickException('An error occurred in SSH. Please try again.')
+
+		click.echo('- Profile saved to .profiles/%s' % dest_filename)
+		path = profiles_dir / dest_filename
+
 	path = pathlib.Path(path)
 	if not path.exists() or not path.is_file():
 		raise click.ClickException('Invalid file')
 
 	with path.open('r') as f:
-		xhprof_data = json.load(f)
+		profile_data = json.load(f)
+		xhprof_data = profile_data['xhprof']
+
+	del profile_data['xhprof']
 
 	totals = {'ct': 0, 'wt': 0, 'ut': 0, 'st': 0, 'cpu': 0, 'mu': 0, 'pmu': 0, 'samples': 0,
-		'queries': 0, 'http_reqs': 0}
+		'queries': 0, 'http_reqs': 0, 'timestamp': profile_data['timestamp'],
+		'method': profile_data['method'], 'host': profile_data['host'],
+		'request_uri': profile_data['request_uri']}
 
 	metrics = []
 	for key in totals.keys():
@@ -82,18 +162,27 @@ def profile(path):
 	wrapper(_profile, data=data, totals=totals)
 
 def _render_summary(pad, totals):
-	pad.addstr(0, 0, 'Run: ', curses.color_pair(1))
-	pad.addstr('#12448', curses.color_pair(2))
-	pad.addstr(' Wall Time: ', curses.color_pair(1))
-	pad.addstr('{:,} ms'.format(totals['wt']), curses.color_pair(2))
-	pad.addstr(' Peak Memory: ', curses.color_pair(1))
-	pad.insstr('{:,.2f} mb'.format(totals['pmu']/1024/1024), curses.color_pair(2))
+	run_id = datetime.fromtimestamp(totals['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
 
+	pad.addstr(0, 0, 'Run: ', curses.color_pair(1))
+	pad.addstr(run_id, curses.color_pair(2))
+	pad.addstr(' Wall Time: ', curses.color_pair(1))
+	pad.addstr('{:,} µs'.format(totals['wt']), curses.color_pair(2))
+	pad.addstr(' Peak Memory: ', curses.color_pair(1))
+	pad.insstr('{:,.2f} MiB'.format(totals['pmu']/1024/1024), curses.color_pair(2))
+
+	request_uri = totals['request_uri']
+	request_uri = re.sub(r'&?SAIL_NO_CACHE=[0-9]+', '', request_uri)
+	request_uri = request_uri.rstrip('?')
+	if request_uri == '/':
+		request_uri = ''
+
+	url = totals['host'] + request_uri
 	pad.addstr(1, 0, 'URL: ', curses.color_pair(1))
-	pad.addstr(1, 5, '/wp-admin/admin-ajax.php?_doing_cron=123781293712&_t=1991299921&action=none&cache-buster=chuck-norris', curses.color_pair(2))
+	pad.addstr(1, 5, url, curses.color_pair(2))
 
 	pad.addstr(2, 0, 'Method: ', curses.color_pair(1))
-	pad.addstr('POST', curses.color_pair(2))
+	pad.addstr(totals['method'], curses.color_pair(2))
 
 	pad.addstr(' Function Calls: ', curses.color_pair(1))
 	pad.addstr('{:,}'.format(totals['ct']), curses.color_pair(2))
