@@ -68,6 +68,7 @@ def init(provider_token, email, size, region, force):
 			'secret': app['secret'],
 			'url': app['url'],
 			'login_url': app['login_url'],
+			'profile_key': app['profile_key'],
 			'version': __version__,
 		}, f, indent='\t')
 

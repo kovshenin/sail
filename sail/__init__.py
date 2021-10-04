@@ -14,4 +14,4 @@ def cli(debug):
 	util.debug(debug)
 
 # Command groups
-from sail import provision, deploy, database, backups, domains, misc
+from sail import provision, deploy, database, backups, domains, misc, profiling
