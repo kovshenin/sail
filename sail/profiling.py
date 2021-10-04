@@ -4,96 +4,58 @@ import click, pathlib, json
 import os, re
 import requests
 import time
+import click.utils
 
-from curses import wrapper, curs_set
 import curses
 import textwrap
-from random import randrange
 from urllib.parse import urlparse
 from datetime import datetime
 import subprocess
+import shlex
 
-@cli.command('profile')
+# shortcuts:
+# sail profile .profiles/some-file.json
+# sail profile https://example.org/
+
+# sail profile open .profiles/something.json
+# sail profile run https://example.org
+# sail profile curl -H 'Some: header' -XPOST https://example.org
+# sail profile key --curl
+# sail profile download /var/www/profiles/filename.xhprof
+
+class ProfilerCmd(click.Group):
+	def resolve_command(self, ctx, args):
+		cmd_name = click.utils.make_str(args[0])
+
+		if cmd_name.startswith('http://') or cmd_name.startswith('https://'):
+			args.insert(0, 'run')
+
+		path = pathlib.Path(cmd_name)
+		if path.exists() and path.is_file():
+			args.insert(0, 'open')
+
+		return super().resolve_command(ctx, args)
+
+@cli.group(cls=ProfilerCmd)
+@click.pass_context
+def profile(ctx):
+	'''Run the profiler to find application performance bottlenecks'''
+	pass
+
+@profile.command()
 @click.argument('path', nargs=1)
-def profile(path):
-	root = util.find_root()
-	sail_config = util.get_sail_config()
-
-	if 'profile_key' not in sail_config:
-		raise click.ClickException('Profile key not found in .sail/config.json')
-
-	profiles_dir = pathlib.Path(root + '/.profiles')
-	profiles_dir.mkdir(parents=True, exist_ok=True)
-
-	if path.startswith('http://') or path.startswith('https://'):
-		url = urlparse(path)
-		host = '%s.sailed.io' % sail_config['app_id']
-		query = url.query
-		nocache = 'SAIL_NO_CACHE=%d' % time.time()
-		query = nocache if not query else query + '&' + nocache
-		query = '?' + query
-
-		click.echo('# Profiling')
-		click.echo('- Server: %s' % host)
-		click.echo('- Host: %s' % url.netloc)
-		click.echo('- Request: GET %s%s' % (url.path, query))
-
-		headers = {
-			'Host': url.netloc,
-			'X-Sail-Profile': sail_config['profile_key'],
-		}
-
-		request = requests.Request('GET', '%s://%s%s%s' % (url.scheme, host, url.path, query), headers=headers)
-		request = request.prepare()
-		session = requests.Session()
-
-		try:
-			response = session.send(request)
-		except:
-			raise click.ClickException('Could not make profiling request.')
-
-		if 'X-Sail-Profile' not in response.headers:
-			raise click.ClickException('X-Sail-Profile header not found in response. Check your profile key.')
-
-		filename = response.headers['X-Sail-Profile']
-		dest_filename = datetime.now().strftime('%Y-%m-%d-%H%M%S.xhprof.json')
-		click.echo('- Downloading profile from %s' % filename)
-
-		args = ['-t']
-		source = 'root@%s.sailed.io:%s' % (sail_config['app_id'], filename)
-		destination = '%s/%s' % (profiles_dir, dest_filename)
-		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
-
-		if returncode != 0:
-			raise click.ClickException('An error occurred in rsync. Please try again.')
-
-		click.echo('- Cleaning up production')
-
-		p = subprocess.Popen(['ssh',
-			'-i', '%s/.sail/ssh.key' % root,
-			'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
-			'-o', 'IdentitiesOnly=yes',
-			'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-			'root@%s.sailed.io' % sail_config['app_id'],
-			'rm %s' % filename
-		])
-
-		while p.poll() is None:
-			util.loader()
-
-		if p.returncode != 0:
-			raise click.ClickException('An error occurred in SSH. Please try again.')
-
-		click.echo('- Profile saved to .profiles/%s' % dest_filename)
-		path = profiles_dir / dest_filename
-
+def open(path):
+	'''Open the profile browser with the specified JSON file'''
 	path = pathlib.Path(path)
 	if not path.exists() or not path.is_file():
-		raise click.ClickException('Invalid file')
+		raise click.ClickException('The profile file is invalid or does not exist')
 
 	with path.open('r') as f:
-		profile_data = json.load(f)
-		xhprof_data = profile_data['xhprof']
+		try:
+			profile_data = json.load(f)
+			xhprof_data = profile_data['xhprof']
+		except:
+			raise click.ClickException('This profile file is invalid, invalid or incomplete JSON')
 
 	del profile_data['xhprof']
 
@@ -159,7 +121,144 @@ def profile(path):
 			data[parent]['excl_' + metric] -= info[metric]
 
 	os.environ.setdefault('ESCDELAY', '10')
-	wrapper(_profile, data=data, totals=totals)
+	curses.wrapper(_browser, data=data, totals=totals)
+
+@profile.command()
+@click.argument('url', nargs=1)
+@click.pass_context
+def run(ctx, url):
+	'''Run the profiler on a URL, download and open the results'''
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+
+	if 'profile_key' not in sail_config:
+		raise click.ClickException('Profile key not found in .sail/config.json')
+
+	url = urlparse(url)
+	host = '%s.sailed.io' % sail_config['app_id']
+	query = url.query
+	nocache = 'SAIL_NO_CACHE=%d' % time.time()
+	query = nocache if not query else query + '&' + nocache
+	query = '?' + query
+	url_path = url.path if url.path else '/'
+
+	click.echo('# Profiling')
+	click.echo('- Server: %s' % host)
+	click.echo('- Host: %s' % url.netloc)
+	click.echo('- Request: GET %s%s' % (url_path, query))
+
+	headers = {
+		'Host': url.netloc,
+		'X-Sail-Profile': sail_config['profile_key'],
+	}
+
+	request = requests.Request('GET', '%s://%s%s%s' % (url.scheme, host, url.path, query), headers=headers)
+	request = request.prepare()
+	session = requests.Session()
+
+	try:
+		response = session.send(request)
+	except:
+		raise click.ClickException('Could not make profiling request.')
+
+	if 'X-Sail-Profile' not in response.headers:
+		raise click.ClickException('X-Sail-Profile header not found in response. Check your profile key.')
+
+	filename = response.headers['X-Sail-Profile']
+	profile_path = ctx.invoke(download, path=filename)
+	return ctx.invoke(open, path=profile_path)
+
+@profile.command()
+@click.option('--header', is_flag=True, help="Provide the result as an HTTP header string")
+def key(header):
+	'''Show the profiling secret key'''
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+
+	if 'profile_key' not in sail_config:
+		raise click.ClickException('Profile key not found in .sail/config.json')
+
+	if header:
+		click.echo('X-Sail-Profile: %s' % sail_config['profile_key'], nl=False)
+		return
+
+	click.echo(sail_config['profile_key'], nl=False)
+
+@profile.command(context_settings=dict(ignore_unknown_options=True))
+@click.argument('command', nargs=-1)
+@click.pass_context
+def curl(ctx, command):
+	'''Wrapper for the curl command which adds an X-Sail-Profile header'''
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+
+	if 'profile_key' not in sail_config:
+		raise click.ClickException('Profile key not found in .sail/config.json')
+
+	command = list(command)
+	command = ['-s', '-v', '-H', 'X-Sail-Profile: %s' % sail_config['profile_key']] + command
+	click.echo('# Running cURL with profiling headers', err=True)
+
+	# TODO: Maybe add the SAIL_NOCACHE query var
+	p = subprocess.Popen(['curl'] + command, stdout=subprocess.PIPE,
+		stderr=subprocess.PIPE, encoding='utf8')
+
+	stdout, stderr = p.communicate()
+
+	if p.returncode != 0:
+		raise click.ClickException('An error occurred in cURL. Please try again.')
+
+	matches = re.search(r'^<\s*X-Sail-Profile: (.+)$', stderr, re.MULTILINE)
+	if not matches:
+		raise click.ClickException('Could not find profile filename from headers')
+
+	filename = matches.group(1)
+	profile_path = ctx.invoke(download, path=filename)
+	return ctx.invoke(open, path=profile_path)
+
+@profile.command()
+@click.argument('path', nargs=1)
+def download(path):
+	'''Download a profile JSON from the production server'''
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+
+	if 'profile_key' not in sail_config:
+		raise click.ClickException('Profile key not found in .sail/config.json')
+
+	profiles_dir = pathlib.Path(root + '/.profiles')
+	profiles_dir.mkdir(parents=True, exist_ok=True)
+
+	dest_filename = datetime.now().strftime('%Y-%m-%d-%H%M%S.xhprof.json')
+	click.echo('- Downloading profile from %s' % path)
+
+	args = ['-t']
+	source = 'root@%s.sailed.io:%s' % (sail_config['app_id'], path)
+	destination = '%s/%s' % (profiles_dir, dest_filename)
+	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
+
+	if returncode != 0:
+		raise click.ClickException('An error occurred in rsync. Please try again.')
+
+	click.echo('- Cleaning up production')
+
+	p = subprocess.Popen(['ssh',
+		'-i', '%s/.sail/ssh.key' % root,
+		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'IdentitiesOnly=yes',
+		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'root@%s.sailed.io' % sail_config['app_id'],
+		'rm %s' % path
+	])
+
+	while p.poll() is None:
+		util.loader()
+
+	if p.returncode != 0:
+		raise click.ClickException('An error occurred in SSH. Please try again.')
+
+	click.echo('- Profile saved to .profiles/%s' % dest_filename)
+	return profiles_dir / dest_filename
 
 def _render_summary(pad, totals):
 	run_id = datetime.fromtimestamp(totals['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
@@ -504,9 +603,9 @@ def _render_view_main(stdscr, data, totals, selected=1, sort=2):
 		elif c == curses.KEY_RESIZE:
 			return 'resize'
 
-def _profile(stdscr, data, totals):
+def _browser(stdscr, data, totals):
 	try:
-		curs_set(False)
+		curses.curs_set(False)
 	except curses.error:
 		pass
 
