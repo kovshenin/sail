@@ -31,6 +31,7 @@ Contents:
 * [Accessing Logs](#accessing-logs)
 * [Integrating with Git](#integrating-with-git)
 * [Blueprints](#blueprints)
+* [Profiling](#profiling)
 * [Migrating existing projects to Sail](#migrating-existing-projects-to-sail)
 * [Support](#support)
 * [License and Contributing](#license-and-contributing)
@@ -469,6 +470,22 @@ directory:
   configuration for Mailgun transactional e-mail service.
 * **sample.yaml**: This file contains all available blueprint components with
   some usage examples and comments. Don't actually apply this file.
+
+## Profiling
+
+Sail ships with a built-in performance profiler for WordPress. It will help you
+spot performance bottlenecks in your application code. To generate a profile run:
+
+```
+sail profile https://example.org
+```
+
+This will perform an HTTP request to the specified URL, gather and store all
+profiling data, download the data to your local working copy, and open it in
+the profile browser.
+
+Learn more about [profiling WordPress with Sail CLI](https://sailed.io/kb/profile/)
+in our knowledgebase.
 
 ## Migrating existing projects to Sail
 
