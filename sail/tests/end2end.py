@@ -517,8 +517,8 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(result.stdout, 'X-Sail-Profile: %s' % config['profile_key'])
 
 	@unittest.skipIf(work_in_progress, 'Work in progress!')
-	@patch('sail.profiling._browser')
-	def test_016_profile(self, browser):
+	@patch('curses.wrapper')
+	def test_016_profile(self, wrapper):
 		with open('.sail/config.json') as f:
 			config = json.load(f)
 
@@ -531,8 +531,8 @@ class TestEnd2End(unittest.TestCase):
 		self.assertIn('Cleaning up production', result.output)
 		self.assertIn('Profile saved to', result.output)
 
-		browser.assert_called_once()
-		totals = browser.call_args.kwargs['totals']
+		wrapper.assert_called_once()
+		totals = wrapper.call_args.kwargs['totals']
 
 		self.assertGreater(totals['timestamp'], 1633423829)
 		self.assertGreater(totals['queries'], 1)
@@ -543,7 +543,7 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(totals['method'], 'GET')
 		self.assertIn('SAIL_NO_CACHE=', totals['request_uri'])
 
-		data = browser.call_args.kwargs['data']
+		data = wrapper.call_args.kwargs['data']
 		self.assertEqual(data['main()']['ct'], 1)
 		self.assertGreater(data['main()']['wt'], 1)
 		self.assertGreater(data['main()']['mu'], 1)
