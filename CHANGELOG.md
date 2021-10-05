@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.9.15] - 2021-10-05
+
 * Added: New `profile` command group for performance profiling
 * Added: New `gmail-dns.yaml` blueprint to add Google Mail / Workspace MX records
 * Changed: Remove associated sailed.io DNS record on destroy
