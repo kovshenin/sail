@@ -57,7 +57,6 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Success. The ship has sailed!', result.output)
 
-	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_002_wp_home(self):
 		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'home'])
 		self.assertEqual(result.exit_code, 0)
@@ -503,6 +502,58 @@ class TestEnd2End(unittest.TestCase):
 		self.assertIn('Skipping MX record for baz.saildemo.com', result.output)
 		self.assertIn('Skipping CNAME record for qux.saildemo.com', result.output)
 		self.assertIn('Blueprint applied successfully', result.output)
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_015_profile_config(self):
+		with open('.sail/config.json') as f:
+			config = json.load(f)
+
+		result = self.runner.invoke(cli, ['profile', 'key'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertEqual(result.stdout, config['profile_key'])
+
+		result = self.runner.invoke(cli, ['profile', 'key', '--header'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertEqual(result.stdout, 'X-Sail-Profile: %s' % config['profile_key'])
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	@patch('sail.profiling._browser')
+	def test_016_profile(self, browser):
+		with open('.sail/config.json') as f:
+			config = json.load(f)
+
+		result = self.runner.invoke(cli, ['profile', self.home])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Server:', result.output)
+		self.assertIn('Host:', result.output)
+		self.assertIn('Request:', result.output)
+		self.assertIn('Downloading profile from', result.output)
+		self.assertIn('Cleaning up production', result.output)
+		self.assertIn('Profile saved to', result.output)
+
+		browser.assert_called_once()
+		totals = browser.call_args.kwargs['totals']
+
+		self.assertGreater(totals['timestamp'], 1633423829)
+		self.assertGreater(totals['queries'], 1)
+		self.assertGreater(totals['ct'], 1)
+		self.assertGreater(totals['wt'], 1)
+		self.assertGreater(totals['mu'], 1)
+		self.assertGreater(totals['pmu'], 1)
+		self.assertEqual(totals['method'], 'GET')
+		self.assertIn('SAIL_NO_CACHE=', totals['request_uri'])
+
+		data = browser.call_args.kwargs['data']
+		self.assertEqual(data['main()']['ct'], 1)
+		self.assertGreater(data['main()']['wt'], 1)
+		self.assertGreater(data['main()']['mu'], 1)
+		self.assertGreater(data['main()']['pmu'], 1)
+
+		self.assertGreater(data['main()']['excl_wt'], 1)
+		self.assertGreater(data['main()']['excl_pmu'], 1)
+
+		self.assertIn('wp', data['main()']['children'])
+		self.assertIn('do_action#init', data['main()']['children'])
 
 	def test_999_destroy(self):
 		result = self.runner.invoke(cli, ['destroy', '-y'])
