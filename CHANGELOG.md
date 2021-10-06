@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 * Added: New `profile clean` command to delete local and remove profiling data
+* Fixed: When deleting a parent domain orphaned subdomains were not deleted
 
 ## [0.9.15] - 2021-10-05
 
