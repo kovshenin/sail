@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Added: New `profile clean` command to delete local and remove profiling data
+
 ## [0.9.15] - 2021-10-05
 
 * Added: New `profile` command group for performance profiling
