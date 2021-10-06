@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from datetime import datetime
 import subprocess
 import shlex
+import shutil
 
 # shortcuts:
 # sail profile .profiles/some-file.json
@@ -22,6 +23,7 @@ import shlex
 # sail profile curl -H 'Some: header' -XPOST https://example.org
 # sail profile key --curl
 # sail profile download /var/www/profiles/filename.xhprof
+# sail profile clean
 
 class ProfilerCmd(click.Group):
 	def resolve_command(self, ctx, args):
@@ -259,6 +261,36 @@ def download(path):
 
 	click.echo('- Profile saved to .profiles/%s' % dest_filename)
 	return profiles_dir / dest_filename
+
+@profile.command()
+def clean():
+	'''Delete all profiling data from production and local working copy'''
+	root = util.find_root()
+	sail_config = util.get_sail_config()
+
+	# Delete local profiles
+	click.echo('# Cleaning up')
+	click.echo('- Deleting local profiles')
+	profiles_dir = pathlib.Path(root + '/.profiles')
+	shutil.rmtree(profiles_dir)
+
+	click.echo('- Deleting production profiles')
+	p = subprocess.Popen(['ssh',
+		'-i', '%s/.sail/ssh.key' % root,
+		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'IdentitiesOnly=yes',
+		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'root@%s.sailed.io' % sail_config['app_id'],
+		'rm -rf /var/www/profiles/*'
+	])
+
+	while p.poll() is None:
+		util.loader()
+
+	if p.returncode != 0:
+		raise click.ClickException('An error occurred in SSH. Please try again.')
+
+	click.echo('- Done')
 
 def _render_summary(pad, totals):
 	run_id = datetime.fromtimestamp(totals['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
