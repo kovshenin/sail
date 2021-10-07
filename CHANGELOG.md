@@ -4,6 +4,7 @@
 
 * Added: New `profile clean` command to delete local and remove profiling data
 * Added: `php-xml` and `php-zip` packages to the core image
+* Added: Support for the newer justsailed.io internal subdomains
 * Fixed: When deleting a parent domain orphaned subdomains were not deleted
 * Fixed: Poor performance navigating the profile browser with > 5k entries
 
