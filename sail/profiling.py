@@ -322,8 +322,14 @@ def _render_summary(pad, totals):
 	pad.addstr(' HTTP Reqs: ', curses.color_pair(1))
 	pad.addstr('{:,}'.format(totals['http_reqs']), curses.color_pair(2))
 
-def _render_listview(pad, columns, data, cols, selected = 0):
+def _render_listview(pad, columns, data, cols, selected=0, lines=None):
 	y = -1
+
+	if lines:
+		offset_y, visible = lines
+		y += offset_y
+		data = data[offset_y:visible+1]
+
 	for entry in data:
 		y += 1
 
@@ -502,11 +508,12 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 			offset_y = selected - 1
 
 		if refresh:
-			_render_listview(listview, columns, listview_data, cols, selected)
-			listview.refresh(offset_y,0, 4,0, rows - 2, cols - 1)
+			lines = (offset_y, offset_y + visible)
+			_render_listview(listview, columns, listview_data, cols, selected, lines)
+			listview.refresh(offset_y,0, 4,0, rows-2,cols-1)
 
 			_render_sticky_header(sticky_header, columns, listview_data, cols, offset_y)
-			sticky_header.refresh(0,0, 4,0, 6, cols -1)
+			sticky_header.refresh(0,0, 4,0, 6,cols-1)
 
 			_render_footer(footer, selected, len(listview_data), cols)
 			footer.refresh(0,0, rows-1,0, rows-1,cols-1)
@@ -595,7 +602,8 @@ def _render_view_main(stdscr, data, totals, selected=1, sort=2):
 			offset_y = selected - 1
 
 		if refresh:
-			_render_listview(listview, columns, listview_data, cols, selected)
+			lines = (offset_y, offset_y + visible)
+			_render_listview(listview, columns, listview_data, cols, selected, lines)
 			listview.refresh(offset_y,0, 4,0, rows-2,cols-1)
 
 			_render_sticky_header(sticky_header, columns, listview_data, cols, offset_y)
