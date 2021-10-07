@@ -17,14 +17,14 @@ def cli():
 	root = util.find_root()
 	sail_config = util.get_sail_config()
 
-	click.echo('Spawning an interactive MySQL shell at %s.sailed.io' % sail_config['app_id'])
+	click.echo('Spawning an interactive MySQL shell at %s' % sail_config['hostname'])
 
 	os.execlp('ssh', 'ssh', '-t',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'docker exec -it sail sudo -u www-data wp --path=/var/www/public db cli'
 	)
 
@@ -50,7 +50,7 @@ def import_cmd(path):
 
 	args = ['-t']
 	source = path
-	destination = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], temp_name)
+	destination = 'root@%s:/var/www/%s' % (sail_config['hostname'], temp_name)
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
@@ -67,7 +67,7 @@ def import_cmd(path):
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'docker exec sail bash -c "%s /var/www/%s | mysql -uroot wordpress"' % (cat_bin, temp_name)
 	])
 
@@ -84,7 +84,7 @@ def import_cmd(path):
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'docker exec sail rm /var/www/%s' % temp_name
 	])
 
@@ -113,7 +113,7 @@ def export():
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'docker exec sail bash -c "mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s"' % filename
 	])
 
@@ -126,7 +126,7 @@ def export():
 	click.echo('- Export completed, downloading')
 
 	args = ['-t']
-	source = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], filename)
+	source = 'root@%s:/var/www/%s' % (sail_config['hostname'], filename)
 	destination = '%s/%s' % (backups_dir, filename)
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
@@ -140,7 +140,7 @@ def export():
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'docker exec sail rm /var/www/%s' % filename
 	])
 

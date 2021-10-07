@@ -60,14 +60,14 @@ def wp(command):
 
 	command = shlex.join(command)
 
-	click.echo('Spawning SSH and running WP-CLI on %s.sailed.io' % sail_config['app_id'], err=True)
+	click.echo('Spawning SSH and running WP-CLI on %s' % sail_config['hostname'], err=True)
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'docker exec -it sail sudo -u www-data bash -c "cd ~/public; wp %s"' % command
 	)
 
@@ -92,7 +92,7 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 	root = util.find_root()
 	sail_config = util.get_sail_config()
 
-	click.echo('Querying logs on %s.sailed.io' % sail_config['app_id'])
+	click.echo('Querying logs on %s' % sail_config['hostname'])
 
 	settings = []
 	if nginx_access or nginx:
@@ -125,7 +125,7 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'journalctl --no-hostname --directory=/var/log/journal %s' % settings
 	)
 
@@ -142,13 +142,13 @@ def ssh(root):
 	if not as_root:
 		command = 'docker exec -it sail sudo -u www-data bash -c "cd ~/public; bash"'
 
-	click.echo('Spawning an interactive SSH shell for %s.sailed.io' % sail_config['app_id'])
+	click.echo('Spawning an interactive SSH shell for %s' % sail_config['hostname'])
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		command
 	)

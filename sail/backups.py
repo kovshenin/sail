@@ -62,7 +62,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 		args = ['-rtl', '--delete', '--rsync-path', 'sudo -u www-data rsync']
 		source = '%s/uploads/' % progress_dir
-		destination = 'root@%s.sailed.io:/var/www/uploads/' % app_id
+		destination = 'root@%s:/var/www/uploads/' % sail_config['hostname']
 		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 		if returncode != 0:
@@ -73,7 +73,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 	args = ['-rtl', '--delete', '--rsync-path', 'sudo -u www-data rsync']
 	source = '%s/www/' % progress_dir
-	destination = 'root@%s.sailed.io:/var/www/public/' % app_id
+	destination = 'root@%s:/var/www/public/' % sail_config['hostname']
 	returncode, stdout, stderr = util.rsync(args, source, destination)
 
 	if returncode != 0:
@@ -87,7 +87,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 		args = ['-t']
 		source = '%s/database.sql.gz' % progress_dir
-		destination = 'root@%s.sailed.io:/var/www/%s' % (app_id, database_filename)
+		destination = 'root@%s:/var/www/%s' % (sail_config['hostname'], database_filename)
 		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 		if returncode != 0:
@@ -103,7 +103,7 @@ def restore(path, yes, skip_db, skip_uploads):
 			'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 			'-o', 'IdentitiesOnly=yes',
 			'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-			'root@%s.sailed.io' % sail_config['app_id'],
+			'root@%s' % sail_config['hostname'],
 			'docker exec sail bash -c "zcat /var/www/%s | mysql -uroot wordpress"' % database_filename,
 		])
 
@@ -121,7 +121,7 @@ def restore(path, yes, skip_db, skip_uploads):
 			'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 			'-o', 'IdentitiesOnly=yes',
 			'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-			'root@%s.sailed.io' % sail_config['app_id'],
+			'root@%s' % sail_config['hostname'],
 			'docker exec sail rm /var/www/%s' % database_filename
 		])
 
@@ -155,7 +155,7 @@ def backup():
 	click.echo('- Downloading application files')
 
 	args = ['-rtl', '--copy-dest', '%s/' % root]
-	source = 'root@%s.sailed.io:/var/www/public/' % app_id
+	source = 'root@%s:/var/www/public/' % sail_config['hostname']
 	destination = '%s/www/' % progress_dir
 	returncode, stdout, stderr = util.rsync(args, source, destination)
 
@@ -166,7 +166,7 @@ def backup():
 	click.echo('- Downloading uploads')
 
 	args = ['-rtl', '--copy-dest', '%s/wp-content/uploads/' % root]
-	source = 'root@%s.sailed.io:/var/www/uploads/' % app_id
+	source = 'root@%s:/var/www/uploads/' % sail_config['hostname']
 	destination = '%s/uploads/' % progress_dir
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
@@ -181,7 +181,7 @@ def backup():
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'docker exec sail bash -c "mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s"' % database_filename
 	])
 
@@ -195,7 +195,7 @@ def backup():
 	click.echo('- Export completed, downloading database')
 
 	args = ['-t']
-	source = 'root@%s.sailed.io:/var/www/%s' % (sail_config['app_id'], database_filename)
+	source = 'root@%s:/var/www/%s' % (sail_config['hostname'], database_filename)
 	destination = '%s/database.sql.gz' % progress_dir
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
@@ -210,7 +210,7 @@ def backup():
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'docker exec sail rm /var/www/%s' % database_filename
 	])
 

@@ -8,8 +8,8 @@ _find_root = Mock(return_value='/path/to/project')
 _get_sail_config = Mock(return_value={
 	"app_id": "foo",
 	"secret": "bar",
-	"url": "https://foobar.sailed.io/",
-	"login_url": "https://foobar.sailed.io/wp-login.php",
+	"url": "https://foobar.justsailed.io/",
+	"login_url": "https://foobar.justsailed.io/wp-login.php",
 	"version": "0.9.8"
 })
 _request = Mock()

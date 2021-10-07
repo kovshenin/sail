@@ -65,7 +65,7 @@ def deploy(with_uploads, dry_run, path):
 	if dry_run:
 		click.echo('# Comparing files')
 
-		destination = 'root@%s.sailed.io:/var/www/public/' % app_id
+		destination = 'root@%s:/var/www/public/' % sail_config['hostname']
 		source = '%s/' % root
 		files = _diff(source, destination, _get_extend_filters(path))
 		empty = True
@@ -92,7 +92,7 @@ def deploy(with_uploads, dry_run, path):
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'mkdir -p /var/www/releases/%s && rsync -rogtl /var/www/public/ /var/www/releases/%s' % (release_name, release_name)
 	])
 
@@ -108,7 +108,7 @@ def deploy(with_uploads, dry_run, path):
 		args=['-rtl', '--rsync-path', 'sudo -u www-data rsync',
 			'--copy-dest', '/var/www/public/', '--delete'],
 		source='%s/' % root,
-		destination='root@%s.sailed.io:/var/www/releases/%s' % (app_id, release_name),
+		destination='root@%s:/var/www/releases/%s' % (sail_config['hostname'], release_name),
 		extend_filters=_get_extend_filters(path)
 	)
 
@@ -122,7 +122,7 @@ def deploy(with_uploads, dry_run, path):
 		returncode, stdout, stderr = util.rsync(
 			args=['-rtl', '--rsync-path', 'sudo -u www-data rsync', '--delete'],
 			source='%s/wp-content/uploads/' % root,
-			destination='root@%s.sailed.io:/var/www/uploads/' % app_id,
+			destination='root@%s:/var/www/uploads/' % sail_config['hostname'],
 			default_filters=False,
 			extend_filters=_get_extend_filters(path, 'wp-content/uploads')
 		)
@@ -220,7 +220,7 @@ def download(path, yes, with_uploads, delete, dry_run):
 	if dry_run:
 		click.echo('# Comparing files')
 
-		source = 'root@%s.sailed.io:/var/www/public/' % app_id
+		source = 'root@%s:/var/www/public/' % sail_config['hostname']
 		destination = '%s/' % root
 		files = _diff(source, destination, _get_extend_filters(path))
 		empty = True
@@ -243,7 +243,7 @@ def download(path, yes, with_uploads, delete, dry_run):
 
 	returncode, stdout, stderr = util.rsync(
 		args=['-rtl'] + delete,
-		source='root@%s.sailed.io:/var/www/public/' % app_id,
+		source='root@%s:/var/www/public/' % sail_config['hostname'],
 		destination='%s/' % root,
 		extend_filters=_get_extend_filters(path)
 	)
@@ -257,7 +257,7 @@ def download(path, yes, with_uploads, delete, dry_run):
 		# Download uploads from production
 		returncode, stdout, stderr = util.rsync(
 			args=['-rtl'] + delete,
-			source='root@%s.sailed.io:/var/www/uploads/' % app_id,
+			source='root@%s:/var/www/uploads/' % sail_config['hostname'],
 			destination='%s/wp-content/uploads/' % root,
 			default_filters=False,
 			extend_filters=_get_extend_filters(path, 'wp-content/uploads')

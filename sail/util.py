@@ -141,6 +141,10 @@ def get_sail_config():
 	if not config:
 		raise click.ClickException('Could not parse .sail/config.json. If this is a new project run: sail init')
 
+	# Back-compat
+	if 'hostname' not in config:
+		config['hostname'] = '%s.sailed.io' % config['app_id']
+
 	return config
 
 loader_i = 0

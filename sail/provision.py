@@ -42,11 +42,13 @@ def init(provider_token, email, size, region, force):
 		'size': size,
 		'email': email,
 		'region': region,
+		'version': __version__,
 	}, anon=True)
 
 	app_id = app['app_id']
 	private_key = app['private_key']
 	public_key = app['public_key']
+	hostname = app['hostname']
 
 	click.echo('- Init successful, application id: %s' % app_id)
 	os.mkdir('.sail')
@@ -66,6 +68,7 @@ def init(provider_token, email, size, region, force):
 		json.dump({
 			'app_id': app_id,
 			'secret': app['secret'],
+			'hostname': app['hostname'],
 			'url': app['url'],
 			'login_url': app['login_url'],
 			'profile_key': app['profile_key'],
@@ -89,14 +92,14 @@ def init(provider_token, email, size, region, force):
 
 	click.echo('- Writing server keys to .sail/known_hosts')
 	f = open('%s/.sail/known_hosts' % root, 'w+')
-	r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', '%s.sailed.io' % app_id], stdout=f, stderr=subprocess.DEVNULL)
+	r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', hostname], stdout=f, stderr=subprocess.DEVNULL)
 	f.close()
 
 	click.echo()
 	click.secho('# Downloading files from production', bold=True)
 
 	args = ['-r']
-	source = 'root@%s.sailed.io:/var/www/public/' % app_id
+	source = 'root@%s:/var/www/public/' % hostname
 	destination = '%s/' % root
 	returncode, stdout, stderr = util.rsync(args, source, destination)
 
@@ -121,7 +124,7 @@ def init(provider_token, email, size, region, force):
 
 	click.echo()
 	click.echo('- SSH/SFTP Access Details')
-	click.echo('- Host: %s.sailed.io' % app_id)
+	click.echo('- Host: %s' % hostname)
 	click.echo('- Port: 22')
 	click.echo('- Username: root')
 	click.echo('- SSH Key: .sail/ssh.key')

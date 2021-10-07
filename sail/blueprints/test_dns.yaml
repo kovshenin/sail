@@ -25,7 +25,7 @@ dns:
 - domain: ${{ domain }}
   name: qux
   type: CNAME
-  value: sailed.io.
+  value: justsailed.io.
   exists: skip
 
 vars:

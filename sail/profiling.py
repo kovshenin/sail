@@ -137,7 +137,7 @@ def run(ctx, url):
 		raise click.ClickException('Profile key not found in .sail/config.json')
 
 	url = urlparse(url)
-	host = '%s.sailed.io' % sail_config['app_id']
+	host = sail_config['hostname']
 	query = url.query
 	nocache = 'SAIL_NO_CACHE=%d' % time.time()
 	query = nocache if not query else query + '&' + nocache
@@ -235,7 +235,7 @@ def download(path):
 	click.echo('- Downloading profile from %s' % path)
 
 	args = ['-t']
-	source = 'root@%s.sailed.io:%s' % (sail_config['app_id'], path)
+	source = 'root@%s:%s' % (sail_config['hostname'], path)
 	destination = '%s/%s' % (profiles_dir, dest_filename)
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
@@ -249,7 +249,7 @@ def download(path):
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'rm %s' % path
 	])
 
@@ -280,7 +280,7 @@ def clean():
 		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s.sailed.io' % sail_config['app_id'],
+		'root@%s' % sail_config['hostname'],
 		'rm -rf /var/www/profiles/*'
 	])
 
