@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.9.16] - 2021-10-07
+
 * Added: New `profile clean` command to delete local and remove profiling data
 * Added: `php-xml` and `php-zip` packages to the core image
 * Added: Support for the newer justsailed.io internal subdomains
