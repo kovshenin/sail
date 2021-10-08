@@ -152,3 +152,12 @@ def ssh(root):
 		'root@%s' % sail_config['hostname'],
 		command
 	)
+
+@cli.command('info')
+def info():
+	'''Show current sail information'''
+	sail_config = util.get_sail_config()
+
+	click.echo('App ID: %(app_id)s' % sail_config)
+	click.echo('URL: %(url)s' % sail_config)
+	click.echo('Version: %(version)s' % sail_config)
