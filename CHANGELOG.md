@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+* Added: `sail info` command to show some basic project information
+* Change: Add a default 1G swap file for new provisions
+
 ## [0.9.16] - 2021-10-07
 
 * Added: New `profile clean` command to delete local and remove profiling data
