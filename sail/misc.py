@@ -1,7 +1,7 @@
 from sail import cli, util
 
 import click, pathlib, json
-import os, shlex, subprocess
+import os, shlex, subprocess, io
 import webbrowser
 
 @cli.command('config')
@@ -127,30 +127,6 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
 		'root@%s' % sail_config['hostname'],
 		'journalctl --no-hostname --directory=/var/log/journal %s' % settings
-	)
-
-@cli.command()
-@click.option('--root', '--host', is_flag=True, help='Login to the host (not the container) as the root user')
-def ssh(root):
-	'''Open an interactive SSH shell to the production container or host'''
-	as_root = root
-	root = util.find_root()
-	sail_config = util.get_sail_config()
-
-	# Container as www-data, or host as root
-	command = ''
-	if not as_root:
-		command = 'docker exec -it sail sudo -u www-data bash -c "cd ~/public; bash"'
-
-	click.echo('Spawning an interactive SSH shell for %s' % sail_config['hostname'])
-
-	os.execlp('ssh', 'ssh', '-tt',
-		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
-		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
-		'root@%s' % sail_config['hostname'],
-		command
 	)
 
 @cli.command('info')

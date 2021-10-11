@@ -2,6 +2,7 @@ import sail
 
 import time, pathlib, os
 import json, click, requests, shlex, subprocess
+import fabric, paramiko
 
 _debug = False
 def debug(set=None):
@@ -236,3 +237,22 @@ def rsync(args, source, destination, default_filters=True, extend_filters=[]):
 		dlog('Rsync stderr: %s' % stderr)
 
 	return (p.returncode, stdout, stderr)
+
+def connection():
+	sail_config = get_sail_config()
+	root = find_root()
+
+	hostname = sail_config['hostname']
+	with open('%s/.sail/ssh.key' % root, 'r') as f:
+		pkey = paramiko.RSAKey.from_private_key(f)
+
+	ssh_config = fabric.Config()
+	ssh_config.user = 'root'
+	ssh_config.connect_kwargs = {'pkey': pkey, 'look_for_keys': False}
+	ssh_config.run = {'echo': False}
+	ssh_config.load_ssh_configs = False
+	ssh_config.forward_agent = False
+
+	c = fabric.Connection(hostname, config=ssh_config)
+	c.client.load_host_keys('%s/.sail/known_hosts' % root)
+	return c

@@ -15,3 +15,4 @@ def cli(debug):
 
 # Command groups
 from sail import provision, deploy, database, backups, domains, misc, profiling
+from sail import ssh
