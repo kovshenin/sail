@@ -89,9 +89,9 @@ def deploy(with_uploads, dry_run, path):
 
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'mkdir -p /var/www/releases/%s && rsync -rogtl /var/www/public/ /var/www/releases/%s' % (release_name, release_name)
 	])
