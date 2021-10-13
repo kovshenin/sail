@@ -21,9 +21,9 @@ def cli():
 
 	os.execlp('ssh', 'ssh', '-t',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'docker exec -it sail sudo -u www-data wp --path=/var/www/public db cli'
 	)
@@ -64,9 +64,9 @@ def import_cmd(path):
 
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'docker exec sail bash -c "%s /var/www/%s | mysql -uroot wordpress"' % (cat_bin, temp_name)
 	])
@@ -81,9 +81,9 @@ def import_cmd(path):
 
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'docker exec sail rm /var/www/%s' % temp_name
 	])
@@ -110,9 +110,9 @@ def export():
 
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'docker exec sail bash -c "mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s"' % filename
 	])
@@ -137,9 +137,9 @@ def export():
 
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'docker exec sail rm /var/www/%s' % filename
 	])

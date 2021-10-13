@@ -206,9 +206,9 @@ def rsync(args, source, destination, default_filters=True, extend_filters=[]):
 	args.insert(0, 'rsync')
 	ssh_args = ['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 	]
 
 	args.extend(['-e', shlex.join(ssh_args)])

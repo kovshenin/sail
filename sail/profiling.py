@@ -246,9 +246,9 @@ def download(path):
 
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'rm %s' % path
 	])
@@ -277,9 +277,9 @@ def clean():
 	click.echo('- Deleting production profiles')
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'rm -rf /var/www/profiles/*'
 	])

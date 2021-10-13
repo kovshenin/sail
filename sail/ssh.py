@@ -163,9 +163,9 @@ def shell(root):
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		command
 	)

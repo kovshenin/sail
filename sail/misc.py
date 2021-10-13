@@ -64,9 +64,9 @@ def wp(command):
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'docker exec -it sail sudo -u www-data bash -c "cd ~/public; wp %s"' % command
 	)
@@ -122,9 +122,9 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile=%s/.sail/known_hosts' % root,
+		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile=%s/.sail/ssh.key' % root,
+		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % sail_config['hostname'],
 		'journalctl --no-hostname --directory=/var/log/journal %s' % settings
 	)
