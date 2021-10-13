@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.9.17] - 2021-10-13
+
 * Added: New `sail ssh key` group of commands to list, add and delete SSH keys
 * Added: `sail info` command to show some basic project information
 * Change: Add a default 1G swap file for new provisions
