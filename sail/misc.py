@@ -135,5 +135,6 @@ def info():
 	sail_config = util.get_sail_config()
 
 	click.echo('App ID: %(app_id)s' % sail_config)
+	click.echo('Hostname: %(hostname)s' % sail_config)
 	click.echo('URL: %(url)s' % sail_config)
 	click.echo('Version: %(version)s' % sail_config)
