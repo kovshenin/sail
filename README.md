@@ -320,7 +320,7 @@ Regular .sql files can be imported too.
 
 You have **full root access** to every server you provision with Sail. There is
 no password for security reasons, but your root SSH key is saved to `.sail/ssh.key`
-after provisioning your application.
+after provisioning your application. You can [add/remove your own SSH keys](https://sailed.io/kb/ssh-key/) too.
 
 You can use this key directly with SSH or GUI SFTP software. Sail provides a
 handful of useful commands too:
