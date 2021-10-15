@@ -1,0 +1,11 @@
+apt:
+  install:
+    - php-zip
+    - php-xml
+    - vim
+    - zsh
+    - git
+  selections:
+    - mysql-server mysql-server/root_password password something secret
+    - mysql-server mysql-server/root_password_again password something secret
+    - postfix postfix/relayhost string smtp.gmail.com

@@ -1,7 +1,7 @@
 # Relative import
 import sys, pathlib
 sys.path.append(str(pathlib.Path(__file__).parent.parent.parent.resolve()))
-from sail import cli
+from sail import cli, util
 
 import io, os
 import click
@@ -554,6 +554,25 @@ class TestEnd2End(unittest.TestCase):
 
 		self.assertIn('wp', data['main()']['children'])
 		self.assertIn('do_action#init', data['main()']['children'])
+
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_017_blueprint_apt(self):
+		# Make sure domain doesn't exist.
+		result = self.runner.invoke(cli, ['blueprint', 'test_apt.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Setting debconf selections', result.output)
+		self.assertIn('Updating package lists', result.output)
+		self.assertIn('Installing packages', result.output)
+		self.assertIn('Blueprint applied successfully', result.output)
+
+		c = util.connection()
+		r = c.run('docker exec sail dpkg --status git', hide=True, warn=True)
+		self.assertEqual(r.return_code, 0)
+		self.assertIn('Status: install ok installed', r.stdout)
+
+		r = c.run('docker exec sail dpkg --status vim', hide=True, warn=True)
+		self.assertEqual(r.return_code, 0)
+		self.assertIn('Status: install ok installed', r.stdout)
 
 	def test_999_destroy(self):
 		result = self.runner.invoke(cli, ['destroy', '-y'])
