@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Added: New `sail ssh run` command
+* Added: New `apt` section for blueprints
 * Changed: Split `--host` and `--root` arguments for `sail ssh shell`
 
 ## [0.9.17] - 2021-10-13
