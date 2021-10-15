@@ -332,8 +332,9 @@ sail ssh
 ```
 
 This will open a session as the `www-data` user, inside the application container
-on the `/var/www/public` directory. If you'd rather open a root session on your
-host droplet, just add `--root` or `--host` to the command.
+on the `/var/www/public` directory. If you'd rather open a root session in the
+application container, just add `--root` to the command. To access the host system
+add `--host`.
 
 The host server will contain the original `/var/www` directory, with all your
 application releases, as well as your SSH service configuration in /etc/ssh. So
