@@ -1,0 +1,21 @@
+---
+version: 1
+
+# Add A TXT record for site verification
+dns:
+- domain: ${{ domain }}
+  name: '@'
+  type: TXT
+  value: ${{ value }}
+  exists: skip
+
+vars:
+- name: domain
+  prompt: Domain Name
+  type: string
+  option: --domain
+
+- name: value
+  prompt: TXT Record Value
+  type: string
+  option: --value
