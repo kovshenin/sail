@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Changed: Split `--host` and `--root` arguments for `sail ssh shell`
+
 ## [0.9.17] - 2021-10-13
 
 * Added: New `sail ssh key` group of commands to list, add and delete SSH keys
