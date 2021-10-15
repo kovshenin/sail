@@ -5,9 +5,10 @@ import os, shlex, subprocess, io
 import requests
 
 @cli.group(invoke_without_command=True)
-@click.option('--root', '--host', is_flag=True, help='Login to the host (not the container) as the root user')
+@click.option('--root', is_flag=True, help='Login as the root user')
+@click.option('--host', is_flag=True, help='Login to the host (not the container) as the root user')
 @click.pass_context
-def ssh(ctx, root):
+def ssh(ctx, root, host):
 	'''Open an SSH shell, manage SSH keys and more'''
 	# Default subcommand for back-compat
 	if not ctx.invoked_subcommand:
@@ -147,16 +148,19 @@ def delete(hash):
 	click.echo('Removed SSH key %s' % fp)
 
 @ssh.command()
-@click.option('--root', '--host', is_flag=True, help='Login to the host (not the container) as the root user')
-def shell(root):
+@click.option('--root', is_flag=True, help='Login as the root user')
+@click.option('--host', is_flag=True, help='Login to the host (not the container) as the root user')
+def shell(root, host):
 	'''Open an interactive SSH shell to the production container or host'''
 	as_root = root
 	root = util.find_root()
 	sail_config = util.get_sail_config()
 
-	# Container as www-data, or host as root
 	command = ''
-	if not as_root:
+
+	if not host and as_root:
+		command = 'docker exec -it sail bash'
+	elif not host and not as_root:
 		command = 'docker exec -it sail sudo -u www-data bash -c "cd ~/public; bash"'
 
 	click.echo('Spawning an interactive SSH shell for %s' % sail_config['hostname'])
