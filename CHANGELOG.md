@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.9.18] - 2021-10-26
+
 * Added: New `sail ssh run` command
 * Added: New `apt` section for blueprints
 * Added: New `site-verification.yaml` blueprint to add TXT records
