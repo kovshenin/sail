@@ -152,50 +152,45 @@ def deploy(with_uploads, dry_run, path):
 @click.option('--releases', is_flag=True, help='Get a list of valid releases to rollback to')
 def rollback(release=None, releases=False):
 	'''Rollback production to a previous release'''
-	root = util.find_root()
 	sail = util.config()
+	c = util.connection()
 
 	if releases or not release:
-		data = util.request('/rollback')
+		_releases = c.run('ls /var/www/releases').stdout.strip().split('\n')
+		if len(_releases) < 1:
+			raise click.ClickException('Could not find any releases')
+
+		try:
+			_current = c.run('readlink /var/www/public').stdout.strip().split('/')[-1]
+		except:
+			_current = '0'
+
 		click.echo('# Available releases:')
-		if data.get('releases', []):
-			for r in data.get('releases', []):
-				flags = '(current)' if r == data.get('current_release') else ''
-				click.echo('- %s %s' % (r, flags))
+		for r in _releases:
+			flags = '(current)' if r == _current else ''
+			click.echo('- %s %s' % (r, flags))
 
-			click.echo()
-			click.echo('Rollback with: sail rollback <release>')
-		else:
-			click.echo('- No releases found, perhaps you should deploy something')
-
+		click.echo()
+		click.echo('Rollback with: sail rollback <release>')
 		return
 
 	if release:
 		release = str(release)
 
-	click.echo()
-	click.echo('# Rolling back')
+	click.echo('# Rolling back to %s' % release)
 
-	if release:
-		click.echo('- Requesting Sail API to rollback: %s' % release)
-	else:
-		click.echo('- Requesting Sail API to rollback')
+	_releases = c.run('ls /var/www/releases').stdout.strip().split('\n')
+	if release not in _releases:
+		raise click.ClickException('Invalid release. To get a list run: sail rollback --releases')
 
-	data = util.request('/rollback/', json={'release': release})
-	task_id = data.get('task_id')
-	rollback_release = data.get('release')
+	click.echo('- Updating symlinks')
+	c.run('ln -sfn /var/www/releases/%s /var/www/public' % release)
 
-	if not task_id:
-		raise click.ClickException('Could not obain a rollback task_id.')
+	click.echo('- Reloading services')
+	c.run('docker exec sail nginx -s reload')
+	c.run('docker exec sail kill -s USR2 $(docker exec sail cat /var/run/php/php7.4-fpm.pid)')
 
-	click.echo('- Scheduled successfully, waiting for rollback')
-
-	try:
-		data = util.wait_for_task(task_id, timeout=300, interval=5)
-	except:
-		raise click.ClickException('Rollback failed')
-
-	click.echo('- Successfully rolled back to %s' % rollback_release)
+	click.echo('- Successfully rolled back to %s' % release)
 
 @cli.command()
 @click.argument('path', nargs=-1, required=False)
