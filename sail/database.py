@@ -34,6 +34,7 @@ def import_cmd(path):
 	'''Import a local .sql or .sql.gz file to the production MySQL database'''
 	root = util.find_root()
 	config = util.config()
+	c = util.connection()
 
 	path = pathlib.Path(path).resolve()
 	if not path.exists():
@@ -62,36 +63,16 @@ def import_cmd(path):
 	click.echo('- Importing database into MySQL')
 	cat_bin = 'zcat' if is_gz else 'cat'
 
-	p = subprocess.Popen(['ssh',
-		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
-		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % config['hostname'],
-		'docker exec sail bash -c "%s /var/www/%s | mysql -uroot wordpress"' % (cat_bin, temp_name)
-	])
-
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	try:
+		c.run('docker exec sail bash -c "%s /var/www/%s | mysql -uroot wordpress"' % (cat_bin, temp_name))
+	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
 	click.echo('- Cleaning up production')
 
-	p = subprocess.Popen(['ssh',
-		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
-		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % config['hostname'],
-		'docker exec sail rm /var/www/%s' % temp_name
-	])
-
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	try:
+		c.run('docker exec sail rm /var/www/%s' % temp_name)
+	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
 	click.echo('- Database imported')
@@ -101,6 +82,7 @@ def export():
 	'''Export the production database to a local .sql.gz file'''
 	root = util.find_root()
 	config = util.config()
+	c = util.connection()
 
 	backups_dir = pathlib.Path(root + '/.backups')
 	backups_dir.mkdir(parents=True, exist_ok=True)
@@ -108,19 +90,9 @@ def export():
 
 	click.echo('# Exporting WordPress database')
 
-	p = subprocess.Popen(['ssh',
-		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
-		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % config['hostname'],
-		'docker exec sail bash -c "mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s"' % filename
-	])
-
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	try:
+		c.run('docker exec sail bash -c "mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s"' % filename)
+	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
 	click.echo('- Export completed, downloading')
@@ -135,19 +107,9 @@ def export():
 
 	click.echo('- Cleaning up production')
 
-	p = subprocess.Popen(['ssh',
-		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
-		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % config['hostname'],
-		'docker exec sail rm /var/www/%s' % filename
-	])
-
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
+	try:
+		c.run('docker exec sail rm /var/www/%s' % filename)
+	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
 	click.echo('- Database export saved to .backups/%s' % filename)

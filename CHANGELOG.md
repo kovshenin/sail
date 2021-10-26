@@ -7,6 +7,7 @@
 * Added: New `site-verification.yaml` blueprint to add TXT records
 * Changed: Deploys, rollbacks and release-tracking are now 100% client-side
 * Changed: Split `--host` and `--root` arguments for `sail ssh shell`
+* Changed: Use Fabric instead of SSH subprocess in db and full backups
 * Changed: Some overall refactoring
 
 ## [0.9.17] - 2021-10-13
