@@ -254,5 +254,31 @@ def connection():
 	ssh_config.forward_agent = False
 
 	c = fabric.Connection(hostname, config=ssh_config)
-	c.client.load_host_keys('%s/.sail/known_hosts' % root)
+
+	# Load known_hosts if it exists
+	known_hosts = pathlib.Path(root) / '.sail/known_hosts'
+	if known_hosts.exists() and known_hosts.is_file():
+		c.client.load_host_keys(known_hosts)
+
+	def _run(func):
+		def run(*args, **kwargs):
+			dlog('Fabric: %s, %s' % (repr(args), repr(kwargs)))
+			kwargs['hide'] = True
+
+			# Run it
+			r = func(*args, **kwargs)
+
+			stdout = r.stdout.strip()
+			if stdout:
+				dlog('Fabric stdout: %s' % stdout)
+
+			stderr = r.stderr.strip()
+			if stderr:
+				dlog('Fabric stderr: %s' % stderr)
+
+			return r
+		return run
+
+	# Decorate it
+	c.run = _run(c.run)
 	return c
