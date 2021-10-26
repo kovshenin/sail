@@ -14,6 +14,7 @@ def config(name, value=None, delete=False):
 		'provider-token',
 		'email',
 		'api-base',
+		'keep',
 	]
 
 	if name not in valid_names:

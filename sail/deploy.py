@@ -2,6 +2,7 @@ from sail import cli, util
 
 import subprocess, time
 import click, pathlib
+import re, shlex
 
 def _get_extend_filters(paths, prefix=None):
 	root = util.find_root()
@@ -60,7 +61,7 @@ def deploy(with_uploads, dry_run, path):
 	config = util.config()
 
 	app_id = config['app_id']
-	release_name = str(int(time.time()))
+	release = str(int(time.time()))
 
 	if dry_run:
 		click.echo('# Comparing files')
@@ -86,21 +87,10 @@ def deploy(with_uploads, dry_run, path):
 
 	click.echo('# Deploying to production')
 	click.echo('- Preparing release directory')
+	c = util.connection()
 
-	p = subprocess.Popen(['ssh',
-		'-i', '%s/.sail/ssh.key' % root,
-		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
-		'-o', 'IdentitiesOnly=yes',
-		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % config['hostname'],
-		'mkdir -p /var/www/releases/%s && rsync -rogtl /var/www/public/ /var/www/releases/%s' % (release_name, release_name)
-	])
-
-	while p.poll() is None:
-		util.loader()
-
-	if p.returncode != 0:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+	c.run('mkdir -p /var/www/releases/%s' % release)
+	c.run('rsync -rogtl /var/www/public/ /var/www/releases/%s' % release)
 
 	click.echo('- Uploading application files to production')
 
@@ -108,7 +98,7 @@ def deploy(with_uploads, dry_run, path):
 		args=['-rtl', '--rsync-path', 'sudo -u www-data rsync',
 			'--copy-dest', '/var/www/public/', '--delete'],
 		source='%s/' % root,
-		destination='root@%s:/var/www/releases/%s' % (config['hostname'], release_name),
+		destination='root@%s:/var/www/releases/%s' % (config['hostname'], release),
 		extend_filters=_get_extend_filters(path)
 	)
 
@@ -130,22 +120,35 @@ def deploy(with_uploads, dry_run, path):
 		if returncode != 0:
 			raise click.ClickException('An error occurred during upload. Please try again.')
 
-	click.echo('- Requesting Sail API to deploy: %s' % release_name)
+	click.echo('- Deploying release: %s' % release)
 
-	data = util.request('/deploy/', json={'release': release_name})
-	task_id = data.get('task_id')
+	click.echo('- Updating symlinks')
+	c.run('sudo -u www-data ln -sfn /var/www/uploads /var/www/releases/%s/wp-content/uploads' % release)
+	c.run('sudo -u www-data ln -sfn /var/www/releases/%s /var/www/public' % release)
 
-	if not task_id:
-		raise click.ClickException('Could not obain a deploy task_id.')
+	click.echo('- Reloading services')
+	c.run('docker exec sail nginx -s reload')
+	c.run('docker exec sail kill -s USR2 $(docker exec sail cat /var/run/php/php7.4-fpm.pid)')
 
-	click.echo('- Scheduled successfully, waiting for deploy')
+	releases = c.run('ls /var/www/releases')
+	releases = re.findall('\d+', releases.stdout)
+	releases = [int(i) for i in releases]
 
-	try:
-		data = util.wait_for_task(task_id, timeout=300, interval=5)
-	except:
-		raise click.ClickException('Deploy failed')
+	keep = util.get_sail_default('keep')
+	if not keep:
+		keep = 5
 
-	click.echo('- Successfully deployed %s' % release_name)
+	keep = int(keep)
+	keep = max(keep, 2)
+	keep = min(keep, 30)
+
+	if len(releases) > keep:
+		click.echo('- Removing outdated releases')
+		remove = sorted(releases)[:len(releases)-keep]
+		for key in remove:
+			c.run(shlex.join(['rm', '-rf', '/var/www/releases/%s' % key]))
+
+	click.echo('- Successfully deployed %s' % release)
 
 @cli.command()
 @click.argument('release', required=False, type=int, nargs=1)
@@ -156,7 +159,9 @@ def rollback(release=None, releases=False):
 	c = util.connection()
 
 	if releases or not release:
-		_releases = c.run('ls /var/www/releases').stdout.strip().split('\n')
+		_releases = c.run('ls /var/www/releases')
+		_releases = re.findall('\d+', _releases.stdout)
+
 		if len(_releases) < 1:
 			raise click.ClickException('Could not find any releases')
 
