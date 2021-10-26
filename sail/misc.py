@@ -56,18 +56,18 @@ def config(name, value=None, delete=False):
 def wp(command):
 	'''Run a WP-CLI command on the production host'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	command = shlex.join(command)
 
-	click.echo('Spawning SSH and running WP-CLI on %s' % sail_config['hostname'], err=True)
+	click.echo('Spawning SSH and running WP-CLI on %s' % config['hostname'], err=True)
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % sail_config['hostname'],
+		'root@%s' % config['hostname'],
 		'docker exec -it sail sudo -u www-data bash -c "cd ~/public; wp %s"' % command
 	)
 
@@ -75,8 +75,8 @@ def wp(command):
 def admin():
 	'''Open your default web browser to the wp-login.php location of your site'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
-	webbrowser.open(sail_config['login_url'])
+	config = util.config()
+	webbrowser.open(config['login_url'])
 
 @cli.command()
 @click.option('--nginx', is_flag=True)
@@ -90,9 +90,9 @@ def admin():
 def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, lines):
 	'''Query and follow logs from the production server'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
-	click.echo('Querying logs on %s' % sail_config['hostname'])
+	click.echo('Querying logs on %s' % config['hostname'])
 
 	settings = []
 	if nginx_access or nginx:
@@ -125,16 +125,16 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % sail_config['hostname'],
+		'root@%s' % config['hostname'],
 		'journalctl --no-hostname --directory=/var/log/journal %s' % settings
 	)
 
 @cli.command('info')
 def info():
 	'''Show current sail information'''
-	sail_config = util.get_sail_config()
+	config = util.config()
 
-	click.echo('App ID: %(app_id)s' % sail_config)
-	click.echo('Hostname: %(hostname)s' % sail_config)
-	click.echo('URL: %(url)s' % sail_config)
-	click.echo('Version: %(version)s' % sail_config)
+	click.echo('App ID: %(app_id)s' % config)
+	click.echo('Hostname: %(hostname)s' % config)
+	click.echo('URL: %(url)s' % config)
+	click.echo('Version: %(version)s' % config)

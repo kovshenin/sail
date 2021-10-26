@@ -143,7 +143,7 @@ def blueprint(path):
 	import json
 
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	_args = path
 	arguments = []
@@ -238,12 +238,12 @@ def blueprint(path):
 def destroy(yes):
 	'''Shutdown and destroy the production droplet'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	if not yes:
 		click.confirm('All droplet data will be scrubbed and irretrievable. Are you sure?', abort=True)
 
-	app_id = sail_config['app_id']
+	app_id = config['app_id']
 
 	click.echo()
 	click.echo('# Destroying application')

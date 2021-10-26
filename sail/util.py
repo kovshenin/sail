@@ -37,10 +37,10 @@ def request(endpoint, **kwargs):
 	headers = {}
 
 	if not anon:
-		sail_config = get_sail_config()
+		_config = config()
 		headers = {
-			'X-App-Id': sail_config['app_id'],
-			'X-App-Secret': sail_config['secret'],
+			'X-App-Id': _config['app_id'],
+			'X-App-Secret': _config['secret'],
 		}
 
 	if not method:
@@ -130,23 +130,23 @@ def find_root():
 
 		p = p.parent
 
-def get_sail_config():
+def config():
 	root = find_root()
 
 	if not root:
 		raise click.ClickException('Could not parse .sail/config.json. If this is a new project run: sail init')
 
 	with open(root + '/.sail/config.json') as f:
-		config = json.load(f)
+		_config = json.load(f)
 
-	if not config:
+	if not _config:
 		raise click.ClickException('Could not parse .sail/config.json. If this is a new project run: sail init')
 
 	# Back-compat
-	if 'hostname' not in config:
-		config['hostname'] = '%s.sailed.io' % config['app_id']
+	if 'hostname' not in _config:
+		_config['hostname'] = '%s.sailed.io' % _config['app_id']
 
-	return config
+	return _config
 
 loader_i = 0
 
@@ -239,10 +239,10 @@ def rsync(args, source, destination, default_filters=True, extend_filters=[]):
 	return (p.returncode, stdout, stderr)
 
 def connection():
-	sail_config = get_sail_config()
+	_config = config()
 	root = find_root()
 
-	hostname = sail_config['hostname']
+	hostname = _config['hostname']
 	with open('%s/.sail/ssh.key' % root, 'r') as f:
 		pkey = paramiko.RSAKey.from_private_key(f)
 

@@ -57,15 +57,15 @@ def _get_extend_filters(paths, prefix=None):
 def deploy(with_uploads, dry_run, path):
 	'''Deploy your working copy to production. If path is not specified then all application files are deployed.'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
-	app_id = sail_config['app_id']
+	app_id = config['app_id']
 	release_name = str(int(time.time()))
 
 	if dry_run:
 		click.echo('# Comparing files')
 
-		destination = 'root@%s:/var/www/public/' % sail_config['hostname']
+		destination = 'root@%s:/var/www/public/' % config['hostname']
 		source = '%s/' % root
 		files = _diff(source, destination, _get_extend_filters(path))
 		empty = True
@@ -92,7 +92,7 @@ def deploy(with_uploads, dry_run, path):
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % sail_config['hostname'],
+		'root@%s' % config['hostname'],
 		'mkdir -p /var/www/releases/%s && rsync -rogtl /var/www/public/ /var/www/releases/%s' % (release_name, release_name)
 	])
 
@@ -108,7 +108,7 @@ def deploy(with_uploads, dry_run, path):
 		args=['-rtl', '--rsync-path', 'sudo -u www-data rsync',
 			'--copy-dest', '/var/www/public/', '--delete'],
 		source='%s/' % root,
-		destination='root@%s:/var/www/releases/%s' % (sail_config['hostname'], release_name),
+		destination='root@%s:/var/www/releases/%s' % (config['hostname'], release_name),
 		extend_filters=_get_extend_filters(path)
 	)
 
@@ -122,7 +122,7 @@ def deploy(with_uploads, dry_run, path):
 		returncode, stdout, stderr = util.rsync(
 			args=['-rtl', '--rsync-path', 'sudo -u www-data rsync', '--delete'],
 			source='%s/wp-content/uploads/' % root,
-			destination='root@%s:/var/www/uploads/' % sail_config['hostname'],
+			destination='root@%s:/var/www/uploads/' % config['hostname'],
 			default_filters=False,
 			extend_filters=_get_extend_filters(path, 'wp-content/uploads')
 		)
@@ -153,7 +153,7 @@ def deploy(with_uploads, dry_run, path):
 def rollback(release=None, releases=False):
 	'''Rollback production to a previous release'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	sail = util.config()
 
 	if releases or not release:
 		data = util.request('/rollback')
@@ -206,7 +206,7 @@ def rollback(release=None, releases=False):
 def download(path, yes, with_uploads, delete, dry_run):
 	'''Download files from production to your working copy'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	if not yes and not dry_run:
 		click.confirm('Downloading files from production may overwrite '
@@ -214,13 +214,13 @@ def download(path, yes, with_uploads, delete, dry_run):
 			abort=True
 		)
 
-	app_id = sail_config['app_id']
+	app_id = config['app_id']
 	delete = ['--delete'] if delete else []
 
 	if dry_run:
 		click.echo('# Comparing files')
 
-		source = 'root@%s:/var/www/public/' % sail_config['hostname']
+		source = 'root@%s:/var/www/public/' % config['hostname']
 		destination = '%s/' % root
 		files = _diff(source, destination, _get_extend_filters(path))
 		empty = True
@@ -243,7 +243,7 @@ def download(path, yes, with_uploads, delete, dry_run):
 
 	returncode, stdout, stderr = util.rsync(
 		args=['-rtl'] + delete,
-		source='root@%s:/var/www/public/' % sail_config['hostname'],
+		source='root@%s:/var/www/public/' % config['hostname'],
 		destination='%s/' % root,
 		extend_filters=_get_extend_filters(path)
 	)
@@ -257,7 +257,7 @@ def download(path, yes, with_uploads, delete, dry_run):
 		# Download uploads from production
 		returncode, stdout, stderr = util.rsync(
 			args=['-rtl'] + delete,
-			source='root@%s:/var/www/uploads/' % sail_config['hostname'],
+			source='root@%s:/var/www/uploads/' % config['hostname'],
 			destination='%s/wp-content/uploads/' % root,
 			default_filters=False,
 			extend_filters=_get_extend_filters(path, 'wp-content/uploads')

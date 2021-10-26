@@ -12,7 +12,7 @@ def domain():
 def list():
 	'''List domains associated with your site'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	response = util.request('/domains/')
 
@@ -36,7 +36,7 @@ def list():
 def make_primary(domain, force, skip_replace):
 	'''Set a domain as primary, update siteurl/home, search-replace all links'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	click.echo('# Updating primary domain')
 
@@ -60,7 +60,7 @@ def make_primary(domain, force, skip_replace):
 def make_https(domains, agree_tos):
 	'''Request and install SSL certificates for domains'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	if not agree_tos:
 		click.echo('Let\'s Encrypt ToS: https://community.letsencrypt.org/tos')
@@ -88,7 +88,7 @@ def make_https(domains, agree_tos):
 def add(domains, skip_dns):
 	'''Add a new domain, with DNS records pointing to your site'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	if not domains:
 		raise click.ClickException('At least one domain is required')
@@ -108,7 +108,7 @@ def delete(domains, skip_dns):
 	'''Delete a domain and all DNS records'''
 	'''Add a new domain, with DNS records pointing to your site'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	response = util.request('/domains/', json={'domains': domains, 'skip_dns': skip_dns}, method='DELETE')
 

@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from click.testing import CliRunner
 
 _find_root = Mock(return_value='/path/to/project')
-_get_sail_config = Mock(return_value={
+_util_config = Mock(return_value={
 	"app_id": "foo",
 	"secret": "bar",
 	"url": "https://foobar.justsailed.io/",
@@ -16,13 +16,13 @@ _request = Mock()
 _rmtree = Mock()
 
 @patch('sail.util.find_root', _find_root)
-@patch('sail.util.get_sail_config', _get_sail_config)
+@patch('sail.util.config', _util_config)
 @patch('sail.util.request', _request)
 @patch('shutil.rmtree', _rmtree)
 class TestDestroy(unittest.TestCase):
 	def setUp(self):
 		_find_root.reset_mock()
-		_get_sail_config.reset_mock()
+		_util_config.reset_mock()
 		_request.reset_mock()
 		_rmtree.reset_mock()
 

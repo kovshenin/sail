@@ -154,7 +154,7 @@ def shell(root, host):
 	'''Open an interactive SSH shell to the production container or host'''
 	as_root = root
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	command = ''
 
@@ -163,14 +163,14 @@ def shell(root, host):
 	elif not host and not as_root:
 		command = 'docker exec -it sail sudo -u www-data bash -c "cd ~/public; bash"'
 
-	click.echo('Spawning an interactive SSH shell for %s' % sail_config['hostname'])
+	click.echo('Spawning an interactive SSH shell for %s' % config['hostname'])
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % sail_config['hostname'],
+		'root@%s' % config['hostname'],
 		command
 	)
 
@@ -182,7 +182,7 @@ def run(command, root, host):
 	'''Run a command via SSH and return the results'''
 	as_root = root
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	if len(command) > 1:
 		command = shlex.join(command)
@@ -194,13 +194,13 @@ def run(command, root, host):
 	elif not host and not as_root:
 		command = shlex.join(['docker', 'exec', '-it', 'sail', 'sudo', '-u', 'www-data', 'bash', '-c', command])
 
-	click.echo('Spawning SSH and running command on %s' % sail_config['hostname'], err=True)
+	click.echo('Spawning SSH and running command on %s' % config['hostname'], err=True)
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % sail_config['hostname'],
+		'root@%s' % config['hostname'],
 		command
 	)

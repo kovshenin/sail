@@ -131,13 +131,13 @@ def open(path):
 def run(ctx, url):
 	'''Run the profiler on a URL, download and open the results'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
-	if 'profile_key' not in sail_config:
+	if 'profile_key' not in config:
 		raise click.ClickException('Profile key not found in .sail/config.json')
 
 	url = urlparse(url)
-	host = sail_config['hostname']
+	host = config['hostname']
 	query = url.query
 	nocache = 'SAIL_NO_CACHE=%d' % time.time()
 	query = nocache if not query else query + '&' + nocache
@@ -151,7 +151,7 @@ def run(ctx, url):
 
 	headers = {
 		'Host': url.netloc,
-		'X-Sail-Profile': sail_config['profile_key'],
+		'X-Sail-Profile': config['profile_key'],
 	}
 
 	request = requests.Request('GET', '%s://%s%s%s' % (url.scheme, host, url.path, query), headers=headers)
@@ -175,16 +175,16 @@ def run(ctx, url):
 def key(header):
 	'''Show the profiling secret key'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
-	if 'profile_key' not in sail_config:
+	if 'profile_key' not in config:
 		raise click.ClickException('Profile key not found in .sail/config.json')
 
 	if header:
-		click.echo('X-Sail-Profile: %s' % sail_config['profile_key'], nl=False)
+		click.echo('X-Sail-Profile: %s' % config['profile_key'], nl=False)
 		return
 
-	click.echo(sail_config['profile_key'], nl=False)
+	click.echo(config['profile_key'], nl=False)
 
 @profile.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument('command', nargs=-1)
@@ -192,13 +192,13 @@ def key(header):
 def curl(ctx, command):
 	'''Wrapper for the curl command which adds an X-Sail-Profile header'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
-	if 'profile_key' not in sail_config:
+	if 'profile_key' not in config:
 		raise click.ClickException('Profile key not found in .sail/config.json')
 
 	command = list(command)
-	command = ['-s', '-v', '-H', 'X-Sail-Profile: %s' % sail_config['profile_key']] + command
+	command = ['-s', '-v', '-H', 'X-Sail-Profile: %s' % config['profile_key']] + command
 	click.echo('# Running cURL with profiling headers', err=True)
 
 	# TODO: Maybe add the SAIL_NOCACHE query var
@@ -223,9 +223,9 @@ def curl(ctx, command):
 def download(path):
 	'''Download a profile JSON from the production server'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
-	if 'profile_key' not in sail_config:
+	if 'profile_key' not in config:
 		raise click.ClickException('Profile key not found in .sail/config.json')
 
 	profiles_dir = pathlib.Path(root + '/.profiles')
@@ -235,7 +235,7 @@ def download(path):
 	click.echo('- Downloading profile from %s' % path)
 
 	args = ['-t']
-	source = 'root@%s:%s' % (sail_config['hostname'], path)
+	source = 'root@%s:%s' % (config['hostname'], path)
 	destination = '%s/%s' % (profiles_dir, dest_filename)
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
@@ -249,7 +249,7 @@ def download(path):
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % sail_config['hostname'],
+		'root@%s' % config['hostname'],
 		'rm %s' % path
 	])
 
@@ -266,7 +266,7 @@ def download(path):
 def clean():
 	'''Delete all profiling data from production and local working copy'''
 	root = util.find_root()
-	sail_config = util.get_sail_config()
+	config = util.config()
 
 	# Delete local profiles
 	click.echo('# Cleaning up')
@@ -280,7 +280,7 @@ def clean():
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
-		'root@%s' % sail_config['hostname'],
+		'root@%s' % config['hostname'],
 		'rm -rf /var/www/profiles/*'
 	])
 
