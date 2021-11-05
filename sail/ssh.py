@@ -6,9 +6,8 @@ import requests
 
 @cli.group(invoke_without_command=True)
 @click.option('--root', is_flag=True, help='Login as the root user')
-@click.option('--host', is_flag=True, help='Login to the host (not the container) as the root user')
 @click.pass_context
-def ssh(ctx, root, host):
+def ssh(ctx, root):
 	'''Open an SSH shell, manage SSH keys and more'''
 	# Default subcommand for back-compat
 	if not ctx.invoked_subcommand:
@@ -149,19 +148,15 @@ def delete(hash):
 
 @ssh.command()
 @click.option('--root', is_flag=True, help='Login as the root user')
-@click.option('--host', is_flag=True, help='Login to the host (not the container) as the root user')
-def shell(root, host):
-	'''Open an interactive SSH shell to the production container or host'''
+def shell(root):
+	'''Open an interactive SSH shell to the production host'''
 	as_root = root
 	root = util.find_root()
 	config = util.config()
 
 	command = ''
-
-	if not host and as_root:
-		command = 'docker exec -it sail bash'
-	elif not host and not as_root:
-		command = 'docker exec -it sail sudo -u www-data bash -c "cd ~/public; bash"'
+	if not as_root:
+		command = 'sudo -u www-data bash -c "cd ~/public; bash"'
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
@@ -175,8 +170,7 @@ def shell(root, host):
 @ssh.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument('command', nargs=-1)
 @click.option('--root', is_flag=True, help='Login as the root user')
-@click.option('--host', is_flag=True, help='Login to the host (not the container) as the root user')
-def run(command, root, host):
+def run(command, root):
 	'''Run a command via SSH and return the results'''
 	as_root = root
 	root = util.find_root()
@@ -187,10 +181,8 @@ def run(command, root, host):
 	else:
 		command = ''.join(command)
 
-	if not host and as_root:
-		command = shlex.join(['docker', 'exec', '-it', 'sail', 'bash', '-c', command])
-	elif not host and not as_root:
-		command = shlex.join(['docker', 'exec', '-it', 'sail', 'sudo', '-u', 'www-data', 'bash', '-c', command])
+	if not as_root:
+		command = shlex.join(['sudo', '-u', 'www-data', 'bash', '-c', command])
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
