@@ -138,8 +138,8 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 	c.run('sudo -u www-data ln -sfn /var/www/releases/%s /var/www/public' % release)
 
 	click.echo('- Reloading services')
-	c.run('docker exec sail nginx -s reload')
-	c.run('docker exec sail kill -s USR2 $(docker exec sail cat /var/run/php/php7.4-fpm.pid)')
+	c.run('nginx -s reload')
+	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
 
 	releases = c.run('ls /var/www/releases')
 	releases = re.findall('\d+', releases.stdout)
@@ -203,8 +203,8 @@ def rollback(release=None, releases=False):
 	c.run('ln -sfn /var/www/releases/%s /var/www/public' % release)
 
 	click.echo('- Reloading services')
-	c.run('docker exec sail nginx -s reload')
-	c.run('docker exec sail kill -s USR2 $(docker exec sail cat /var/run/php/php7.4-fpm.pid)')
+	c.run('nginx -s reload')
+	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
 
 	click.echo('- Successfully rolled back to %s' % release)
 
