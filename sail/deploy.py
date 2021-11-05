@@ -2,7 +2,9 @@ from sail import cli, util
 
 import subprocess, time
 import click, pathlib
-import re, shlex
+import re, shlex, os, stat
+
+from glob import glob
 
 def _get_extend_filters(paths, prefix=None):
 	root = util.find_root()
@@ -86,6 +88,27 @@ def deploy(with_uploads, dry_run, path):
 		return
 
 	click.echo('# Deploying to production')
+
+	hooks = glob(root + '/.sail/pre-deploy') + glob(root + '/.sail/pre-deploy.*')
+	failed = []
+	if len(hooks) > 0:
+		click.echo('- Running pre-deploy hooks')
+
+	for hook in hooks:
+		f = pathlib.Path(hook)
+		if not os.access(f, os.X_OK):
+			f.chmod(f.stat().st_mode | stat.S_IEXEC)
+
+		p = subprocess.Popen(str(f), encoding='utf8', shell=True)
+		p.communicate()
+		if p.returncode > 0:
+			failed.append(f)
+
+	if len(failed) > 0:
+		click.echo('- One or more pre-deploy hooks failed. Aborting deploy.')
+		for f in failed:
+			click.echo('- Failed: %s' % f)
+
 	click.echo('- Preparing release directory')
 	c = util.connection()
 
