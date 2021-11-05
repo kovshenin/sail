@@ -66,6 +66,7 @@ def wp(command):
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
+		'-o', 'LogLevel=QUIET',
 		'root@%s' % config['hostname'],
 		'sudo -u www-data bash -c "cd ~/public; wp %s"' % command
 	)
