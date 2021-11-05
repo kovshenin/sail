@@ -1,2 +1,3 @@
 include requirements.txt
 include sail/blueprints/*.yaml
+include templates/*

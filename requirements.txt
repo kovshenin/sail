@@ -4,3 +4,5 @@ prettytable==2.2.0
 PyYAML==5.4.1
 fabric==2.6.0
 paramiko==2.8.0
+python-digitalocean==1.17.0
+Jinja2==3.0.2

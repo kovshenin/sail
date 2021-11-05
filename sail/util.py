@@ -3,6 +3,7 @@ import sail
 import time, pathlib, os
 import json, click, requests, shlex, subprocess
 import fabric, paramiko
+import jinja2
 
 _debug = False
 def debug(set=None):
@@ -291,3 +292,8 @@ def connection():
 	# Decorate it
 	c.run = _run(c.run)
 	return c
+
+def template(filename, data):
+	e = jinja2.Environment(loader=jinja2.FileSystemLoader(sail.TEMPLATES_PATH))
+	template = e.get_template(filename)
+	return template.render(data)

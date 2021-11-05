@@ -163,8 +163,6 @@ def shell(root, host):
 	elif not host and not as_root:
 		command = 'docker exec -it sail sudo -u www-data bash -c "cd ~/public; bash"'
 
-	click.echo('Spawning an interactive SSH shell for %s' % config['hostname'])
-
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
@@ -193,8 +191,6 @@ def run(command, root, host):
 		command = shlex.join(['docker', 'exec', '-it', 'sail', 'bash', '-c', command])
 	elif not host and not as_root:
 		command = shlex.join(['docker', 'exec', '-it', 'sail', 'sudo', '-u', 'www-data', 'bash', '-c', command])
-
-	click.echo('Spawning SSH and running command on %s' % config['hostname'], err=True)
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
