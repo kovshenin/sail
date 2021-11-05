@@ -163,6 +163,7 @@ def shell(root):
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
+		'-o', 'LogLevel=QUIET',
 		'root@%s' % config['hostname'],
 		command
 	)
@@ -189,6 +190,7 @@ def run(command, root):
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
+		'-o', 'LogLevel=QUIET',
 		'root@%s' % config['hostname'],
 		command
 	)
