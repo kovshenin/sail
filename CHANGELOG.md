@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+* Added: New `pre-deploy` hooks in .sail, these will run every time deploy is invoked
+* Added: New `sail diff` command, shortcut for `sail deploy --dry-run` and `sail download --dry-run`
+* Changed: New `--skip-hooks` or `--no-verify` options to `sail deploy` to skip running hooks
+
 ## [0.9.18] - 2021-10-26
 
 * Added: New `sail ssh run` command
