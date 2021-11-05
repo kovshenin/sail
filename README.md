@@ -49,35 +49,8 @@ brew install sail
 ```
 
 If you're new to Howebrew, [installing it](https://brew.sh/) is quite a breeze as well.
-
-### From PyPI
-
-If you already use Python and pip, you can obtain the latest version of Sail
-from PyPI:
-
-```
-pip3 install sailed.io
-```
-
-### From Source
-
-You will need Python 3.6+ with `pip` and `setuptools` available. Download
-the source files from GitHub, install dependencies and run the Sail installation:
-
-```
-pip3 install -r requirements.txt
-python3 setup.py install
-```
-
-Consider installing Sail in a virtual environment, to make sure dependencies
-aren't broken for other Python software on the system:
-
-```
-python3 -m venv .env
-.env/bin/pip install -r requirements.txt
-.env/bin/python setup.py install
-ln -s .env/bin/sail /usr/local/bin/sail
-```
+If you're looking for other ways to install Sail, checkout the [installing section](https://sailed.io/kb/install/)
+in the Sail Knowledgebase.
 
 ## Getting a DigitalOcean API Token
 
@@ -215,6 +188,13 @@ existing applications to Sail.
 
 You can run deploy with the `--dry-run` flag to get a list of file changes, which
 will be written to the production server during the deploy.
+
+You can add pre-deploy hooks to your Sail project. These are useful to run PHP linter,
+PHPCS and other tools prior to deploying to production. Here's a [quick guide](https://sailed.io/kb/pre-deploy-phpcs/)
+using a simple pre-deploy hook to lint PHP files and run them through the
+WordPress Coding Standards check.
+
+You can learn more about [deploying with Sail CLI here](https://sailed.io/kb/deploy/).
 
 ### Rolling Back
 
