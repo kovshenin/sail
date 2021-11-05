@@ -100,7 +100,7 @@ def restore(path, yes, skip_db, skip_uploads):
 		# TODO: Maybe do an atomic import which deletes tables that no longer exist
 		# by doing a rename.
 		try:
-			c.run('docker exec sail bash -c "zcat /var/www/%s | mysql -uroot wordpress"' % database_filename)
+			c.run('zcat /var/www/%s | mysql -uroot wordpress' % database_filename)
 		except:
 			shutil.rmtree(progress_dir)
 			raise click.ClickException('An error occurred in SSH. Please try again.')
@@ -108,7 +108,7 @@ def restore(path, yes, skip_db, skip_uploads):
 		click.echo('- Cleaning up production')
 
 		try:
-			c.run('docker exec sail rm /var/www/%s' % database_filename)
+			c.run('rm /var/www/%s' % database_filename) # TODO: Move to /tmp maybe, or /root
 		except:
 			shutil.rmtree(progress_dir)
 			raise click.ClickException('An error occurred in SSH. Please try again.')
@@ -159,7 +159,7 @@ def backup():
 	click.echo('- Exporting WordPress database')
 
 	try:
-		c.run('docker exec sail bash -c "mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s"' % database_filename)
+		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s' % database_filename)
 	except:
 		shutil.rmtree(progress_dir)
 		raise click.ClickException('An error occurred in SSH. Please try again.')
@@ -178,7 +178,7 @@ def backup():
 	click.echo('- Cleaning up production')
 
 	try:
-		c.run('docker exec sail rm /var/www/%s' % database_filename)
+		c.run('rm /var/www/%s' % database_filename)
 	except:
 		shutil.rmtree(progress_dir)
 		raise click.ClickException('An error occurred in SSH. Please try again.')
