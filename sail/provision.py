@@ -232,7 +232,7 @@ def init(ctx, provider_token, email, size, region, force):
 	util.wait(wait_for_cloud_init, timeout=300, interval=10)
 
 	c.run('mkdir -p /etc/nginx/conf.d/shared')
-	# c.put(sail.TEMPLATES_PATH + '/nginx.main.conf', '/etc/nginx/nginx.conf')
+	c.put(sail.TEMPLATES_PATH + '/nginx.main.conf', '/etc/nginx/nginx.conf')
 	c.put(sail.TEMPLATES_PATH + '/nginx.shared.conf', '/etc/nginx/conf.d/shared/sail.conf')
 
 	# Generate default server config and install cert.
