@@ -95,6 +95,8 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 		for f in failed:
 			click.echo('- Failed: %s' % f)
 
+		exit()
+
 	click.echo('- Preparing release directory')
 	c = util.connection()
 
