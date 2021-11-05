@@ -149,9 +149,18 @@ def config():
 	return _config
 
 loader_i = 0
+loader_suspended = False
 
-def loader():
+def loader(suspend=None):
 	global loader_i
+	global loader_suspended
+
+	if suspend:
+		loader_suspended = True
+		return
+
+	if loader_suspended:
+		return
 
 	frames = [
 		"   ",

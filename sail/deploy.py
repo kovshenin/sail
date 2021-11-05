@@ -57,40 +57,26 @@ def _get_extend_filters(paths, prefix=None):
 @click.argument('path', nargs=-1, required=False)
 @click.option('--with-uploads', is_flag=True, help='Include the wp-content/uploads directory')
 @click.option('--dry-run', is_flag=True, help='Show changes about to be deployed to production')
-def deploy(with_uploads, dry_run, path):
+@click.option('--skip-hooks', '--no-verify', is_flag=True, help='Do not run pre-deploy hooks')
+@click.pass_context
+def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 	'''Deploy your working copy to production. If path is not specified then all application files are deployed.'''
 	root = util.find_root()
 	config = util.config()
 
-	app_id = config['app_id']
 	release = str(int(time.time()))
 
 	if dry_run:
-		click.echo('# Comparing files')
-
-		destination = 'root@%s:/var/www/public/' % config['hostname']
-		source = '%s/' % root
-		files = _diff(source, destination, _get_extend_filters(path))
-		empty = True
-
-		colors = {'created': 'green', 'deleted': 'red', 'updated': 'yellow'}
-		labels = {'created': 'New', 'deleted': 'Delete', 'updated': 'Update'}
-		for op in ['created', 'updated', 'deleted']:
-			for filename in files[op]:
-				empty = False
-				click.secho('- %s: %s' % (labels[op], filename), fg=colors[op])
-
-		# TODO: Compare uploads if requested --with-uploads
-
-		if empty:
-			click.echo('- No changes')
-
-		return
+		return ctx.invoke(diff, path=path)
 
 	click.echo('# Deploying to production')
 
-	hooks = glob(root + '/.sail/pre-deploy') + glob(root + '/.sail/pre-deploy.*')
+	hooks = []
 	failed = []
+
+	if not skip_hooks:
+		hooks = glob(root + '/.sail/pre-deploy') + glob(root + '/.sail/pre-deploy.*')
+
 	if len(hooks) > 0:
 		click.echo('- Running pre-deploy hooks')
 
@@ -226,7 +212,8 @@ def rollback(release=None, releases=False):
 @click.option('--with-uploads', is_flag=True, help='Include the wp-content/uploads directory')
 @click.option('--delete', is_flag=True, help='Delete files from local copy that do not exist on production')
 @click.option('--dry-run', is_flag=True, help='Show changes about to be downloaded to the working copy')
-def download(path, yes, with_uploads, delete, dry_run):
+@click.pass_context
+def download(ctx, path, yes, with_uploads, delete, dry_run):
 	'''Download files from production to your working copy'''
 	root = util.find_root()
 	config = util.config()
@@ -237,30 +224,10 @@ def download(path, yes, with_uploads, delete, dry_run):
 			abort=True
 		)
 
-	app_id = config['app_id']
 	delete = ['--delete'] if delete else []
 
 	if dry_run:
-		click.echo('# Comparing files')
-
-		source = 'root@%s:/var/www/public/' % config['hostname']
-		destination = '%s/' % root
-		files = _diff(source, destination, _get_extend_filters(path))
-		empty = True
-
-		colors = {'created': 'green', 'deleted': 'red', 'updated': 'yellow'}
-		labels = {'created': 'New', 'deleted': 'Delete', 'updated': 'Update'}
-		for op in ['created', 'updated', 'deleted']:
-			for filename in files[op]:
-				empty = False
-				click.secho('- %s: %s' % (labels[op], filename), fg=colors[op])
-
-		# TODO: Compare uploads if requested --with-uploads
-
-		if empty:
-			click.echo('- No changes')
-
-		return
+		return ctx.invoke(diff, path=path, reverse=True)
 
 	click.echo('# Downloading application files from production')
 
@@ -290,6 +257,44 @@ def download(path, yes, with_uploads, delete, dry_run):
 			raise click.ClickException('An error occurred during download. Please try again.')
 
 	click.echo('- Files download completed')
+
+@cli.command()
+@click.argument('path', nargs=-1, required=False)
+@click.option('--reverse', is_flag=True, help='Reverse the file comparison direction (production to local)')
+@click.option('--raw', is_flag=True, help='Show the list of changes in raw format')
+def diff(path, reverse, raw):
+	'''Show file changes between your local copy and production.'''
+	root = util.find_root()
+	config = util.config()
+
+	if raw:
+		util.loader(suspend=True)
+	else:
+		click.echo('# Comparing files')
+
+	destination = 'root@%s:/var/www/public/' % config['hostname']
+	source = '%s/' % root
+
+	if reverse:
+		destination, source = source, destination
+
+	files = _diff(source, destination, _get_extend_filters(path))
+	empty = True
+
+	colors = {'created': 'green', 'deleted': 'red', 'updated': 'yellow'}
+	labels = {'created': 'New', 'deleted': 'Delete', 'updated': 'Update'}
+	for op in ['created', 'updated', 'deleted']:
+		for filename in files[op]:
+			empty = False
+			if raw:
+				click.echo(filename)
+			else:
+				click.secho('- %s: %s' % (labels[op], filename), fg=colors[op])
+
+	# TODO: Compare uploads if requested --with-uploads
+
+	if empty and not raw:
+		click.echo('- No changes')
 
 def _diff(source, destination, extend_filters=[]):
 	'''Compare application files between environments'''
