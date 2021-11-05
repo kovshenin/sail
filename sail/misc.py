@@ -61,15 +61,13 @@ def wp(command):
 
 	command = shlex.join(command)
 
-	click.echo('Spawning SSH and running WP-CLI on %s' % config['hostname'], err=True)
-
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % config['hostname'],
-		'docker exec -it sail sudo -u www-data bash -c "cd ~/public; wp %s"' % command
+		'sudo -u www-data bash -c "cd ~/public; wp %s"' % command
 	)
 
 @cli.command()
@@ -77,7 +75,7 @@ def admin():
 	'''Open your default web browser to the wp-login.php location of your site'''
 	root = util.find_root()
 	config = util.config()
-	webbrowser.open(config['login_url'])
+	webbrowser.open(config['hostname'] + '/wp-login.php')
 
 @cli.command()
 @click.option('--nginx', is_flag=True)
