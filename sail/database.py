@@ -17,15 +17,13 @@ def cli():
 	root = util.find_root()
 	config = util.config()
 
-	click.echo('Spawning an interactive MySQL shell at %s' % config['hostname'])
-
 	os.execlp('ssh', 'ssh', '-t',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % config['hostname'],
-		'docker exec -it sail sudo -u www-data wp --path=/var/www/public db cli'
+		'sudo -u www-data wp --path=/var/www/public db cli'
 	)
 
 @db.command(name='import')
@@ -64,14 +62,14 @@ def import_cmd(path):
 	cat_bin = 'zcat' if is_gz else 'cat'
 
 	try:
-		c.run('docker exec sail bash -c "%s /var/www/%s | mysql -uroot wordpress"' % (cat_bin, temp_name))
+		c.run('%s /var/www/%s | mysql -uroot wordpress' % (cat_bin, temp_name))
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
 	click.echo('- Cleaning up production')
 
 	try:
-		c.run('docker exec sail rm /var/www/%s' % temp_name)
+		c.run('rm /var/www/%s' % temp_name)
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
@@ -91,7 +89,7 @@ def export():
 	click.echo('# Exporting WordPress database')
 
 	try:
-		c.run('docker exec sail bash -c "mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s"' % filename)
+		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s' % filename)
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
@@ -108,7 +106,7 @@ def export():
 	click.echo('- Cleaning up production')
 
 	try:
-		c.run('docker exec sail rm /var/www/%s' % filename)
+		c.run('rm /var/www/%s' % filename)
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
