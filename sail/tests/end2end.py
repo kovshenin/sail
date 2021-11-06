@@ -42,7 +42,7 @@ class TestEnd2End(unittest.TestCase):
 		self.home = self.__class__.home
 
 	def test_000_config(self):
-		api_base = 'http://127.0.0.1:5000/api/1.0/'
+		api_base = 'http://127.0.0.1:5000/api/1.1/'
 
 		# Allows running this on the production API server if explicitly asked.
 		if 'SAIL_API_BASE' in os.environ:
