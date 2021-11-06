@@ -104,8 +104,7 @@ def init(ctx, provider_token, email, size, region, force):
 		'profile_key': ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32)),
 		'version': __version__,
 	}
-	with open('%s/.sail/config.json' % root, 'w+') as f:
-		json.dump(config, f, indent='\t')
+	util.update_config(config)
 
 	click.echo('- Provisioning servers')
 	click.echo('- Uploading SSH key to DigitalOcean')
@@ -176,9 +175,7 @@ def init(ctx, provider_token, email, size, region, force):
 	config['ip'] = droplet.ip_address
 	config['droplet_id'] = droplet.id
 	config['key_id'] = key.id
-
-	with open('%s/.sail/config.json' % root, 'w+') as f:
-		json.dump(config, f, indent='\t')
+	util.update_config(config)
 
 	click.echo('- Waiting for SSH')
 	c = util.connection()
@@ -265,8 +262,7 @@ def init(ctx, provider_token, email, size, region, force):
 
 	# Update the domains config.
 	config['domains'].append({'name': hostname, 'internal': True, 'https': https, 'primary': True})
-	with open('%s/.sail/config.json' % root, 'w+') as f:
-		json.dump(config, f, indent='\t')
+	util.update_config(config)
 
 	# Create a MySQL database
 	click.echo('- Setting up the MySQL database')
