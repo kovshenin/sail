@@ -4,6 +4,8 @@ import requests, json, os, subprocess, time
 import click
 import tldextract
 import digitalocean
+import urllib
+import shlex
 
 @cli.group()
 def domain():
@@ -34,22 +36,52 @@ def list():
 @click.option('--skip-replace', is_flag=True, help='Skip running search-replace routines for home, siteurl, and other URLs')
 def make_primary(domain, force, skip_replace):
 	'''Set a domain as primary, update siteurl/home, search-replace all links'''
-	root = util.find_root()
 	config = util.config()
 
 	click.echo('# Updating primary domain')
 
-	response = util.request('/domains/make-primary/', json={
-		'domain': domain,
-		'force': bool(force),
-		'skip_replace': bool(skip_replace),
-	})
-	task_id = response['task_id']
+	if domain not in [d['name'] for d in config['domains']]:
+		raise click.ClickException('Can not make primary, domain does not exist')
 
-	click.echo('- Scheduled make-primary for %s' % domain)
-	click.echo('- Waiting for make-primary to complete')
+	domain = [d for d in config['domains'] if d['name'] == domain][0]
+	if domain['primary'] and not force:
+		raise click.ClickException('Domain %s already set as primary. Use --force to force' % domain['name'])
 
-	util.wait_for_task(task_id, timeout=300, interval=5)
+	c = util.connection()
+	wp = 'sudo -u www-data wp --path=/var/www/public/ --skip-themes --skip-plugins '
+
+	home = c.run(wp + 'option get home').stdout.strip()
+	current = urllib.parse.urlparse(home).netloc
+	proto = 'https://' if domain['https'] else 'http://'
+	click.echo('- Current primary domain: %s' % current)
+
+	if skip_replace:
+		click.echo('- Skipping search-replace')
+	else:
+		click.echo('- Running search-replace')
+
+		for sproto in ['https://', 'http://']:
+			c.run(wp + shlex.join([
+				'search-replace',
+				sproto + current,
+				proto + domain['name'],
+				'--all-tables',
+			]))
+
+		# Flush object cache
+		click.echo('- Flushing object cache')
+		c.run(wp + 'cache flush')
+
+	# Update config.json
+	click.echo('- Updating .sail/config.json')
+	for i, d in enumerate(config['domains']):
+		config['domains'][i]['primary'] = d['name'] == domain['name']
+
+	util.update_config(config)
+
+	click.echo('- Renaming droplet')
+	droplet = digitalocean.Droplet(token=config['provider_token'], id=config['droplet_id'])
+	droplet.rename(domain['name'])
 
 	click.echo('- Primary domain updated successfully')
 
