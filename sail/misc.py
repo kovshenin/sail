@@ -92,8 +92,6 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 	root = util.find_root()
 	config = util.config()
 
-	click.echo('Querying logs on %s' % config['hostname'])
-
 	settings = []
 	if nginx_access or nginx:
 		settings.append('-t nginx_access')
@@ -125,6 +123,7 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
+		'-o', 'LogLevel=QUIET',
 		'root@%s' % config['hostname'],
 		'journalctl --no-hostname --directory=/var/log/journal %s' % settings
 	)
