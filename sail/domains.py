@@ -1,6 +1,6 @@
 from sail import cli, util
 
-import requests, json, os, subprocess, time
+import requests, json, os, subprocess, time, io
 import click
 import tldextract
 import digitalocean
@@ -100,15 +100,62 @@ def make_https(domains, agree_tos):
 	if not domains:
 		raise click.ClickException('At least one domain is required')
 
+	groups = []
+	domains, subdomains = _parse_domains(domains)
+
 	click.echo('# Requesting and installing SSL for domains')
 
-	response = util.request('/domains/make-https/', json={'domains': domains})
-	task_id = response['task_id']
+	for domain in domains + subdomains:
+		if domain.fqdn not in [d['name'] for d in config['domains']]:
+			raise click.ClickException('Domain %s does not exist, please add it first' % domain.fqdn)
 
-	click.echo('- Scheduled make-https for %s' % ', '.join(domains))
-	click.echo('- Waiting for make-https to complete')
+	for domain in domains:
+		if domain.fqdn not in groups:
+			groups.append(domain.fqdn)
 
-	util.wait_for_task(task_id, timeout=300, interval=5)
+	for subdomain in subdomains:
+		if subdomain.fqdn in groups or subdomain.registered_domain in groups:
+			continue
+
+		# Parent domain exists
+		if subdomain.registered_domain in [d['name'] for d in config['domains']]:
+			groups.append(subdomain.registered_domain)
+		else:
+			groups.append(subdomain.fqdn)
+
+	c = util.connection()
+	_doms, _subs = _parse_domains([d['name'] for d in config['domains'] if d['internal'] != True])
+
+	for group in groups:
+		names = []
+		names.extend([d.fqdn for d in _doms if d.fqdn == group])
+		names.extend([s.fqdn for s in _subs if s.registered_domain == group or s.fqdn == group])
+
+		click.echo('- Generating Nginx config for %s' % group)
+		c.put(io.StringIO(util.template('nginx.server.conf',
+			{'server_names': names})),'/etc/nginx/conf.d/%s.conf' % group)
+
+		click.echo('- Requesting SSL certificate for group %s' % group)
+		args = ['certbot', '-n', '-m', config['email'], '--redirect', '--expand',
+			'--agree-tos', '--nginx',
+		]
+
+		for name in names:
+			args.append('-d')
+			args.append(name)
+
+		try:
+			c.run(shlex.join(args))
+		except Exception as e:
+			util.dlog(e)
+			raise click.ClickException('Could not obtain SSL certificate for %s. Use --debug for more info.' % group)
+
+		# Update .sail/config.json
+		for i, d in enumerate(config['domains']):
+			if d['name'] in names:
+				config['domains'][i]['https'] = True
+
+		util.update_config(config)
 
 	click.echo('- SSL certificates installed')
 	click.echo('- Don\'t forget to: sail domain make-primary')
