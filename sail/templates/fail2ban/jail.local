@@ -1,0 +1,37 @@
+{% if 'wordpress-auth' in jails %}
+[wordpress-auth]
+logpath = /var/log/syslog
+enabled = true
+filter = wordpress-auth
+action = nginx-deny
+maxretry = 3
+findtime = 60
+bantime = 120
+{% endif %}
+
+{% if 'wordpress-auth-long' in jails %}
+[wordpress-auth-long]
+logpath = /var/log/syslog
+enabled = true
+filter = wordpress-auth
+action = nginx-deny
+maxretry = 10
+findtime = 600
+bantime = 3600
+{% endif %}
+
+{% if 'wordpress-pingback' in jails %}
+[wordpress-pingback]
+logpath = /var/log/syslog
+enabled = true
+filter = wordpress-pingback
+action = nginx-deny
+maxretry = 2
+findtime = 600
+bantime = 3600
+{% endif %}
+
+{% if 'sshd' not in jails %}
+[sshd]
+enabled = false
+{% endif %}
