@@ -131,6 +131,11 @@ def find_root():
 
 		p = p.parent
 
+def update_config(data):
+	root = find_root()
+	with open(root + '/.sail/config.json', 'w+') as f:
+		json.dump(data, f, indent='\t')
+
 def config():
 	root = find_root()
 

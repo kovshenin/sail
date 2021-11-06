@@ -2,6 +2,8 @@ from sail import cli, util
 
 import requests, json, os, subprocess, time
 import click
+import tldextract
+import digitalocean
 
 @cli.group()
 def domain():
@@ -11,23 +13,20 @@ def domain():
 @domain.command()
 def list():
 	'''List domains associated with your site'''
-	root = util.find_root()
 	config = util.config()
 
-	response = util.request('/domains/')
-
-	click.secho('# Domains', bold=True)
-	for domain, data in response.items():
+	click.echo('# Domains')
+	for domain in config['domains']:
 		flags = []
 		for flag in ['internal', 'https', 'primary']:
-			if data.get(flag, None):
+			if domain.get(flag, None):
 				flags.append(flag)
 
 		sflags = ''
 		if flags:
 			sflags = ' (%s)' % ', '.join(flags)
 
-		click.echo('- ' + domain + sflags)
+		click.echo('- ' + domain['name'] + sflags)
 
 @domain.command()
 @click.argument('domain', nargs=1)
@@ -87,33 +86,198 @@ def make_https(domains, agree_tos):
 @click.argument('domains', nargs=-1)
 def add(domains, skip_dns):
 	'''Add a new domain, with DNS records pointing to your site'''
-	root = util.find_root()
 	config = util.config()
 
 	if not domains:
 		raise click.ClickException('At least one domain is required')
 
-	response = util.request('/domains/', json={'domains': domains, 'skip_dns': skip_dns})
+	domains, subdomains = _parse_domains(domains)
 
-	for domain, data in response['feedback'].items():
-		click.echo()
-		click.echo('# %s' % domain)
-		for line in data:
-			click.echo('- %s' % line)
+	click.echo('# Adding domains')
+
+	# Add all domains and subs to config.json
+	for domain in domains + subdomains:
+		if domain.fqdn not in [d['name'] for d in config['domains']]:
+			config['domains'].append({
+				'name': domain.fqdn,
+				'internal': False,
+				'primary': False,
+				'https': False,
+			})
+
+			util.update_config(config)
+			click.echo('- Adding %s to .sail/config.json' % domain.fqdn)
+		else:
+			click.echo('- Domain %s already exists is .sail/config.json' % domain.fqdn)
+
+	# Bail early if skipping
+	if skip_dns:
+		click.echo('- Skipping updating DNS records')
+		return
+
+	manager = digitalocean.Manager(token=config['provider_token'])
+	existing = manager.get_all_domains()
+
+	# Add or update real domains first.
+	for domain in domains:
+		if domain.fqdn not in [d.name for d in existing]:
+			do_domain = digitalocean.Domain(
+				token=config['provider_token'],
+				name=domain.fqdn,
+				ip_address=config['ip']
+			)
+
+			try:
+				do_domain.create()
+				existing.append(do_domain)
+				click.echo('- Creating DNS zone and record for %s' % domain.fqdn)
+			except:
+				raise click.ClickException('- Could not create DNS zone for %s' % domain.fqdn)
+
+			continue
+
+		# DNS zone exists, try and update it
+		click.echo('- Updating DNS records for %s' % domain.fqdn)
+		do_domain = digitalocean.Domain(token=config['provider_token'], name=domain.fqdn)
+		records = do_domain.get_records()
+		exists = False
+
+		for r in records:
+			if r.name != '@' or r.type != 'A':
+				continue
+
+			if r.data == config['ip']:
+				click.echo('- DNS record for %s exists and is correct' % domain.fqdn)
+				exists = True
+				continue
+
+			# Delete the remaining records.
+			r.destroy()
+			click.echo('- Deleting DNS record for %s, incorrect existing record' % domain.fqdn)
+
+		if not exists:
+			click.echo('- Adding new DNS record for %s' % domain.fqdn)
+			do_domain.create_new_domain_record(name='@', type='A', data=config['ip'])
+
+	# Add all subdomains
+	for subdomain in subdomains:
+		# TODO: Add support for orphaned subdomains
+		if subdomain.registered_domain not in [d.name for d in existing]:
+			click.echo('- Skipping DNS for %s, zone not found' % subdomain.fqdn)
+			continue
+
+		do_domain = digitalocean.Domain(token=config['provider_token'], name=subdomain.registered_domain)
+		records = do_domain.get_records()
+		exists = False
+
+		for r in records:
+			if r.name != subdomain.subdomain or r.type not in ['A', 'CNAME']:
+				continue
+
+			if r.type == 'A' and r.data == config['ip']:
+				click.echo('- Skipping DNS record for %s, existing record is correct' % subdomain.fqdn)
+				exists = True
+				continue
+
+			# Delete the remaining records.
+			r.destroy()
+			click.echo('- Deleting DNS record for %s, incorrect exesting record' % subdomain.fqdn)
+
+		if not exists:
+			click.echo('- Adding new DNS record for %s' % subdomain.fqdn)
+			do_domain.create_new_domain_record(name=subdomain.subdomain, type='A', data=config['ip'])
 
 @domain.command()
 @click.option('--skip-dns', is_flag=True, help='Do not delete DNS records')
 @click.argument('domains', nargs=-1)
 def delete(domains, skip_dns):
 	'''Delete a domain and all DNS records'''
-	'''Add a new domain, with DNS records pointing to your site'''
-	root = util.find_root()
 	config = util.config()
 
-	response = util.request('/domains/', json={'domains': domains, 'skip_dns': skip_dns}, method='DELETE')
+	if not domains:
+		raise click.ClickException('At least one domain is required')
 
-	for domain, data in response['feedback'].items():
-		click.echo()
-		click.echo('# %s' % domain)
-		for line in data:
-			click.echo('- %s' % line)
+	domains, subdomains = _parse_domains(domains)
+
+	click.echo('# Deleting domains')
+
+	# Remove all domains and subs from config.json
+	for domain in domains + subdomains:
+		if domain.fqdn in [d['name'] for d in config['domains']]:
+			config['domains'] = [d for d in config['domains'] if d['name'] != domain.fqdn]
+			util.update_config(config)
+			click.echo('- Deleting %s from .sail/config.json' % domain.fqdn)
+		else:
+			click.echo('- Domain %s does not exist in .sail/config.json' % domain.fqdn)
+
+	# Bail early if skipping
+	if skip_dns:
+		click.echo('- Skipping updating DNS records')
+		return
+
+	manager = digitalocean.Manager(token=config['provider_token'])
+	existing = manager.get_all_domains()
+
+	# Remove subdomains first
+	for subdomain in subdomains:
+		if subdomain.registered_domain not in [d.name for d in existing]:
+			click.echo('- Skipping DNS for %s, zone not found' % subdomain.fqdn)
+			continue
+
+		do_domain = digitalocean.Domain(token=config['provider_token'], name=subdomain.registered_domain)
+		records = do_domain.get_records()
+		exists = False
+
+		for r in records:
+			if r.name != subdomain.subdomain or r.type != 'A':
+				continue
+
+			if r.data == config['ip']:
+				exists = True
+				click.echo('- Deleting A record for %s' % subdomain.fqdn)
+				r.destroy()
+
+		if not exists:
+			click.echo('- No A records to delete for %s' % subdomain.fqdn)
+
+	# Remove domains
+	for domain in domains:
+		if domain.fqdn not in [d.name for d in existing]:
+			click.echo('- Skipping DNS for %s, zone not found' % domain.fqdn)
+			continue
+
+		try:
+			do_domain = digitalocean.Domain(token=config['provider_token'], name=domain.fqdn)
+			do_domain.destroy()
+			click.echo('- Deleting DNS zone for %s' % domain.fqdn)
+		except:
+			click.echo('- Could not delete DNS zone for %s' % domain.fqdn)
+
+		_, _subs = _parse_domains([d['name'] for d in config['domains'] if d['internal'] != True])
+		for _sub in _subs:
+			if _sub.registered_domain == domain.fqdn:
+				click.echo('- Deleting orphaned subdomain %s from .sail/config.json' % _sub.fqdn)
+				config['domains'] = [d for d in config['domains'] if d['name'] != _sub.fqdn]
+				util.update_config(config)
+
+# Parse list into registered domains and subdomains
+def _parse_domains(input_domains):
+	subdomains = []
+	domains = []
+
+	for domain in input_domains:
+		ex = tldextract.extract(domain, include_psl_private_domains=True)
+		if not ex.domain or not ex.suffix:
+			raise click.ClickException('Bad domain: %s' % domain)
+
+		# No internal domains
+		if ex.domain in ['sailed', 'justsailed'] and ex.suffix == 'io':
+			raise click.ClickException('Bad domain: %s' % domain)
+
+		if ex.subdomain:
+			subdomains.append(ex)
+			continue
+
+		domains.append(ex)
+
+	return domains, subdomains

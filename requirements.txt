@@ -6,3 +6,4 @@ fabric==2.6.0
 paramiko==2.8.0
 python-digitalocean==1.17.0
 Jinja2==3.0.2
+tldextract==3.1.2

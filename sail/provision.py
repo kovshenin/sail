@@ -100,6 +100,7 @@ def init(ctx, provider_token, email, size, region, force):
 		'hostname': hostname,
 		'provider_token': provider_token,
 		'email': email,
+		'domains': [],
 		'profile_key': ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32)),
 		'version': __version__,
 	}
@@ -254,6 +255,11 @@ def init(ctx, provider_token, email, size, region, force):
 				time.sleep(10)
 			else:
 				click.echo('- Certbot failed, skipping SSL')
+
+	# Update the domains config.
+	config['domains'].append({'name': hostname, 'internal': True, 'https': https, 'primary': True})
+	with open('%s/.sail/config.json' % root, 'w+') as f:
+		json.dump(config, f, indent='\t')
 
 	# Create a MySQL database
 	click.echo('- Setting up the MySQL database')
