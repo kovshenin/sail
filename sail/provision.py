@@ -235,6 +235,13 @@ def init(ctx, provider_token, email, size, region, force):
 	c.run('mkdir -p /etc/nginx/conf.d/shared')
 	c.put(sail.TEMPLATES_PATH + '/nginx.main.conf', '/etc/nginx/nginx.conf')
 	c.put(sail.TEMPLATES_PATH + '/nginx.shared.conf', '/etc/nginx/conf.d/shared/sail.conf')
+	c.put(sail.TEMPLATES_PATH + '/prepend.php', '/etc/sail/prepend.php')
+	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/fpm/php.ini')
+	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/cli/php.ini')
+
+	# Get xhprof
+	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.0-sail/xhprof.so.gz -o /tmp/xhprof.so.gz')
+	c.run('gunzip /tmp/xhprof.so.gz && mv /tmp/xhprof.so /usr/lib/php/20190902/xhprof.so')
 
 	# Generate default server config and install cert.
 	click.echo('- Installing default SSL certificate')
@@ -297,6 +304,10 @@ def init(ctx, provider_token, email, size, region, force):
 	c.run('rm -rf /var/www/public')
 	c.run('ln -sfn /var/www/releases/1337 /var/www/public')
 	c.run('rm -rf /var/www/public/wp-content/uploads && ln -sfn /var/www/uploads /var/www/public/wp-content/uploads')
+
+	# Reload services
+	c.run('nginx -s reload')
+	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
 
 	# Download files from production
 	ctx.invoke(deploy.download, yes=True)

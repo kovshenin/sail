@@ -21,7 +21,7 @@ import shutil
 # sail profile open .profiles/something.json
 # sail profile run https://example.org
 # sail profile curl -H 'Some: header' -XPOST https://example.org
-# sail profile key --curl
+# sail profile key --header
 # sail profile download /var/www/profiles/filename.xhprof
 # sail profile clean
 
