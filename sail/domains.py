@@ -48,7 +48,7 @@ def make_primary(domain, force, skip_replace):
 		raise click.ClickException('Domain %s already set as primary. Use --force to force' % domain['name'])
 
 	c = util.connection()
-	wp = 'sudo -u www-data wp --path=/var/www/public/ --skip-themes --skip-plugins '
+	wp = 'sudo -u www-data wp --path=%s --skip-themes --skip-plugins ' % util.remote_path('/public/')
 
 	home = c.run(wp + 'option get home').stdout.strip()
 	current = urllib.parse.urlparse(home).netloc

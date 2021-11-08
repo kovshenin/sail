@@ -35,7 +35,13 @@ class Sail_Profiler {
 	public static function start() {
 		xhprof_enable( XHPROF_FLAGS_CPU | XHPROF_FLAGS_MEMORY );
 		register_shutdown_function( [ __CLASS__, 'shutdown' ] );
-		self::$filename = tempnam( '/var/www/profiles', 'xhprof.' );
+
+		$target = '/var/www/profiles';
+		if ( ! empty( $_SERVER['DOCUMENT_ROOT'] ) ) {
+			$target = dirname( $_SERVER['DOCUMENT_ROOT'] ) . '/profiles';
+		}
+
+		self::$filename = tempnam( $target, 'xhprof.' );
 		header( 'X-Sail-Profile: ' . self::$filename );
 	}
 

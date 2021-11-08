@@ -65,8 +65,73 @@ def init(ctx, provider_token, email, size, region, force):
 	app_id = response['app_id']
 	secret = response['secret']
 	hostname = response['hostname']
+	namespace = 'default' # TODO: Add support for namespaces
 
 	click.echo('- Claimed application id: %s' % app_id)
+
+	os.mkdir('.sail')
+	root = util.find_root()
+
+	click.echo('- Writing .sail/config.json')
+	config = {
+		'app_id': app_id,
+		'secret': secret,
+		'hostname': hostname,
+		'provider_token': provider_token,
+		'email': email,
+		'domains': [],
+		'profile_key': ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32)),
+		'namespace': namespace,
+		'version': __version__,
+	}
+	util.update_config(config)
+
+	passwords = {}
+	for key in ['mysql', 'wp']:
+		passwords[key] = ''.join(secrets.choice(string.ascii_letters
+			+ string.digits) for i in range(48))
+
+	# Provision an environment
+	_provision(provider_token, size, region)
+	_configure()
+	_install(passwords)
+
+	# Download files from production
+	ctx.invoke(deploy.download, yes=True)
+
+	# Create a local empty wp-contents/upload directory
+	content_dir = '%s/wp-content/uploads' % root
+	if not os.path.exists(content_dir):
+		os.mkdir(content_dir)
+
+	primary_url = util.primary_url()
+
+	click.echo()
+	click.echo('# Success. The ship has sailed!')
+
+	click.echo()
+	click.echo('- URL: %s' % primary_url)
+	click.echo('- Login: %s/wp-login.php' % primary_url)
+	click.echo('- Username: %s' % email)
+	click.echo('- Password: %s (change me!)' % passwords['wp'])
+
+	click.echo()
+	click.echo('- SSH/SFTP Access Details')
+	click.echo('- Host: %s' % config['hostname'])
+	click.echo('- Port: 22')
+	click.echo('- Username: root')
+	click.echo('- SSH Key: .sail/ssh.key')
+	click.echo('- App root: %s' % util.remote_path())
+	click.echo('- To open an interactive shell run: sail ssh')
+
+	click.echo()
+	click.echo('For support and documentation visit sailed.io')
+
+def _provision(provider_token, size, region):
+	root = util.find_root()
+	config = util.config()
+
+	click.echo('- Provisioning servers')
 
 	# Generate a key pair.
 	key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -81,9 +146,6 @@ def init(ctx, provider_token, email, size, region, force):
 		serialization.PublicFormat.OpenSSH
 	).decode('utf8')
 
-	os.mkdir('.sail')
-	root = util.find_root()
-
 	click.echo('- Writing SSH keys to .sail/ssh.key')
 	with open('%s/.sail/ssh.key' % root, 'w+') as f:
 		f.write(private_key)
@@ -93,25 +155,11 @@ def init(ctx, provider_token, email, size, region, force):
 		f.write(public_key)
 	os.chmod('%s/.sail/ssh.key.pub' % root, 0o644)
 
-	click.echo('- Writing .sail/config.json')
-	config = {
-		'app_id': app_id,
-		'secret': secret,
-		'hostname': hostname,
-		'provider_token': provider_token,
-		'email': email,
-		'domains': [],
-		'profile_key': ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32)),
-		'version': __version__,
-	}
-	util.update_config(config)
-
-	click.echo('- Provisioning servers')
 	click.echo('- Uploading SSH key to DigitalOcean')
 
 	key = digitalocean.SSHKey(
 		token=provider_token,
-		name=app_id,
+		name=config['app_id'],
 		public_key=public_key
 	)
 
@@ -129,7 +177,7 @@ def init(ctx, provider_token, email, size, region, force):
 
 	droplet = digitalocean.Droplet(
 		token=provider_token,
-		name=hostname,
+		name=config['hostname'],
 		region=region,
 		image=sail.DEFAULT_IMAGE,
 		size_slug=size,
@@ -167,7 +215,6 @@ def init(ctx, provider_token, email, size, region, force):
 	util.wait(wait_for_ip, timeout=60, interval=10)
 
 	click.echo('- Droplet up and running, requesting DNS record')
-
 	response = util.request('/ip/', json={
 		'ip': droplet.ip_address,
 	})
@@ -193,7 +240,11 @@ def init(ctx, provider_token, email, size, region, force):
 	click.echo('- Writing server keys to .sail/known_hosts')
 	with open('%s/.sail/known_hosts' % root, 'w+') as f:
 		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', config['ip'],
-			hostname], stdout=f, stderr=subprocess.DEVNULL)
+			config['hostname']], stdout=f, stderr=subprocess.DEVNULL)
+
+def _configure():
+	config = util.config()
+	c = util.connection()
 
 	click.echo('- Configuring software')
 
@@ -205,17 +256,6 @@ def init(ctx, provider_token, email, size, region, force):
 
 	c.run('mkdir /etc/sail')
 	c.put(io.StringIO(json.dumps(config_json)), '/etc/sail/config.json')
-
-	# Prepare release directories
-	c.run('mkdir -p /var/www/releases/1337')
-	c.run('mkdir -p /var/www/uploads')
-	c.run('mkdir -p /var/www/profiles')
-	c.run('chown -R www-data. /var/www')
-
-	passwords = {}
-	for key in ['mysql', 'wp']:
-		passwords[key] = ''.join(secrets.choice(string.ascii_letters
-			+ string.digits) for i in range(48))
 
 	def wait_for_cloud_init():
 		try:
@@ -240,17 +280,23 @@ def init(ctx, provider_token, email, size, region, force):
 	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.0-sail/xhprof.so.gz -o /tmp/xhprof.so.gz')
 	c.run('gunzip /tmp/xhprof.so.gz && mv /tmp/xhprof.so /usr/lib/php/20190902/xhprof.so')
 
+def _install(passwords):
+	config = util.config()
+	c = util.connection()
+
 	# Generate default server config and install cert.
 	click.echo('- Installing default SSL certificate')
-	c.put(io.StringIO(util.template('nginx.server.conf',
-		{'server_names': [hostname]})),'/etc/nginx/conf.d/%s.conf' % hostname)
+	c.put(io.StringIO(util.template('nginx.server.conf', {
+		'server_names': [config['hostname']],
+		'root': util.remote_path('/public'),
+	})),'/etc/nginx/conf.d/%s.conf' % config['hostname'])
 
 	retry = 3
 	https = False
 	while retry:
 		retry -= 1
 		try:
-			c.run('certbot -n --register-unsafely-without-email --agree-tos --nginx --redirect -d %s' % hostname)
+			c.run('certbot -n --register-unsafely-without-email --agree-tos --nginx --redirect -d %s' % config['hostname'])
 			https = True
 			break
 		except:
@@ -261,34 +307,45 @@ def init(ctx, provider_token, email, size, region, force):
 				click.echo('- Certbot failed, skipping SSL')
 
 	# Update the domains config.
-	config['domains'].append({'name': hostname, 'internal': True, 'https': https, 'primary': True})
+	config['domains'].append({
+		'name': config['hostname'],
+		'internal': True,
+		'https': https,
+		'primary': True
+	})
 	util.update_config(config)
+
+	# Prepare release directories
+	remote_path = util.remote_path()
+	c.run('mkdir -p %s/releases/1337' % remote_path)
+	c.run('mkdir -p %s/uploads' % remote_path)
+	c.run('mkdir -p %s/profiles' % remote_path)
+	c.run('chown -R www-data. %s' % remote_path)
 
 	# Create a MySQL database
 	click.echo('- Setting up the MySQL database')
 
-	c.run('mysql -e "CREATE DATABASE wordpress;"')
-	c.run('mysql -e "CREATE USER wordpress@localhost IDENTIFIED BY \'%s\'"' % passwords['mysql'])
-	c.run('mysql -e "GRANT ALL PRIVILEGES ON wordpress.* TO wordpress@localhost;"')
+	c.run('mysql -e "CREATE DATABASE \\`wordpress_%s\\`;"' % config['namespace'])
+	c.run('mysql -e "CREATE USER \\`wordpress_%s\\`@localhost IDENTIFIED BY \'%s\'"' % (config['namespace'], passwords['mysql']))
+	c.run('mysql -e "GRANT ALL PRIVILEGES ON \\`wordpress_%s\\`.* TO \\`wordpress_%s\\`@localhost;"' % (config['namespace'], config['namespace']))
 
 	click.echo('- Downloading and installing WordPress')
-	wp = 'sudo -u www-data wp --path=/var/www/releases/1337 '
-	url = ('https://' if https else 'http://') + hostname
+	wp = 'sudo -u www-data wp --path=%s/releases/1337 ' % remote_path
 
 	c.run(wp + 'core download')
 	c.run(wp + shlex.join([
 		'config', 'create',
-		'--dbname=wordpress',
-		'--dbuser=wordpress',
+		'--dbname=wordpress_%s' % config['namespace'],
+		'--dbuser=wordpress_%s' % config['namespace'],
 		'--dbpass=%s' % passwords['mysql']
 	]))
 	c.run(wp + shlex.join([
 		'core', 'install',
-		'--url=%s' % url,
+		'--url=%s' % util.primary_url(),
 		'--title=Sailed',
-		'--admin_user=%s' % email,
+		'--admin_user=%s' % config['email'],
 		'--admin_password=%s' % passwords['wp'],
-		'--admin_email=%s' % email,
+		'--admin_email=%s' % config['email'],
 		'--skip-email'
 	]))
 	c.run(wp + shlex.join([
@@ -297,41 +354,14 @@ def init(ctx, provider_token, email, size, region, force):
 
 	# Do da deploy.
 	click.echo('- Cleaning up')
-	c.run('rm -rf /var/www/public')
-	c.run('ln -sfn /var/www/releases/1337 /var/www/public')
-	c.run('rm -rf /var/www/public/wp-content/uploads && ln -sfn /var/www/uploads /var/www/public/wp-content/uploads')
+	c.run('rm -rf %s/public' % remote_path)
+	c.run('ln -sfn %s/releases/1337 %s/public' % (remote_path, remote_path))
+	c.run('rm -rf %s/public/wp-content/uploads && ln -sfn %s/uploads %s/public/wp-content/uploads' % (
+		remote_path, remote_path, remote_path))
 
 	# Reload services
-	c.run('nginx -s reload')
-	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
-
-	# Download files from production
-	ctx.invoke(deploy.download, yes=True)
-
-	# Create a local empty wp-contents/upload directory
-	content_dir = '%s/wp-content/uploads' % root
-	if not os.path.exists(content_dir):
-		os.mkdir(content_dir)
-
-	click.echo()
-	click.echo('# Success. The ship has sailed!')
-
-	click.echo()
-	click.echo('- URL: %s' % url)
-	click.echo('- Login: %s/wp-login.php' % url)
-	click.echo('- Username: %s' % email)
-	click.echo('- Password: %s (change me!)' % passwords['wp'])
-
-	click.echo()
-	click.echo('- SSH/SFTP Access Details')
-	click.echo('- Host: %s' % hostname)
-	click.echo('- Port: 22')
-	click.echo('- Username: root')
-	click.echo('- SSH Key: .sail/ssh.key')
-	click.echo('- To open an interactive shell run: sail ssh')
-
-	click.echo()
-	click.echo('For support and documentation visit sailed.io')
+	c.run('systemctl reload nginx.service')
+	c.run('systemctl reload php7.4-fpm.service')
 
 @cli.command()
 @click.option('--yes', '-y', is_flag=True, help='Force Y on overwriting local copy')

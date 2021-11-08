@@ -156,7 +156,7 @@ def shell(root):
 
 	command = ''
 	if not as_root:
-		command = 'sudo -u www-data bash -c "cd ~/public; bash"'
+		command = 'sudo -u www-data bash -c "cd %s; bash"' % util.remote_path('/public')
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,

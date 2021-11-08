@@ -281,7 +281,7 @@ def clean():
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % config['hostname'],
-		'rm -rf /var/www/profiles/*'
+		'rm -rf %s/profiles/*' % util.remote_path()
 	])
 
 	while p.poll() is None:

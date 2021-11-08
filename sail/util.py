@@ -277,3 +277,22 @@ def template(filename, data):
 	e = jinja2.Environment(loader=jinja2.FileSystemLoader(sail.TEMPLATES_PATH))
 	template = e.get_template(filename)
 	return template.render(data)
+
+def primary_url():
+	_config = config()
+	primary = [d for d in _config['domains'] if d['primary']][0]
+	return ('https://' if primary.get('https') else 'http://') + primary['name']
+
+def remote_path(directory=None):
+	_config = config()
+	namespace = _config.get('namespace', 'default')
+	prefix = ''
+
+	if namespace != 'default':
+		prefix = '/_%s' % namespace
+
+	path = '/var/www' + prefix
+	if directory:
+		path = path + '/' + directory.lstrip('/')
+
+	return path

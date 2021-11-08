@@ -35,6 +35,7 @@ def restore(path, yes, skip_db, skip_uploads):
 	backups_dir.mkdir(parents=True, exist_ok=True)
 	progress_dir = pathlib.Path(backups_dir / ('.%s.progress' % hashlib.sha256(os.urandom(32)).hexdigest()[:8]))
 	progress_dir.mkdir()
+	remote_path = util.remote_path()
 
 	database_filename = 'database.%s.sql.gz' % hashlib.sha256(os.urandom(32)).hexdigest()[:8]
 
@@ -63,7 +64,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 		args = ['-rtl', '--delete', '--rsync-path', 'sudo -u www-data rsync']
 		source = '%s/uploads/' % progress_dir
-		destination = 'root@%s:/var/www/uploads/' % config['hostname']
+		destination = 'root@%s:%s/uploads/' % (config['hostname'], remote_path)
 		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 		if returncode != 0:
@@ -74,7 +75,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 	args = ['-rtl', '--delete', '--rsync-path', 'sudo -u www-data rsync']
 	source = '%s/www/' % progress_dir
-	destination = 'root@%s:/var/www/public/' % config['hostname']
+	destination = 'root@%s:%s/public/' % (config['hostname'], remote_path)
 	returncode, stdout, stderr = util.rsync(args, source, destination)
 
 	if returncode != 0:
@@ -88,7 +89,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 		args = ['-t']
 		source = '%s/database.sql.gz' % progress_dir
-		destination = 'root@%s:/var/www/%s' % (config['hostname'], database_filename)
+		destination = 'root@%s:%s/%s' % (config['hostname'], remote_path, database_filename)
 		returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 		if returncode != 0:
@@ -100,7 +101,7 @@ def restore(path, yes, skip_db, skip_uploads):
 		# TODO: Maybe do an atomic import which deletes tables that no longer exist
 		# by doing a rename.
 		try:
-			c.run('zcat /var/www/%s | mysql -uroot wordpress' % database_filename)
+			c.run('zcat %s/%s | mysql -uroot "wordpress_%s"' % (remote_path, database_filename, config['namespace']))
 		except:
 			shutil.rmtree(progress_dir)
 			raise click.ClickException('An error occurred in SSH. Please try again.')
@@ -108,7 +109,7 @@ def restore(path, yes, skip_db, skip_uploads):
 		click.echo('- Cleaning up production')
 
 		try:
-			c.run('rm /var/www/%s' % database_filename) # TODO: Move to /tmp maybe, or /root
+			c.run('rm %s/%s' % (remote_path, database_filename)) # TODO: Move to /tmp maybe, or /root
 		except:
 			shutil.rmtree(progress_dir)
 			raise click.ClickException('An error occurred in SSH. Please try again.')
@@ -131,13 +132,14 @@ def backup():
 	progress_dir = pathlib.Path(backups_dir / ('.%s.progress' % hashlib.sha256(os.urandom(32)).hexdigest()[:8]))
 	(progress_dir / 'www').mkdir(parents=True)
 	(progress_dir / 'uploads').mkdir()
+	remote_path = util.remote_path()
 
 	database_filename = 'database.%s.sql.gz' % hashlib.sha256(os.urandom(32)).hexdigest()[:8]
 
 	click.echo('- Downloading application files')
 
 	args = ['-rtl', '--copy-dest', '%s/' % root]
-	source = 'root@%s:/var/www/public/' % config['hostname']
+	source = 'root@%s:%s/public/' % (config['hostname'], remote_path)
 	destination = '%s/www/' % progress_dir
 	returncode, stdout, stderr = util.rsync(args, source, destination)
 
@@ -148,7 +150,7 @@ def backup():
 	click.echo('- Downloading uploads')
 
 	args = ['-rtl', '--copy-dest', '%s/wp-content/uploads/' % root]
-	source = 'root@%s:/var/www/uploads/' % config['hostname']
+	source = 'root@%s:%s/uploads/' % (config['hostname'], remote_path)
 	destination = '%s/uploads/' % progress_dir
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
@@ -159,7 +161,7 @@ def backup():
 	click.echo('- Exporting WordPress database')
 
 	try:
-		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s' % database_filename)
+		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot "wordpress_%s" | gzip -c9 > %s/%s' % (config['namespace'], remote_path, database_filename))
 	except:
 		shutil.rmtree(progress_dir)
 		raise click.ClickException('An error occurred in SSH. Please try again.')
@@ -167,7 +169,7 @@ def backup():
 	click.echo('- Export completed, downloading database')
 
 	args = ['-t']
-	source = 'root@%s:/var/www/%s' % (config['hostname'], database_filename)
+	source = 'root@%s:%s/%s' % (config['hostname'], remote_path, database_filename)
 	destination = '%s/database.sql.gz' % progress_dir
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
@@ -178,7 +180,7 @@ def backup():
 	click.echo('- Cleaning up production')
 
 	try:
-		c.run('rm /var/www/%s' % database_filename)
+		c.run('rm %s/%s' % (remote_path, database_filename))
 	except:
 		shutil.rmtree(progress_dir)
 		raise click.ClickException('An error occurred in SSH. Please try again.')

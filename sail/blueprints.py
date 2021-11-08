@@ -257,13 +257,16 @@ def _bp_postfix(data):
 			'email': json.dumps(data.get('from_email')),
 		}
 
-		c.run('sudo -u www-data mkdir -p /var/www/public/wp-content/mu-plugins/')
+		remote_path = util.remote_path()
+
+		c.run('sudo -u www-data mkdir -p %s/public/wp-content/mu-plugins/' % remote_path)
 		c.put(io.StringIO(util.template('postfix/1-sail-mail-from.php', context)),
-			'/var/www/public/wp-content/mu-plugins/1-sail-mail-from.php')
-		c.run('chown www-data. /var/www/public/wp-content/mu-plugins/1-sail-mail-from.php')
+			'%s/public/wp-content/mu-plugins/1-sail-mail-from.php' % remote_path)
+		c.run('chown www-data. %s/public/wp-content/mu-plugins/1-sail-mail-from.php' % remote_path)
 
 def _bp_fail2ban(jails):
 	c = util.connection()
+	remote_path = util.remote_path()
 
 	wait = 'while fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/{lock,lock-frontend} >/dev/null 2>&1; do sleep 1; done && '
 	status = c.run('dpkg -s fail2ban', warn=True)
@@ -273,16 +276,16 @@ def _bp_fail2ban(jails):
 
 	click.echo('- Configuring fail2ban rules')
 	# Make sure mu-plugins exists
-	c.run('sudo -u www-data mkdir -p /var/www/public/wp-content/mu-plugins/')
+	c.run('sudo -u www-data mkdir -p %s/public/wp-content/mu-plugins/' % remote_path)
 
 	c.put(sail.TEMPLATES_PATH + '/fail2ban/wordpress-auth.conf', '/etc/fail2ban/filter.d/wordpress-auth.conf')
 	c.put(sail.TEMPLATES_PATH + '/fail2ban/wordpress-pingback.conf', '/etc/fail2ban/filter.d/wordpress-pingback.conf')
 	c.put(sail.TEMPLATES_PATH + '/fail2ban/nginx-deny.conf', '/etc/fail2ban/action.d/nginx-deny.conf')
-	c.put(sail.TEMPLATES_PATH + '/fail2ban/0-sail-auth-syslog.php', '/var/www/public/wp-content/mu-plugins/0-sail-auth-syslog.php')
+	c.put(sail.TEMPLATES_PATH + '/fail2ban/0-sail-auth-syslog.php', '%s/public/wp-content/mu-plugins/0-sail-auth-syslog.php' % remote_path)
 	c.put(io.StringIO(util.template('fail2ban/jail.local', {'jails': jails})), '/etc/fail2ban/jail.local')
 
 	# Make sure configs directory exists and permissions ok
-	c.run('chown www-data. /var/www/public/wp-content/mu-plugins/0-sail-auth-syslog.php')
+	c.run('chown www-data. %s/public/wp-content/mu-plugins/0-sail-auth-syslog.php' % remote_path)
 	c.run('sudo -u www-data mkdir -p /var/www/configs')
 	c.run('fail2ban-client reload')
 
@@ -290,7 +293,7 @@ def _bp_define_constants(constants):
 	c = util.connection()
 
 	click.echo('- Updating wp-config.php constants')
-	wp = 'sudo -u www-data wp --path=/var/www/public --skip-themes --skip-plugins '
+	wp = 'sudo -u www-data wp --path=%s --skip-themes --skip-plugins ' % util.remote_path('/public')
 
 	for name, value in constants.items():
 		if type(value) not in [str, float, int, bool]:
@@ -312,7 +315,7 @@ def _bp_update_options(options):
 	c = util.connection()
 
 	click.echo('- Applying options')
-	wp = 'sudo -u www-data wp --path=/var/www/public --skip-themes --skip-plugins '
+	wp = 'sudo -u www-data wp --path=%s --skip-themes --skip-plugins ' % util.remote_path('/public')
 
 	for option_name, data in options.items():
 		# Scalars
@@ -374,7 +377,7 @@ def _bp_install_wp_products(what, products):
 		return
 
 	c = util.connection()
-	wp = 'sudo -u www-data wp --path=/var/www/public '
+	wp = 'sudo -u www-data wp --path=%s ' % util.remote_path('/public')
 
 	click.echo('- Installing %s' % what)
 

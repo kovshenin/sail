@@ -23,7 +23,7 @@ def cli():
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % config['hostname'],
-		'sudo -u www-data wp --path=/var/www/public db cli'
+		'sudo -u www-data wp --path=%s db cli' % util.remote_path('/public')
 	)
 
 @db.command(name='import')
@@ -33,6 +33,7 @@ def import_cmd(path):
 	root = util.find_root()
 	config = util.config()
 	c = util.connection()
+	remote_path = util.remote_path()
 
 	path = pathlib.Path(path).resolve()
 	if not path.exists():
@@ -49,7 +50,7 @@ def import_cmd(path):
 
 	args = ['-t']
 	source = path
-	destination = 'root@%s:/var/www/%s' % (config['hostname'], temp_name)
+	destination = 'root@%s:%s/%s' % (config['hostname'], remote_path, temp_name)
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
@@ -62,14 +63,14 @@ def import_cmd(path):
 	cat_bin = 'zcat' if is_gz else 'cat'
 
 	try:
-		c.run('%s /var/www/%s | mysql -uroot wordpress' % (cat_bin, temp_name))
+		c.run('%s %s/%s | mysql -uroot "wordpress_%s"' % (cat_bin, remote_path, temp_name, config['namespace']))
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
 	click.echo('- Cleaning up production')
 
 	try:
-		c.run('rm /var/www/%s' % temp_name)
+		c.run('rm %s/%s' % (remote_path, temp_name))
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
@@ -81,6 +82,7 @@ def export():
 	root = util.find_root()
 	config = util.config()
 	c = util.connection()
+	remote_path = util.remote_path()
 
 	backups_dir = pathlib.Path(root + '/.backups')
 	backups_dir.mkdir(parents=True, exist_ok=True)
@@ -89,14 +91,14 @@ def export():
 	click.echo('# Exporting WordPress database')
 
 	try:
-		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot wordpress | gzip -c9 > /var/www/%s' % filename)
+		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot "wordpress_%s" | gzip -c9 > %s/%s' % (config['namespace'], remote_path, filename))
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
 	click.echo('- Export completed, downloading')
 
 	args = ['-t']
-	source = 'root@%s:/var/www/%s' % (config['hostname'], filename)
+	source = 'root@%s:%s/%s' % (config['hostname'], remote_path, filename)
 	destination = '%s/%s' % (backups_dir, filename)
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
@@ -106,7 +108,7 @@ def export():
 	click.echo('- Cleaning up production')
 
 	try:
-		c.run('rm /var/www/%s' % filename)
+		c.run('rm %s/%s' % (remote_path, filename))
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 

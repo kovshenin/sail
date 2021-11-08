@@ -99,17 +99,18 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 
 	click.echo('- Preparing release directory')
 	c = util.connection()
+	remote_path = util.remote_path()
 
-	c.run('mkdir -p /var/www/releases/%s' % release)
-	c.run('rsync -rogtl /var/www/public/ /var/www/releases/%s' % release)
+	c.run('mkdir -p %s/releases/%s' % (remote_path, release))
+	c.run('rsync -rogtl %s/public/ %s/releases/%s' % (remote_path, remote_path, release))
 
 	click.echo('- Uploading application files to production')
 
 	returncode, stdout, stderr = util.rsync(
 		args=['-rtl', '--rsync-path', 'sudo -u www-data rsync',
-			'--copy-dest', '/var/www/public/', '--delete'],
+			'--copy-dest', '%s/public/' % remote_path, '--delete'],
 		source='%s/' % root,
-		destination='root@%s:/var/www/releases/%s' % (config['hostname'], release),
+		destination='root@%s:%s/releases/%s' % (config['hostname'], remote_path, release),
 		extend_filters=_get_extend_filters(path)
 	)
 
@@ -123,7 +124,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 		returncode, stdout, stderr = util.rsync(
 			args=['-rtl', '--rsync-path', 'sudo -u www-data rsync', '--delete'],
 			source='%s/wp-content/uploads/' % root,
-			destination='root@%s:/var/www/uploads/' % config['hostname'],
+			destination='root@%s:%s/uploads/' % (config['hostname'], remote_path),
 			default_filters=False,
 			extend_filters=_get_extend_filters(path, 'wp-content/uploads')
 		)
@@ -134,14 +135,14 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 	click.echo('- Deploying release: %s' % release)
 
 	click.echo('- Updating symlinks')
-	c.run('sudo -u www-data ln -sfn /var/www/uploads /var/www/releases/%s/wp-content/uploads' % release)
-	c.run('sudo -u www-data ln -sfn /var/www/releases/%s /var/www/public' % release)
+	c.run('sudo -u www-data ln -sfn %s/uploads %s/releases/%s/wp-content/uploads' % (remote_path, remote_path, release))
+	c.run('sudo -u www-data ln -sfn %s/releases/%s %s/public' % (remote_path, release, remote_path))
 
 	click.echo('- Reloading services')
 	c.run('nginx -s reload')
 	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
 
-	releases = c.run('ls /var/www/releases')
+	releases = c.run('ls %s/releases' % remote_path)
 	releases = re.findall('\d+', releases.stdout)
 	releases = [int(i) for i in releases]
 
@@ -157,7 +158,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 		click.echo('- Removing outdated releases')
 		remove = sorted(releases)[:len(releases)-keep]
 		for key in remove:
-			c.run(shlex.join(['rm', '-rf', '/var/www/releases/%s' % key]))
+			c.run(shlex.join(['rm', '-rf', '%s/releases/%s' % (remote_path, key)]))
 
 	click.echo('- Successfully deployed %s' % release)
 
@@ -168,16 +169,17 @@ def rollback(release=None, releases=False):
 	'''Rollback production to a previous release'''
 	sail = util.config()
 	c = util.connection()
+	remote_path = util.remote_path()
 
 	if releases or not release:
-		_releases = c.run('ls /var/www/releases')
+		_releases = c.run('ls %s/releases' % remote_path)
 		_releases = re.findall('\d+', _releases.stdout)
 
 		if len(_releases) < 1:
 			raise click.ClickException('Could not find any releases')
 
 		try:
-			_current = c.run('readlink /var/www/public').stdout.strip().split('/')[-1]
+			_current = c.run('readlink %s/public' % remote_path).stdout.strip().split('/')[-1]
 		except:
 			_current = '0'
 
@@ -195,12 +197,12 @@ def rollback(release=None, releases=False):
 
 	click.echo('# Rolling back to %s' % release)
 
-	_releases = c.run('ls /var/www/releases').stdout.strip().split('\n')
+	_releases = c.run('ls %s/releases' % remote_path).stdout.strip().split('\n')
 	if release not in _releases:
 		raise click.ClickException('Invalid release. To get a list run: sail rollback --releases')
 
 	click.echo('- Updating symlinks')
-	c.run('ln -sfn /var/www/releases/%s /var/www/public' % release)
+	c.run('ln -sfn %s/releases/%s %s/public' % (remote_path, release, remote_path))
 
 	click.echo('- Reloading services')
 	c.run('nginx -s reload')
@@ -235,7 +237,7 @@ def download(ctx, path, yes, with_uploads, delete, dry_run):
 
 	returncode, stdout, stderr = util.rsync(
 		args=['-rtl'] + delete,
-		source='root@%s:/var/www/public/' % config['hostname'],
+		source='root@%s:%s' % (config['hostname'], util.remote_path('/public/')),
 		destination='%s/' % root,
 		extend_filters=_get_extend_filters(path)
 	)
@@ -249,7 +251,7 @@ def download(ctx, path, yes, with_uploads, delete, dry_run):
 		# Download uploads from production
 		returncode, stdout, stderr = util.rsync(
 			args=['-rtl'] + delete,
-			source='root@%s:/var/www/uploads/' % config['hostname'],
+			source='root@%s:%s' % (config['hostname'], util.remote_path('/uploads/')),
 			destination='%s/wp-content/uploads/' % root,
 			default_filters=False,
 			extend_filters=_get_extend_filters(path, 'wp-content/uploads')
@@ -274,7 +276,7 @@ def diff(path, reverse, raw):
 	else:
 		click.echo('# Comparing files')
 
-	destination = 'root@%s:/var/www/public/' % config['hostname']
+	destination = 'root@%s:%s' % (config['hostname'], util.remote_path('/public/'))
 	source = '%s/' % root
 
 	if reverse:
