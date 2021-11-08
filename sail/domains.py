@@ -133,8 +133,10 @@ def make_https(domains, agree_tos):
 		names.extend([s.fqdn for s in _subs if s.registered_domain == group or s.fqdn == group])
 
 		click.echo('- Generating Nginx config for %s' % group)
-		c.put(io.StringIO(util.template('nginx.server.conf',
-			{'server_names': names})),'/etc/nginx/conf.d/%s.conf' % group)
+		c.put(io.StringIO(util.template('nginx.server.conf', {
+			'server_names': names,
+			'root': util.remote_path('/public'),
+		})),'/etc/nginx/conf.d/%s.conf' % group)
 
 		click.echo('- Requesting SSL certificate for group %s' % group)
 		args = ['certbot', '-n', '-m', config['email'], '--redirect', '--expand',
