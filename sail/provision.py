@@ -280,6 +280,9 @@ def _configure():
 	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.0-sail/xhprof.so.gz -o /tmp/xhprof.so.gz')
 	c.run('gunzip /tmp/xhprof.so.gz && mv /tmp/xhprof.so /usr/lib/php/20190902/xhprof.so')
 
+	# Permissions
+	c.run('chown -R www-data. /var/www')
+
 def _install(passwords):
 	config = util.config()
 	c = util.connection()
