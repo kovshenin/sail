@@ -79,9 +79,10 @@ def make_primary(domain, force, skip_replace):
 
 	util.update_config(config)
 
-	click.echo('- Renaming droplet')
-	droplet = digitalocean.Droplet(token=config['provider_token'], id=config['droplet_id'])
-	droplet.rename(domain['name'])
+	if config['namespace'] == 'default':
+		click.echo('- Renaming droplet')
+		droplet = digitalocean.Droplet(token=config['provider_token'], id=config['droplet_id'])
+		droplet.rename(domain['name'])
 
 	click.echo('- Primary domain updated successfully')
 
