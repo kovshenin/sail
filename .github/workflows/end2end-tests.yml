@@ -21,7 +21,7 @@ jobs:
       - shell: bash
         env:
           SAIL_PROVIDER_TOKEN: ${{ secrets.SAIL_PROVIDER_TOKEN }}
-          SAIL_API_BASE: https://sailed.io/api/1.0
+          SAIL_API_BASE: https://sailed.io/api/1.1
         run: |
           sail config provider-token $SAIL_PROVIDER_TOKEN
           sail config email kovshenin@gmail.com
