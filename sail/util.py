@@ -86,31 +86,6 @@ def request(endpoint, **kwargs):
 
 	return data
 
-def wait_for_task(task_id, timeout=30, interval=1):
-	feedback_processed = []
-	data = {}
-
-	def _wait():
-		nonlocal data
-
-		data = request('/status/%s/' % task_id)
-		feedback = data.get('feedback', [])
-		if feedback:
-			for line in feedback:
-				if line in feedback_processed:
-					continue
-
-				feedback_processed.append(line)
-				click.echo('- %s' % line)
-
-		if data.get('task_state') == 'failure':
-			raise click.ClickException('Task state failure')
-
-		return data.get('task_state') == 'success'
-
-	wait(_wait, timeout=timeout, interval=interval)
-	return data
-
 def wait(condition, timeout=30, interval=1, *args):
 	'''Wait for condition every interval or timeout.'''
 	start = time.time()
