@@ -127,6 +127,9 @@ def config():
 	if 'hostname' not in _config:
 		_config['hostname'] = '%s.sailed.io' % _config['app_id']
 
+	if 'namespace' not in _config:
+		_config['namespace'] = 'default'
+
 	return _config
 
 loader_i = 0
