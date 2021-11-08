@@ -5,6 +5,11 @@
 * Added: New `pre-deploy` hooks in .sail, these will run every time deploy is invoked
 * Added: New `sail diff` command, shortcut for `sail deploy --dry-run` and `sail download --dry-run`
 * Changed: New `--skip-hooks` or `--no-verify` options to `sail deploy` to skip running hooks
+* Changed: Blueprints now fully client-side
+* Changed: Provision and destroy are mostly client-side (API calls only to control justsailed.io DNS)
+* Changed: Sizes and regions now client-side
+* Changed: Domains, primary and HTTPS fully client-side, domains settings in .sail/config.json
+* Changed: Provision now uses cloud-config instead of a Docker image, removed `--host` option from ssh commands
 
 ## [0.9.18] - 2021-10-26
 

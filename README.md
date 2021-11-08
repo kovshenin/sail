@@ -120,7 +120,7 @@ You can grab a list of valid sizes and regions with `sail sizes` and
 
 ## Domains and DNS
 
-Sail provisions your new site with a `random-hash.sailed.io` subdomain. This is
+Sail provisions your new site with a `random-hash.justsailed.io` subdomain. This is
 used internally by Sail and Sail Services. You can add your own custom domains
 to your application with Sail:
 
@@ -311,24 +311,8 @@ Open an interactive SSH shell to your application:
 sail ssh
 ```
 
-This will open a session as the `www-data` user, inside the application container
-on the `/var/www/public` directory. If you'd rather open a root session in the
-application container, just add `--root` to the command. To access the host system
-add `--host`.
-
-The host server will contain the original `/var/www` directory, with all your
-application releases, as well as your SSH service configuration in /etc/ssh. So
-it's not all that useful, though you can use it to reboot your server for example.
-
-The remaining services run inside a container named `sail`, which you can access
-from the host droplet with Docker:
-
-```
-docker exec -it sail bash
-```
-
-There you will have access to /etc/nginx, /etc/php, /etc/mysql and everything
-else. Remember: with great power comes great responsibility.
+This will open a session as the `www-data` user in the `/var/www/public` directory.
+If you'd rather open a root session, just add `--root` to the command.
 
 Here are a few other useful things you can do with Sail.
 
@@ -449,6 +433,9 @@ directory:
   and other mail delivery services.
 * **mailgun.yaml** and **mailgun-dns.yaml**: DNS validation and full Postifx
   configuration for Mailgun transactional e-mail service.
+* **gmail-dns.yaml** Add DNS records for Google Mail.
+* **site-verification.yaml** Add a TXT record for site verification in Google
+  Search Console and other services.
 * **sample.yaml**: This file contains all available blueprint components with
   some usage examples and comments. Don't actually apply this file.
 
@@ -494,9 +481,12 @@ If you do not use Slack, feel free to open an issue here on GitHub.
 
 ## License and Contributing
 
-The Sail CLI client is free and open source, distributed under the GNU General Public License version 3. Feel free to contribute by opening an issue or pull request on our [GitHub project](https://github.com/kovshenin/sail).
+The Sail CLI client is free and open source, distributed under the GNU General
+Public License version 3. Feel free to contribute by opening an issue or pull
+request on our [GitHub project](https://github.com/kovshenin/sail).
 
-The Sail API server is proprietary and runs on the sailed.io domain. It is used by most core Sail CLI commands and features, including but not limited to provisioning, deploying, domain management and more.
+The Sail API server is proprietary and runs on the sailed.io/justsailed.io
+domains and usage statistics.
 
 ### Legal
 
