@@ -74,9 +74,15 @@ def wp(command):
 @cli.command()
 def admin():
 	'''Open your default web browser to the wp-login.php location of your site'''
-	root = util.find_root()
 	config = util.config()
-	webbrowser.open(config['hostname'] + '/wp-login.php')
+
+	primary = [d for d in config['domains'] if d['primary']]
+	if len(primary) < 1:
+		raise click.ClickException('Could not find primary domain')
+
+	primary = primary[0]
+	url = ('https://' if primary.get('https') else 'http://') + primary['name']
+	webbrowser.open(url + '/wp-login.php')
 
 @cli.command()
 @click.option('--nginx', is_flag=True)
