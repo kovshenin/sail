@@ -140,6 +140,7 @@ def info():
 	config = util.config()
 
 	click.echo('App ID: %(app_id)s' % config)
+	click.echo('Namespace: %(namespace)s' % config)
 	click.echo('Hostname: %(hostname)s' % config)
 	click.echo('IP: %(ip)s' % config)
 	click.echo('Version: %(version)s' % config)
