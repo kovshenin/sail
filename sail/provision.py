@@ -502,16 +502,32 @@ def sizes(provider_token):
 	click.echo(t.get_string())
 
 @cli.command()
-def regions():
+@click.option('--provider-token', help='Your DigitalOcean API token, must be read-write. You can set a default token with: sail config provider-token <token>')
+def regions(provider_token):
 	'''Get available deployment regions'''
-	click.echo()
+	root = util.find_root()
+
+	# Try and get a provider token from .sail/config.json
+	if not provider_token and root:
+		config = util.config()
+		provider_token = config.get('provider_token')
+
+	if not provider_token:
+		provider_token = util.get_sail_default('provider-token')
+
+	if not provider_token:
+		raise click.ClickException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
+
 	click.echo('# Getting available regions')
 
-	data = util.request('/regions/', anon=True)
 	t = PrettyTable(['Slug', 'Name'])
 
-	for slug, region in data.items():
-		t.add_row([slug, region['name']])
+	manager = digitalocean.Manager(token=provider_token)
+	regions = manager.get_all_regions()
+
+	for region in regions:
+		if region.available:
+			t.add_row([region.slug, region.name])
 
 	t.align = 'l'
 	click.echo(t.get_string())
