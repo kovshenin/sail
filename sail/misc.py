@@ -68,7 +68,7 @@ def wp(command):
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'-o', 'LogLevel=QUIET',
 		'root@%s' % config['hostname'],
-		'sudo -u www-data bash -c "cd ~/public; wp %s"' % command
+		'sudo -u www-data bash -c "cd %s; wp %s"' % (util.remote_path('/public'), command)
 	)
 
 @cli.command()
