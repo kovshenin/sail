@@ -61,23 +61,28 @@ def wp(command):
 
 	command = shlex.join(command)
 
-	click.echo('Spawning SSH and running WP-CLI on %s' % config['hostname'], err=True)
-
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
+		'-o', 'LogLevel=QUIET',
 		'root@%s' % config['hostname'],
-		'docker exec -it sail sudo -u www-data bash -c "cd ~/public; wp %s"' % command
+		'sudo -u www-data bash -c "cd %s; wp %s"' % (util.remote_path('/public'), command)
 	)
 
 @cli.command()
 def admin():
 	'''Open your default web browser to the wp-login.php location of your site'''
-	root = util.find_root()
 	config = util.config()
-	webbrowser.open(config['login_url'])
+
+	primary = [d for d in config['domains'] if d['primary']]
+	if len(primary) < 1:
+		raise click.ClickException('Could not find primary domain')
+
+	primary = primary[0]
+	url = ('https://' if primary.get('https') else 'http://') + primary['name']
+	webbrowser.open(url + '/wp-login.php')
 
 @cli.command()
 @click.option('--nginx', is_flag=True)
@@ -92,8 +97,6 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 	'''Query and follow logs from the production server'''
 	root = util.find_root()
 	config = util.config()
-
-	click.echo('Querying logs on %s' % config['hostname'])
 
 	settings = []
 	if nginx_access or nginx:
@@ -126,6 +129,7 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
+		'-o', 'LogLevel=QUIET',
 		'root@%s' % config['hostname'],
 		'journalctl --no-hostname --directory=/var/log/journal %s' % settings
 	)
@@ -136,6 +140,7 @@ def info():
 	config = util.config()
 
 	click.echo('App ID: %(app_id)s' % config)
+	click.echo('Namespace: %(namespace)s' % config)
 	click.echo('Hostname: %(hostname)s' % config)
-	click.echo('URL: %(url)s' % config)
+	click.echo('IP: %(ip)s' % config)
 	click.echo('Version: %(version)s' % config)

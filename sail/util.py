@@ -3,6 +3,7 @@ import sail
 import time, pathlib, os
 import json, click, requests, shlex, subprocess
 import fabric, paramiko
+import jinja2
 
 _debug = False
 def debug(set=None):
@@ -85,31 +86,6 @@ def request(endpoint, **kwargs):
 
 	return data
 
-def wait_for_task(task_id, timeout=30, interval=1):
-	feedback_processed = []
-	data = {}
-
-	def _wait():
-		nonlocal data
-
-		data = request('/status/%s/' % task_id)
-		feedback = data.get('feedback', [])
-		if feedback:
-			for line in feedback:
-				if line in feedback_processed:
-					continue
-
-				feedback_processed.append(line)
-				click.echo('- %s' % line)
-
-		if data.get('task_state') == 'failure':
-			raise click.ClickException('Task state failure')
-
-		return data.get('task_state') == 'success'
-
-	wait(_wait, timeout=timeout, interval=interval)
-	return data
-
 def wait(condition, timeout=30, interval=1, *args):
 	'''Wait for condition every interval or timeout.'''
 	start = time.time()
@@ -130,6 +106,11 @@ def find_root():
 
 		p = p.parent
 
+def update_config(data):
+	root = find_root()
+	with open(root + '/.sail/config.json', 'w+') as f:
+		json.dump(data, f, indent='\t')
+
 def config():
 	root = find_root()
 
@@ -145,6 +126,9 @@ def config():
 	# Back-compat
 	if 'hostname' not in _config:
 		_config['hostname'] = '%s.sailed.io' % _config['app_id']
+
+	if 'namespace' not in _config:
+		_config['namespace'] = 'default'
 
 	return _config
 
@@ -251,7 +235,7 @@ def connection():
 	_config = config()
 	root = find_root()
 
-	hostname = _config['hostname']
+	ip = _config['ip']
 	with open('%s/.sail/ssh.key' % root, 'r') as f:
 		pkey = paramiko.RSAKey.from_private_key(f)
 
@@ -262,7 +246,7 @@ def connection():
 	ssh_config.load_ssh_configs = False
 	ssh_config.forward_agent = False
 
-	c = fabric.Connection(hostname, config=ssh_config)
+	c = fabric.Connection(ip, config=ssh_config)
 
 	# Load known_hosts if it exists
 	known_hosts = pathlib.Path(root) / '.sail/known_hosts'
@@ -291,3 +275,27 @@ def connection():
 	# Decorate it
 	c.run = _run(c.run)
 	return c
+
+def template(filename, data):
+	e = jinja2.Environment(loader=jinja2.FileSystemLoader(sail.TEMPLATES_PATH))
+	template = e.get_template(filename)
+	return template.render(data)
+
+def primary_url():
+	_config = config()
+	primary = [d for d in _config['domains'] if d['primary']][0]
+	return ('https://' if primary.get('https') else 'http://') + primary['name']
+
+def remote_path(directory=None):
+	_config = config()
+	namespace = _config.get('namespace', 'default')
+	prefix = ''
+
+	if namespace != 'default':
+		prefix = '/_%s' % namespace
+
+	path = '/var/www' + prefix
+	if directory:
+		path = path + '/' + directory.lstrip('/')
+
+	return path

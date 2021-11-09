@@ -42,7 +42,7 @@ class TestEnd2End(unittest.TestCase):
 		self.home = self.__class__.home
 
 	def test_000_config(self):
-		api_base = 'http://127.0.0.1:5000/api/1.0/'
+		api_base = 'http://127.0.0.1:5000/api/1.1/'
 
 		# Allows running this on the production API server if explicitly asked.
 		if 'SAIL_API_BASE' in os.environ:
@@ -479,14 +479,14 @@ class TestEnd2End(unittest.TestCase):
 
 		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
 		self.assertEqual(result.exit_code, 1)
-		self.assertIn('domain does not exist', result.output)
+		self.assertIn('domain does not exist', result.stderr)
 
 		result = self.runner.invoke(cli, ['domain', 'add', 'saildemo.com'])
 		self.assertEqual(result.exit_code, 0)
 
 		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
 		self.assertEqual(result.exit_code, 0)
-		self.assertNotIn('domain does not exist', result.output)
+		self.assertNotIn('domain does not exist', result.stderr)
 
 		self.assertIn('Creating A record for foo.saildemo.com', result.output)
 		self.assertIn('Creating A record for bar.saildemo.com', result.output)
@@ -566,11 +566,11 @@ class TestEnd2End(unittest.TestCase):
 		self.assertIn('Blueprint applied successfully', result.output)
 
 		c = util.connection()
-		r = c.run('docker exec sail dpkg --status git', hide=True, warn=True)
+		r = c.run('dpkg --status git', hide=True, warn=True)
 		self.assertEqual(r.return_code, 0)
 		self.assertIn('Status: install ok installed', r.stdout)
 
-		r = c.run('docker exec sail dpkg --status vim', hide=True, warn=True)
+		r = c.run('dpkg --status vim', hide=True, warn=True)
 		self.assertEqual(r.return_code, 0)
 		self.assertIn('Status: install ok installed', r.stdout)
 

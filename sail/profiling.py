@@ -21,7 +21,7 @@ import shutil
 # sail profile open .profiles/something.json
 # sail profile run https://example.org
 # sail profile curl -H 'Some: header' -XPOST https://example.org
-# sail profile key --curl
+# sail profile key --header
 # sail profile download /var/www/profiles/filename.xhprof
 # sail profile clean
 
@@ -281,7 +281,7 @@ def clean():
 		'-o', 'IdentitiesOnly=yes',
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'root@%s' % config['hostname'],
-		'rm -rf /var/www/profiles/*'
+		'rm -rf %s/profiles/*' % util.remote_path()
 	])
 
 	while p.poll() is None:
