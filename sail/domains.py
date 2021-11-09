@@ -133,7 +133,7 @@ def make_https(domains, agree_tos):
 		names.extend([d.fqdn for d in _doms if d.fqdn == group])
 		names.extend([s.fqdn for s in _subs if s.registered_domain == group or s.fqdn == group])
 
-		click.echo('- Requesting SSL certificate')
+		click.echo('- Requesting SSL certificate for %s' % group)
 		args = ['certbot', '-n', 'certonly', '-m', config['email'], '--agree-tos',
 			'--standalone', '--http-01-port', '8088', '--expand',
 		]
