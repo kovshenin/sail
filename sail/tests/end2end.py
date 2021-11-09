@@ -406,7 +406,7 @@ class TestEnd2End(unittest.TestCase):
 	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_012_blueprint_fail2ban(self):
 		result = self.runner.invoke(cli, ['blueprint', 'test_fail2ban.yaml'])
-		self.assertEqual(result.exit_code, 0, msg='{0}'.format(result.stderr + result.stdout))
+		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Installing fail2ban', result.output)
 		self.assertIn('Configuring fail2ban rules', result.output)
 
@@ -436,7 +436,7 @@ class TestEnd2End(unittest.TestCase):
 			'--from-email=me@example.org',
 		])
 
-		self.assertEqual(result.exit_code, 0, msg='{0}'.format(result.stderr + result.stdout))
+		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Installing postfix', result.output)
 		self.assertIn('Configuring postfix', result.output)
 
