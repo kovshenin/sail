@@ -235,7 +235,7 @@ def connection():
 	_config = config()
 	root = find_root()
 
-	hostname = _config['hostname']
+	ip = _config['ip']
 	with open('%s/.sail/ssh.key' % root, 'r') as f:
 		pkey = paramiko.RSAKey.from_private_key(f)
 
@@ -246,7 +246,7 @@ def connection():
 	ssh_config.load_ssh_configs = False
 	ssh_config.forward_agent = False
 
-	c = fabric.Connection(hostname, config=ssh_config)
+	c = fabric.Connection(ip, config=ssh_config)
 
 	# Load known_hosts if it exists
 	known_hosts = pathlib.Path(root) / '.sail/known_hosts'

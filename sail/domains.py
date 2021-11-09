@@ -6,14 +6,15 @@ import tldextract
 import digitalocean
 import urllib
 import shlex
+import re
 
 @cli.group()
 def domain():
 	'''Add, remove and update domains associated with your site'''
 	pass
 
-@domain.command()
-def list():
+@domain.command(name='list')
+def listcmd():
 	'''List domains associated with your site'''
 	config = util.config()
 
@@ -132,15 +133,9 @@ def make_https(domains, agree_tos):
 		names.extend([d.fqdn for d in _doms if d.fqdn == group])
 		names.extend([s.fqdn for s in _subs if s.registered_domain == group or s.fqdn == group])
 
-		click.echo('- Generating Nginx config for %s' % group)
-		c.put(io.StringIO(util.template('nginx.server.conf', {
-			'server_names': names,
-			'root': util.remote_path('/public'),
-		})),'/etc/nginx/conf.d/%s.conf' % group)
-
-		click.echo('- Requesting SSL certificate for group %s' % group)
-		args = ['certbot', '-n', '-m', config['email'], '--redirect', '--expand',
-			'--agree-tos', '--nginx',
+		click.echo('- Requesting SSL certificate')
+		args = ['certbot', '-n', 'certonly', '-m', config['email'], '--agree-tos',
+			'--standalone', '--http-01-port', '8088', '--expand',
 		]
 
 		for name in names:
@@ -159,6 +154,8 @@ def make_https(domains, agree_tos):
 				config['domains'][i]['https'] = True
 
 		util.update_config(config)
+
+	_update_nginx_config()
 
 	click.echo('- SSL certificates installed')
 	click.echo('- Don\'t forget to: sail domain make-primary')
@@ -191,6 +188,8 @@ def add(domains, skip_dns):
 			click.echo('- Adding %s to .sail/config.json' % domain.fqdn)
 		else:
 			click.echo('- Domain %s already exists is .sail/config.json' % domain.fqdn)
+
+	_update_nginx_config()
 
 	# Bail early if skipping
 	if skip_dns:
@@ -292,6 +291,9 @@ def delete(domains, skip_dns):
 		else:
 			click.echo('- Domain %s does not exist in .sail/config.json' % domain.fqdn)
 
+	_update_nginx_config()
+	# TODO: Maybe delete SSL certs for this domain
+
 	# Bail early if skipping
 	if skip_dns:
 		click.echo('- Skipping updating DNS records')
@@ -341,6 +343,50 @@ def delete(domains, skip_dns):
 				click.echo('- Deleting orphaned subdomain %s from .sail/config.json' % _sub.fqdn)
 				config['domains'] = [d for d in config['domains'] if d['name'] != _sub.fqdn]
 				util.update_config(config)
+
+def _update_nginx_config():
+	config = util.config()
+	domains = config['domains']
+	c = util.connection()
+
+	server_names = [d['name'] for d in domains]
+
+	certificates = []
+	https_names = []
+
+	result = c.run('certbot certificates -n', warn=True)
+	matches = re.findall(r'Certificate Name:.+?Private Key Path:.+?$', result.stdout, re.MULTILINE | re.DOTALL)
+	for match in matches:
+		cert = {}
+		cert['name'] = re.search(r'Certificate Name: (.+)$', match, re.MULTILINE).group(1).strip()
+		cert['cert'] = re.search(r'Certificate Path: (.+)$', match, re.MULTILINE).group(1).strip()
+		cert['key'] = re.search(r'Private Key Path: (.+)$', match, re.MULTILINE).group(1).strip()
+
+		domains = re.search(r'Domains: (.+)$', match, re.MULTILINE).group(1).strip()
+		domains = domains.split(' ')
+		cert['domains'] = []
+
+		for domain in domains:
+			if domain in server_names:
+				cert['domains'].append(domain)
+
+		if len(cert['domains']) < 1:
+			continue
+
+		certificates.append(cert)
+		https_names.extend(cert['domains'])
+
+	http_names = list(set(server_names).difference(set(https_names)))
+
+	click.echo('- Generating nginx configuration')
+	c.put(io.StringIO(util.template('nginx.server.conf', {
+		'certificates': certificates,
+		'https_names': https_names,
+		'http_names': http_names,
+		'root': util.remote_path('/public'),
+	})),'/etc/nginx/conf.d/%s.conf' % config['namespace'])
+
+	c.run('systemctl reload nginx')
 
 # Parse list into registered domains and subdomains
 def _parse_domains(input_domains):
