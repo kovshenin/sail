@@ -17,6 +17,7 @@ Contents:
 	+ [Account](#account)
 	+ [API Token](#api-token)
 * [Creating a New Sail Project](#creating-a-new-sail-project)
+	+ [Namespaces and Environments](#namespaces-and-environments)
 	+ [Selecting a Droplet Size and Region](#selecting-a-droplet-size-and-region)
 * [Domains and DNS](#domains-and-dns)
 	+ [SSL and HTTPS](#ssl-and-https)
@@ -104,6 +105,23 @@ sail init
 If you'd like to migrate an existing WordPress application into a Sail-powered
 project, you'll still need to provision a new project first. For more information
 take a look at [Migrating existing projects to Sail](#migrating-existing-projects-to-sail).
+
+### Namespaces and Environments
+
+An environment is a collection of cloud resources, dedicated to running your
+WordPress applications. You can install multiple WordPress applications into the
+same environment using namespaces:
+
+```
+sail init --namespace=secondary --environment=/path/to/existing/project
+```
+
+The command above will create and install a new WordPress application under the
+`secondary` namespace, alongside your main project.
+
+**Note**: Namespaces in a single environment are not isolated. They typically share
+a Linux user, the PHP-FPM pools, Nginx configurations, database servers, etc. If
+you are looking for isolation, we recommend using a separate environment instead.
 
 ### Selecting a Droplet Size and Region
 
