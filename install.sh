@@ -9,6 +9,8 @@ abort() {
 	exit 1
 }
 
+[ "$UID" -eq 0 ] || exec sudo bash "$0" "$@"
+
 major_minor() {
 	echo "${1%%.*}.$(
 		x="${1#*.}"
