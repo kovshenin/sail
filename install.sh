@@ -1,5 +1,4 @@
 #!/bin/bash
-REQUIRED_GIT_VERSION=2.7.0
 REQUIRED_PYTHON_VERSION=3.6.0
 INSTALL_DIR=/opt/sail
 BIN_DIR=/usr/local/bin
@@ -26,19 +25,13 @@ if [[ "${OS}" != "Linux" ]] && [[ "${OS}" != "Darwin" ]]; then
 	abort "Sail CLI is only supported on macOS and Linux. Windows users can use Sail via WSL."
 fi
 
-test_git() {
-	local git_version_output
-	git_version_output="$(git --version 2>/dev/null)"
-	version_ge "$(major_minor "${git_version_output##* }")" "$(major_minor "${REQUIRED_GIT_VERSION}")"
-}
-
 test_python() {
 	local python_version_output
 	python_version_output="$("$1" --version 2>/dev/null)"
 	version_ge "$(major_minor "${python_version_output##* }")" "$(major_minor "${REQUIRED_PYTHON_VERSION}")"
 }
 
-test_git || abort "Sail CLI requires Git version ${REQUIRED_GIT_VERSION} and above."
+git --version || abort "Sail CLI requires Git."
 curl --version || abort "Sail CLI requires the cURL binary."
 
 PYTHON_BIN=""
