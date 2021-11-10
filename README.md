@@ -10,9 +10,6 @@ documentation. For support and announcements [join our Slack](https://join.slack
 Contents:
 
 * [Installing Sail](#installing-sail)
-	+ [Using Homebrew (Linux, MacOS, WSL on Windows)](#using-homebrew-linux-macos-wsl-on-windows)
-	+ [From PyPI](#from-pypi)
-	+ [From Source](#from-source)
 * [Getting a DigitalOcean API Token](#getting-a-digitalocean-api-token)
 	+ [Account](#account)
 	+ [API Token](#api-token)
