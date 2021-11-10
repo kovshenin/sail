@@ -63,7 +63,7 @@ fi
 
 $SUDO mkdir $INSTALL_DIR || abort "Could not create directory ${INSTALL_DIR}. Are you root?"
 cd $INSTALL_DIR || abort "Could not enter directory ${INSTALL_DIR}. Make sure you have correct permissions."
-TARGET_VERSION=$(curl --silent "https://api.github.com/repos/kovshenin/sail/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
+TARGET_VERSION=$(curl --silent "https://api.github.com/repos/kovshenin/sail/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
 if [ -z $TARGET_VERSION ]; then
 	TARGET_VERSION="main"
