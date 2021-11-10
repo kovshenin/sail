@@ -46,7 +46,13 @@ if [[ -z ${PYTHON_BIN} ]]; then
 fi
 
 if [ -d $INSTALL_DIR ]; then
-	abort "The ${INSTALL_DIR} directory already exists. Delete first."
+	# Make sure it's a Sail CLI installation
+	if [ ! -f "$INSTALL_DIR/sail.py" ]; then
+		abort "The ${INSTALL_DIR} directory exists and doesn't look like a Sail CLI installation."
+	fi
+
+	echo "An existing Sail CLI installation found in ${INSTALL_DIR}. Reinstalling..."
+	rm -rf $INSTALL_DIR || abort "Could not delete ${INSTALL_DIR}. Are you root?"
 fi
 
 mkdir $INSTALL_DIR || abort "Could not create directory ${INSTALL_DIR}. Are you root?"
