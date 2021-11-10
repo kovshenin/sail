@@ -2,9 +2,12 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2021-11-10
+
 * Added: Namespaces and environments to run multiple applications in the same environment. Use `--namespace` and `--environment` with `init`.
 * Added: New `pre-deploy` hooks in .sail, these will run every time deploy is invoked
 * Added: New `sail diff` command, shortcut for `sail deploy --dry-run` and `sail download --dry-run`
+* Added: A new `install.sh` script to install and update Sail CLI
 * Changed: New `--skip-hooks` or `--no-verify` options to `sail deploy` to skip running hooks
 * Changed: Blueprints now fully client-side
 * Changed: Provision and destroy are mostly client-side (API calls only to control justsailed.io DNS)
