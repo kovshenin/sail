@@ -9,7 +9,11 @@ abort() {
 	exit 1
 }
 
-[ "$UID" -eq 0 ] || exec sudo bash "$0" "$@"
+SUDO=""
+if [ ! "$UID" -eq 0 ]; then
+	sudo -l mkdir &>/dev/null || abort "This installer requires root or sudo."
+	SUDO="sudo "
+fi
 
 major_minor() {
 	echo "${1%%.*}.$(
@@ -54,10 +58,10 @@ if [ -d $INSTALL_DIR ]; then
 	fi
 
 	echo "An existing Sail CLI installation found in ${INSTALL_DIR}. Reinstalling..."
-	rm -rf $INSTALL_DIR || abort "Could not delete ${INSTALL_DIR}. Are you root?"
+	$SUDO rm -rf $INSTALL_DIR || abort "Could not delete ${INSTALL_DIR}. Are you root?"
 fi
 
-mkdir $INSTALL_DIR || abort "Could not create directory ${INSTALL_DIR}. Are you root?"
+$SUDO mkdir $INSTALL_DIR || abort "Could not create directory ${INSTALL_DIR}. Are you root?"
 cd $INSTALL_DIR || abort "Could not enter directory ${INSTALL_DIR}. Make sure you have correct permissions."
 TARGET_VERSION=$(curl --silent "https://api.github.com/repos/kovshenin/sail/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
 
@@ -73,16 +77,17 @@ if [ ! -z $REQUESTED_VERSION ]; then
 	TARGET_VERSION=$REQUESTED_VERSION
 fi
 
-git clone https://github.com/kovshenin/sail.git . || abort "Could not clone Git repository."
-git fetch --all --tags || abort "Could not fetch tags from Git repository."
-git checkout "${TARGET_VERSION}" || abort "Could not find target version: ${TARGET_VERSION}."
+$SUDO git clone https://github.com/kovshenin/sail.git . || abort "Could not clone Git repository."
+$SUDO git fetch --all --tags || abort "Could not fetch tags from Git repository."
+$SUDO git checkout "${TARGET_VERSION}" || abort "Could not find target version: ${TARGET_VERSION}."
 
-$PYTHON_BIN -m venv "${INSTALL_DIR}/.env"
-.env/bin/pip install -r requirements.txt
-.env/bin/python setup.py install
+$SUDO $PYTHON_BIN -m venv "${INSTALL_DIR}/.env"
+$SUDO .env/bin/pip install -r requirements.txt
+$SUDO .env/bin/python setup.py install
 
-rm "${BIN_DIR}/sail"
-ln -s "${INSTALL_DIR}/.env/bin/sail" "${BIN_DIR}/sail"
+$SUDO rm "${BIN_DIR}/sail"
+$SUDO ln -s "${INSTALL_DIR}/.env/bin/sail" "${BIN_DIR}/sail"
+
 sail_version=$("${BIN_DIR}/sail" --version)
 
 echo
