@@ -36,19 +36,17 @@ Contents:
 
 ## Installing Sail
 
-### Using Homebrew (Linux, MacOS, WSL on Windows)
-
-The easiest and preferred way to install Sail and keep it up to date, is through
-the [Homebrew](https://brew.sh/) package manager. It works on MacOS, Linux, and
-Windows (via WSL):
+To download and install Sail CLI on Linux, macOS or Windows (via WSL), run the
+following command in your terminal:
 
 ```
-brew install sail
+curl -sSLf https://sailed.io/install.sh | bash
 ```
 
-If you're new to Howebrew, [installing it](https://brew.sh/) is quite a breeze as well.
-If you're looking for other ways to install Sail, checkout the [installing section](https://sailed.io/kb/install/)
-in the Sail Knowledgebase.
+If you've already installed Sail, running the command again will update your
+installation to the latest version. If you're looking for other ways to install
+Sail, checkout the [installing section](https://sailed.io/kb/install/) in the
+Sail Knowledgebase.
 
 ## Getting a DigitalOcean API Token
 
