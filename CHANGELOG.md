@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Changed: Postfix and postfix-related blueprints now support namespaces under the hood
+
 ## [0.10.0] - 2021-11-10
 
 * Added: Namespaces and environments to run multiple applications in the same environment. Use `--namespace` and `--environment` with `init`.
