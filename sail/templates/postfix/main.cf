@@ -16,7 +16,8 @@ myhostname = {{ hostname }}
 alias_maps = hash:/etc/aliases
 alias_database = hash:/etc/aliases
 mydestination = $myhostname, localhost
-relayhost = {{ smtp_host }}:{{ smtp_port }}
+sender_dependent_relayhost_maps = hash:/etc/postfix/relay_hosts
+
 mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 172.16.0.0/12
 mailbox_size_limit = 0
 recipient_delimiter = +
@@ -24,8 +25,8 @@ inet_interfaces = loopback-only
 inet_protocols = all
 
 smtp_sasl_auth_enable = yes
-smtp_sasl_password_maps =
-	static:{{ smtp_username }}:{{ smtp_password }}
+smtp_sender_dependent_authentication = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
 
 smtp_sasl_security_options = noanonymous
 smtp_sasl_tls_security_options = noanonymous

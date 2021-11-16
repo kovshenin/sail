@@ -217,6 +217,7 @@ def _bp_dns(records):
 
 def _bp_postfix(data):
 	config = util.config()
+	namespace = config['namespace']
 	c = util.connection()
 
 	mode = data.get('mode')
@@ -238,15 +239,42 @@ def _bp_postfix(data):
 		c.run('usermod -a -G mail www-data', warn=True)
 
 	click.echo('- Configuring postfix')
-	context = {
-		'hostname': config['hostname'],
+
+	try:
+		postfix_config = json.loads(c.run('cat /etc/sail/postfix.json').stdout)
+		click.echo('- Updating existing /etc/sail/postfix.json')
+	except:
+		click.echo('- Creating new /etc/sail/postfix.json')
+		postfix_config = {}
+
+	postfix_config[namespace] = {
+		'namespace': namespace,
+		'smtp_sender': data.get('from_email'),
 		'smtp_host': data.get('host'),
 		'smtp_port': data.get('port', 578),
 		'smtp_username': data.get('username'),
 		'smtp_password': data.get('password'),
 	}
 
-	c.put(io.StringIO(util.template('postfix/main.cf', context)), '/etc/postfix/main.cf')
+	c.put(io.StringIO(json.dumps(postfix_config)), '/etc/sail/postfix.json')
+	c.run('chmod 0600 /etc/sail/postfix.json')
+
+	sasl_passwd = []
+	relay_hosts = []
+	for entry in postfix_config.values():
+		sasl_passwd.append(f"{entry['smtp_sender']} {entry['smtp_username']}:{entry['smtp_password']}")
+		relay_hosts.append(f"{entry['smtp_sender']} {entry['smtp_host']}:{entry['smtp_port']}")
+
+	sasl_passwd = '\n'.join(sasl_passwd)
+	relay_hosts = '\n'.join(relay_hosts)
+
+	c.put(io.StringIO(sasl_passwd), '/etc/postfix/sasl_passwd')
+	c.put(io.StringIO(relay_hosts), '/etc/postfix/relay_hosts')
+	c.run('chmod 0600 /etc/postfix/sasl_passwd')
+	c.run('postmap /etc/postfix/sasl_passwd')
+	c.run('postmap /etc/postfix/relay_hosts')
+
+	c.put(io.StringIO(util.template('postfix/main.cf', {'hostname': config['hostname']})), '/etc/postfix/main.cf')
 	c.run('chmod 0640 /etc/postfix/main.cf && chown root.mail /etc/postfix/main.cf')
 	c.run('systemctl restart postfix.service')
 

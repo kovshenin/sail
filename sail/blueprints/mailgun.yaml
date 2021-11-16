@@ -20,11 +20,11 @@ vars:
   prompt: Mailgun SMTP Password
   type: string
 
+- name: from_email
+  prompt: Sender e-mail
+  option: --from-email
+
 - name: from_name
-  prompt: From name (for outgoing mail)
+  prompt: Sender name
   option: --from-name
   default: WordPress
-
-- name: from_email
-  prompt: From e-mail (for outgoing mail)
-  option: --from-email

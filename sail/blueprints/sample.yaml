@@ -53,9 +53,9 @@ fail2ban:
   sshd
 
 # Install Postfix and configure it to relay mail to a third-party SMTP server,
-# great for Mailgun, Gmail SMTP and other services. You can add an optional
-# from_name and from_email keys to force the From: header used with wp_mail().
-# Note that some SMTP services overwrite the From header anyway.
+# great for Mailgun, Gmail SMTP and other services. You can add a from_name and
+# from_email keys to force the From: and Sender: headers used with wp_mail().
+# Note that some SMTP services overwrite the From/Sender headers anyway.
 postfix:
   mode: relay
   host: ${{ smtp_host }}
