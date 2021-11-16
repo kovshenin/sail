@@ -291,15 +291,6 @@ def delete(domains, skip_dns):
 		else:
 			click.echo('- Domain %s does not exist in .sail/config.json' % domain.fqdn)
 
-	# Delete orphans
-	for domain in domains:
-		_, _subs = _parse_domains([d['name'] for d in config['domains'] if d['internal'] != True])
-		for _sub in _subs:
-			if _sub.registered_domain == domain.fqdn:
-				click.echo('- Deleting orphaned subdomain %s from .sail/config.json' % _sub.fqdn)
-				config['domains'] = [d for d in config['domains'] if d['name'] != _sub.fqdn]
-				util.update_config(config)
-
 	_update_nginx_config()
 	# TODO: Maybe delete SSL certs for this domain
 
@@ -344,10 +335,35 @@ def _delete_dns_records(domains, subdomains):
 			continue
 
 		try:
-			# TODO: Maybe run a few extra checks before deleting the entire zone?
 			do_domain = digitalocean.Domain(token=config['provider_token'], name=domain.fqdn)
-			do_domain.destroy()
-			click.echo('- Deleting DNS zone for %s' % domain.fqdn)
+			records = do_domain.get_records()
+			exists = False
+			delete_zone = True
+
+			for r in records:
+				if r.name == '@' and r.type == 'A' and r.data == config['ip']:
+					exists = True
+					click.echo('- Deleting A record for %s' % domain.fqdn)
+					r.destroy()
+					continue
+
+				if r.name == '@' and r.type == 'NS':
+					continue
+
+				if r.name == '@' and r.type == 'SOA':
+					continue
+
+				# There are more records, don't delete the zone
+				delete_zone = False
+
+			if not exists:
+				click.echo('- No A records to delete for %s' % domain.fqdn)
+
+			if delete_zone:
+				do_domain.destroy()
+				click.echo('- Deleting DNS zone for %s' % domain.fqdn)
+			else:
+				click.echo('- Skipping deleting DNS zone for %s, other records exist' % domain.fqdn)
 		except:
 			click.echo('- Could not delete DNS zone for %s' % domain.fqdn)
 
