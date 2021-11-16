@@ -466,7 +466,8 @@ def _install(passwords):
 @cli.command()
 @click.option('--yes', '-y', is_flag=True, help='Force yes on the are-you-sure prompt')
 @click.option('--environment', is_flag=True, help='Force destroy environment, even if other namespaces exist')
-def destroy(yes, environment):
+@click.option('--skip-dns', is_flag=True, help='Do not attempt to delete DNS records for associated domains')
+def destroy(yes, environment, skip_dns):
 	'''Destroy an application namespace and/or the environment'''
 	root = util.find_root()
 	config = util.config()
@@ -490,7 +491,15 @@ def destroy(yes, environment):
 	elif not environment and config['namespace'] == 'default':
 		raise click.ClickException('You asked to destroy the default namespace, but other namespaces exist in this environment. Use --environment to destroy the entire environment.')
 
-	data = util.request('/destroy/', method='DELETE')
+	try:
+		data = util.request('/destroy/', method='DELETE')
+	except:
+		pass
+
+	if not skip_dns:
+		_domains = [d['name'] for d in config.get('domains', []) if not d['internal']]
+		_domains, _subdomains = domains._parse_domains(_domains)
+		domains._delete_dns_records(_domains, _subdomains)
 
 	if environment:
 		_destroy_environment()
