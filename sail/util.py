@@ -204,7 +204,7 @@ def rsync(args, source, destination, default_filters=True, extend_filters=[]):
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 	]
 
-	args.extend(['-e', util.join(ssh_args)])
+	args.extend(['-e', join(ssh_args)])
 
 	# Add all filters in order
 	for filter in filters:
