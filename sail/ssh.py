@@ -49,8 +49,8 @@ def add(path):
 		key = items[1]
 
 		try:
-			r = c.run(shlex.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
-				+ ' <<<' + shlex.join([_key]), hide=True)
+			r = c.run(util.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
+				+ ' <<<' + util.join([_key]), hide=True)
 
 			size, fp, _ = r.stdout.split(maxsplit=2)
 		except:
@@ -67,7 +67,7 @@ def add(path):
 			continue
 
 		click.echo('- Added %s' % fingerprint)
-		c.run(shlex.join(['echo', key]) + ' >> /root/.ssh/authorized_keys', hide=True)
+		c.run(util.join(['echo', key]) + ' >> /root/.ssh/authorized_keys', hide=True)
 
 def _list(c):
 	keys = io.BytesIO()
@@ -87,8 +87,8 @@ def _list(c):
 		type = items[0]
 		key = items[1]
 		try:
-			r = c.run(shlex.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
-				+ ' <<<' + shlex.join([line]), hide=True)
+			r = c.run(util.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
+				+ ' <<<' + util.join([line]), hide=True)
 
 			size, fp, _ = r.stdout.split(maxsplit=2)
 		except:
@@ -123,8 +123,8 @@ def delete(hash):
 
 	c = util.connection()
 	try:
-		r = c.run(shlex.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
-			+ ' <<<' + shlex.join([sail_pub_key]), hide=True)
+		r = c.run(util.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
+			+ ' <<<' + util.join([sail_pub_key]), hide=True)
 
 		_, sail_fp, _ = r.stdout.split(maxsplit=2)
 	except:
@@ -143,7 +143,7 @@ def delete(hash):
 	key = existing[fp]['key']
 
 	regex = key.replace('/', '\/')
-	c.run(shlex.join(['sed', '-i', '/^%s/d' % regex, '/root/.ssh/authorized_keys']), hide=True)
+	c.run(util.join(['sed', '-i', '/^%s/d' % regex, '/root/.ssh/authorized_keys']), hide=True)
 	click.echo('Removed SSH key %s' % fp)
 
 @ssh.command()
@@ -178,12 +178,12 @@ def run(command, root):
 	config = util.config()
 
 	if len(command) > 1:
-		command = shlex.join(command)
+		command = util.join(command)
 	else:
 		command = ''.join(command)
 
 	if not as_root:
-		command = shlex.join(['sudo', '-u', 'www-data', 'bash', '-c', command])
+		command = util.join(['sudo', '-u', 'www-data', 'bash', '-c', command])
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,

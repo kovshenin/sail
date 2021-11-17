@@ -158,7 +158,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 		click.echo('- Removing outdated releases')
 		remove = sorted(releases)[:len(releases)-keep]
 		for key in remove:
-			c.run(shlex.join(['rm', '-rf', '%s/releases/%s' % (remote_path, key)]))
+			c.run(util.join(['rm', '-rf', '%s/releases/%s' % (remote_path, key)]))
 
 	click.echo('- Successfully deployed %s' % release)
 

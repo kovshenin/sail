@@ -433,13 +433,13 @@ def _install(passwords):
 	wp = 'sudo -u www-data wp --path=%s/releases/1337 ' % remote_path
 
 	c.run(wp + 'core download')
-	c.run(wp + shlex.join([
+	c.run(wp + util.join([
 		'config', 'create',
 		'--dbname=wordpress_%s' % config['namespace'],
 		'--dbuser=wordpress_%s' % config['namespace'],
 		'--dbpass=%s' % passwords['mysql']
 	]))
-	c.run(wp + shlex.join([
+	c.run(wp + util.join([
 		'core', 'install',
 		'--url=%s' % util.primary_url(),
 		'--title=Sailed',
@@ -448,7 +448,7 @@ def _install(passwords):
 		'--admin_email=%s' % config['email'],
 		'--skip-email'
 	]))
-	c.run(wp + shlex.join([
+	c.run(wp + util.join([
 		'rewrite', 'structure', '/%postname%/'
 	]))
 

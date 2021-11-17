@@ -62,7 +62,7 @@ def make_primary(domain, force, skip_replace):
 		click.echo('- Running search-replace')
 
 		for sproto in ['https://', 'http://']:
-			c.run(wp + shlex.join([
+			c.run(wp + util.join([
 				'search-replace',
 				sproto + current,
 				proto + domain['name'],
@@ -143,7 +143,7 @@ def make_https(domains, agree_tos):
 			args.append(name)
 
 		try:
-			c.run(shlex.join(args))
+			c.run(util.join(args))
 		except Exception as e:
 			util.dlog(e)
 			raise click.ClickException('Could not obtain SSL certificate for %s. Use --debug for more info.' % group)

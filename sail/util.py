@@ -204,7 +204,7 @@ def rsync(args, source, destination, default_filters=True, extend_filters=[]):
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 	]
 
-	args.extend(['-e', shlex.join(ssh_args)])
+	args.extend(['-e', util.join(ssh_args)])
 
 	# Add all filters in order
 	for filter in filters:
@@ -299,3 +299,6 @@ def remote_path(directory=None):
 		path = path + '/' + directory.lstrip('/')
 
 	return path
+
+def join(split_command):
+	return ' '.join(shlex.quote(arg) for arg in split_command)

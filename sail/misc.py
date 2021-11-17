@@ -59,7 +59,7 @@ def wp(command):
 	root = util.find_root()
 	config = util.config()
 
-	command = shlex.join(command)
+	command = util.join(command)
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,

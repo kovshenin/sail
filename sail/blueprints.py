@@ -140,7 +140,7 @@ def _bp_apt(items):
 		click.echo('- Setting debconf selections')
 		selections = items['selections']
 		for line in selections:
-			command = shlex.join(['echo', line]) + ' | debconf-set-selections'
+			command = util.join(['echo', line]) + ' | debconf-set-selections'
 			c.run(command)
 
 	if 'install' in items:
@@ -150,7 +150,7 @@ def _bp_apt(items):
 
 		click.echo('- Installing packages')
 		packages = items['install']
-		command = wait + shlex.join(['DEBIAN_FRONTEND=noninteractive', 'apt', 'install', '-y'] + packages)
+		command = wait + util.join(['DEBIAN_FRONTEND=noninteractive', 'apt', 'install', '-y'] + packages)
 
 		try:
 			c.run(command, timeout=300)
@@ -337,7 +337,7 @@ def _bp_define_constants(constants):
 			value = str(value)
 			raw = ['--raw']
 
-		c.run(wp + shlex.join(['config', 'set', name, value] + raw), timeout=30)
+		c.run(wp + util.join(['config', 'set', name, value] + raw), timeout=30)
 
 def _bp_update_options(options):
 	c = util.connection()
@@ -370,14 +370,14 @@ def _bp_update_options(options):
 			option_value = option_value.strip('\n')
 
 		if delete:
-			c.run(wp + shlex.join(['option', 'delete', option_name]), timeout=30)
+			c.run(wp + util.join(['option', 'delete', option_name]), timeout=30)
 		else:
-			c.run(wp + shlex.join(['option', 'update', option_name,
+			c.run(wp + util.join(['option', 'update', option_name,
 				option_value] + format), timeout=30)
 
 			# Set the autoload flag
 			if autoload is not None:
-				c.run(wp + shlex.join([
+				c.run(wp + util.join([
 					'eval', "update_option( %s, get_option( %s ), %s );" %
 					(json.dumps(option_name), json.dumps(option_name), 'true' if autoload else 'false')
 				]))
@@ -412,23 +412,23 @@ def _bp_install_wp_products(what, products):
 	for slug, version in wporg.items():
 		click.echo('- wporg/%s=%s' % (slug, version))
 		_version = ['--version=%s' % version] if version != 'latest' else []
-		r = c.run(wp + shlex.join([what[:-1], 'install', '--force', slug] + _version), timeout=30)
+		r = c.run(wp + util.join([what[:-1], 'install', '--force', slug] + _version), timeout=30)
 
 	for slug, data in custom.items():
 		url = data.get('url')
 		click.echo('thirdparty/%s' % slug)
-		c.run(wp + shlex.join([what[:-1], 'install', '--force', url]), timeout=30)
+		c.run(wp + util.join([what[:-1], 'install', '--force', url]), timeout=30)
 
 	if what == 'plugins':
 		click.echo('- Activating plugins')
 
 		if wporg:
-			c.run(wp + shlex.join(['plugin', 'activate'] + list(wporg.keys())), timeout=60)
+			c.run(wp + util.join(['plugin', 'activate'] + list(wporg.keys())), timeout=60)
 
 		if custom:
-			c.run(wp + shlex.join(['plugin', 'activate'] + list(custom.keys())), timeout=60)
+			c.run(wp + util.join(['plugin', 'activate'] + list(custom.keys())), timeout=60)
 
 	else: # themes
 		click.echo('- Activating theme')
 		last = list(products.keys())[-1]
-		c.run(wp + shlex.join(['theme', 'activate', last]), timeout=60)
+		c.run(wp + util.join(['theme', 'activate', last]), timeout=60)
