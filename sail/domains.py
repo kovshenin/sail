@@ -270,8 +270,9 @@ def add(domains, skip_dns):
 
 @domain.command()
 @click.option('--skip-dns', is_flag=True, help='Do not delete DNS records')
+@click.option('--zone', is_flag=True, help='Force delete a DNS zone, even if other records exist in the zone.')
 @click.argument('domains', nargs=-1)
-def delete(domains, skip_dns):
+def delete(domains, skip_dns, zone):
 	'''Delete a domain and all DNS records'''
 	config = util.config()
 
@@ -299,9 +300,19 @@ def delete(domains, skip_dns):
 		click.echo('- Skipping updating DNS records')
 		return
 
-	_delete_dns_records(domains, subdomains)
+	# Delete orphans if the entire zone is going to be deleted.
+	if zone:
+		for domain in domains:
+			_, _subs = _parse_domains([d['name'] for d in config['domains'] if d['internal'] != True])
+			for _sub in _subs:
+				if _sub.registered_domain == domain.fqdn:
+					click.echo('- Deleting orphaned subdomain %s from .sail/config.json' % _sub.fqdn)
+					config['domains'] = [d for d in config['domains'] if d['name'] != _sub.fqdn]
+					util.update_config(config)
 
-def _delete_dns_records(domains, subdomains):
+	_delete_dns_records(domains, subdomains, force_delete_zones=zone)
+
+def _delete_dns_records(domains, subdomains, force_delete_zones=False):
 	config = util.config()
 	manager = digitalocean.Manager(token=config['provider_token'])
 	existing = manager.get_all_domains()
@@ -339,6 +350,11 @@ def _delete_dns_records(domains, subdomains):
 			records = do_domain.get_records()
 			exists = False
 			delete_zone = True
+
+			if force_delete_zones:
+				click.echo('- Deleting DNS zone for %s, forced' % domain.fqdn)
+				do_domain.destroy()
+				continue
 
 			for r in records:
 				if r.name == '@' and r.type == 'A' and r.data == config['ip']:

@@ -475,7 +475,7 @@ class TestEnd2End(unittest.TestCase):
 	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_014_blueprint_dns(self):
 		# Make sure domain doesn't exist.
-		result = self.runner.invoke(cli, ['domain', 'delete', 'saildemo.com'])
+		result = self.runner.invoke(cli, ['domain', 'delete', 'saildemo.com', '--zone'])
 
 		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
 		self.assertEqual(result.exit_code, 1)
