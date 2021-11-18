@@ -4,7 +4,7 @@ version: 1
 # Configure Postfix for Mailgun
 postfix:
   mode: relay
-  host: smtp.mailgun.org
+  host: ${{ smtp_host }}
   port: 587
   username: ${{ username }}
   password: ${{ password }}
@@ -12,6 +12,11 @@ postfix:
   from_email: ${{ from_email }}
 
 vars:
+- name: smtp_host
+  prompt: Mailgun SMTP host
+  option: --smtp-host
+  default: smtp.mailgun.org
+
 - name: username
   prompt: Mailgun SMTP Login
   type: string
