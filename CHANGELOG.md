@@ -7,6 +7,7 @@
 * Changed: `sail domain delete` will no longer delete orphaned subdomains when given a parent domain
 * Changed: `sail domain delete` will now attempt to delete the DNS zone only if no more records exist in that zone
 * Changed: `sail domain delete` now accepts a `--zone` flag which forces a DNS zone delete (and orphaned subdomains form config.json)
+* Added: Support for the Mailgun EU region in `mailgun.yaml` blueprint
 
 ## [0.10.0] - 2021-11-10
 
