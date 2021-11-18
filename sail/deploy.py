@@ -53,6 +53,35 @@ def _get_extend_filters(paths, prefix=None):
 
 	return extend_filters
 
+def _get_deployignore_filters():
+	root = util.find_root()
+	p = pathlib.Path(root) / '.deployignore'
+
+	filters = []
+	negates = []
+
+	if not p.is_file():
+		return filters
+
+	with p.open('r') as f:
+		lines = f.readlines()
+
+	for line in lines:
+		line = line.strip()
+		if re.match(r'^\s*#', line):
+			continue
+
+		negate = re.match(r'^\s*!(.+)', line)
+		if negate:
+			negates.append('+ %s' % negate.group(1))
+			continue
+
+		filters.append('- %s' % line)
+
+	# Negates have to come first for rsync.
+	filters = negates + filters
+	return filters
+
 @cli.command()
 @click.argument('path', nargs=-1, required=False)
 @click.option('--with-uploads', is_flag=True, help='Include the wp-content/uploads directory')
@@ -106,12 +135,16 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 
 	click.echo('- Uploading application files to production')
 
+	# Parse .deployignore.
+	filters = _get_deployignore_filters()
+	filters += _get_extend_filters(path)
+
 	returncode, stdout, stderr = util.rsync(
 		args=['-rtl', '--rsync-path', 'sudo -u www-data rsync',
 			'--copy-dest', '%s/public/' % remote_path, '--delete'],
 		source='%s/' % root,
 		destination='root@%s:%s/releases/%s' % (config['hostname'], remote_path, release),
-		extend_filters=_get_extend_filters(path)
+		extend_filters=filters
 	)
 
 	if returncode != 0:
@@ -282,7 +315,9 @@ def diff(path, reverse, raw):
 	if reverse:
 		destination, source = source, destination
 
-	files = _diff(source, destination, _get_extend_filters(path))
+	filters = _get_deployignore_filters()
+	filters += _get_extend_filters(path)
+	files = _diff(source, destination, filters)
 	empty = True
 
 	colors = {'created': 'green', 'deleted': 'red', 'updated': 'yellow'}

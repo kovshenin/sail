@@ -574,6 +574,44 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(r.return_code, 0)
 		self.assertIn('Status: install ok installed', r.stdout)
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_018_deployignore(self):
+		with open('.deployignore', 'w+') as f:
+			f.write('# this is a comment\n')
+			f.write('node_modules\n')
+			f.write('debug.log\n')
+			f.write('/readme.html\n')
+			f.write('*.sql\n')
+			f.write('!important.sql\n')
+
+		pathlib.Path('not-ignored.txt').touch()
+		pathlib.Path('important.sql').touch()
+		pathlib.Path('backup.sql').touch()
+		pathlib.Path('node_modules/one/two/three').mkdir(parents=True, exist_ok=True)
+		pathlib.Path('node_modules/one/two/three/four').touch()
+		pathlib.Path('wp-content/node_modules/one/two/three').mkdir(parents=True, exist_ok=True)
+		pathlib.Path('wp-content/node_modules/one/two/three/four').touch()
+		pathlib.Path('debug.log').touch()
+		pathlib.Path('wp-content/debug.log').touch()
+		pathlib.Path('readme.html').touch()
+		pathlib.Path('wp-content/readme.html').touch()
+
+		result = self.runner.invoke(cli, ['diff', '--raw'])
+		self.assertEqual(result.exit_code, 0)
+		diff = result.output.split('\n')
+
+		self.assertIn('not-ignored.txt', diff)
+		self.assertIn('important.sql', diff)
+		self.assertNotIn('backup.sql', diff)
+		self.assertNotIn('node_modules/one/two/three', diff)
+		self.assertNotIn('node_modules/one/two/three/four', diff)
+		self.assertNotIn('wp-content/node_modules/one/two/three', diff)
+		self.assertNotIn('wp-content/node_modules/one/two/three/four', diff)
+		self.assertNotIn('debug.log', diff)
+		self.assertNotIn('wp-content/debug.log', diff)
+		self.assertNotIn('readme.html', diff)
+		self.assertIn('wp-content/readme.html', diff)
+
 	def test_999_destroy(self):
 		result = self.runner.invoke(cli, ['destroy', '-y'])
 		self.assertEqual(result.exit_code, 0)
