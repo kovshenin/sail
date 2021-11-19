@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.1] - 2021-11-19
+
 * Changed: Postfix and postfix-related blueprints now support namespaces under the hood
 * Changed: `sail destroy` will now delete DNS records for all associated domains, use `--skip-dns` to bypass
 * Changed: `sail domain delete` will no longer delete orphaned subdomains when given a parent domain
