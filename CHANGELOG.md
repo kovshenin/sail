@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 * Changed: Update xhprof.so for profiling, adds labels to do_shortcode_tag
+* Changed: Nginx server configuration template now adds http2 support by default
 
 ## [0.10.1] - 2021-11-19
 
