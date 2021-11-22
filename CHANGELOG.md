@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Changed: Update xhprof.so for profiling, adds labels to do_shortcode_tag
+
 ## [0.10.1] - 2021-11-19
 
 * Changed: Postfix and postfix-related blueprints now support namespaces under the hood

@@ -372,7 +372,7 @@ def _configure():
 	c.run('systemctl reload nginx')
 
 	# Get xhprof
-	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.0-sail/xhprof.so.gz -o /tmp/xhprof.so.gz')
+	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.2-sail/xhprof.so.gz -o /tmp/xhprof.so.gz')
 	c.run('gunzip /tmp/xhprof.so.gz && mv /tmp/xhprof.so /usr/lib/php/20190902/xhprof.so')
 
 	# Get dhparams
