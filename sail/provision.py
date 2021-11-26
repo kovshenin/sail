@@ -1,4 +1,4 @@
-from sail import cli, util, deploy, domains, __version__
+from sail import cli, util, deploy, domains, cron, __version__
 
 import sail
 import json
@@ -140,6 +140,9 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 
 	# Run the installs
 	_install(passwords)
+
+	# Add the default WP cron schedule.
+	ctx.invoke(cron.add, schedule='*/5', command=('wp cron event run --due-now',))
 
 	# Download files from production
 	ctx.invoke(deploy.download, yes=True)
@@ -450,6 +453,16 @@ def _install(passwords):
 	]))
 	c.run(wp + util.join([
 		'rewrite', 'structure', '/%postname%/'
+	]))
+
+	# Disable standard wp-cron (will spawn via system cron).
+	c.run(wp + util.join([
+		'config', 'set', 'DISABLE_WP_CRON', 'true', '--raw'
+	]))
+
+	# Run any outstanding events (like the cron check).
+	c.run(wp + util.join([
+		'cron', 'event', 'run', '--due-now'
 	]))
 
 	# Do da deploy.
