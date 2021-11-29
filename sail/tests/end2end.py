@@ -1,6 +1,6 @@
 # Relative import
 import sys, pathlib
-sys.path.append(str(pathlib.Path(__file__).parent.parent.parent.resolve()))
+sys.path.insert(1, str(pathlib.Path(__file__).parent.parent.parent.resolve()))
 from sail import cli, util
 
 import io, os
