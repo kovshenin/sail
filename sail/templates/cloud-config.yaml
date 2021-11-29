@@ -23,11 +23,11 @@ swap:
   size: 2147483648
 
 runcmd:
-  - [ ufw allow ssh ]
-  - [ ufw allow http ]
-  - [ ufw allow https ]
-  - [ ufw enable ]
+  - [ ufw, allow, ssh ]
+  - [ ufw, allow, http ]
+  - [ ufw, allow, https ]
+  - [ ufw, enable ]
 
-  - [ curl, -O, https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar ]
+  - [ curl, -O, "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar" ]
   - [ chmod, +x, wp-cli.phar ]
   - [ mv, wp-cli.phar, /usr/local/bin/wp ]
