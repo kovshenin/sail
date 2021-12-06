@@ -2,8 +2,15 @@
 
 ## [Unreleased]
 
+* Added: New `sail cron` commands to add, remove and view system cron entries
+* Added: Default fastcgi_cache configuration, compatible with most advanced-cache.php-based caching plugins
+* Added: A `--json` flag to the `sail db export` command for easier integration with third-party scripts
 * Changed: Update xhprof.so for profiling, adds labels to do_shortcode_tag
 * Changed: Nginx server configuration template now adds http2 support by default
+* Changed: Increased various timeouts in `init`
+* Changed: .ico requests can now be served by PHP/WordPress
+* Fixed: ufw now properly configured during provision
+* Fixed: Redirects in `sail profile` will no longer be followed
 
 ## [0.10.1] - 2021-11-19
 
