@@ -159,7 +159,7 @@ def run(ctx, url):
 	session = requests.Session()
 
 	try:
-		response = session.send(request)
+		response = session.send(request, allow_redirects=False)
 	except:
 		raise click.ClickException('Could not make profiling request.')
 
