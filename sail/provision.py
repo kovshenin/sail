@@ -305,7 +305,7 @@ def _provision(provider_token, size, region):
 			return True
 		return False
 
-	util.wait(wait_for_ip, timeout=60, interval=10)
+	util.wait(wait_for_ip, timeout=120, interval=10)
 
 	click.echo('- Droplet up and running, requesting DNS record')
 	response = util.request('/ip/', json={
@@ -328,7 +328,7 @@ def _provision(provider_token, size, region):
 			util.dlog(repr(e))
 			return False
 
-	util.wait(wait_for_ssh, timeout=60, interval=10)
+	util.wait(wait_for_ssh, timeout=120, interval=10)
 
 	click.echo('- Writing server keys to .sail/known_hosts')
 	with open('%s/.sail/known_hosts' % root, 'w+') as f:
@@ -361,7 +361,7 @@ def _configure():
 		return False
 
 	click.echo('- Waiting for cloud-init to complete')
-	util.wait(wait_for_cloud_init, timeout=300, interval=10)
+	util.wait(wait_for_cloud_init, timeout=900, interval=10)
 
 	c.run('mkdir -p /etc/nginx/conf.d/extras')
 	c.put(sail.TEMPLATES_PATH + '/nginx.main.conf', '/etc/nginx/nginx.conf')
