@@ -4,6 +4,8 @@ import os, subprocess
 import click
 import hashlib
 import pathlib
+import json
+
 from datetime import datetime
 
 @cli.group()
@@ -77,25 +79,31 @@ def import_cmd(path):
 	click.echo('- Database imported')
 
 @db.command()
-def export():
+@click.option('--json', 'as_json', is_flag=True, help='Output in JSON format')
+def export(as_json):
 	'''Export the production database to a local .sql.gz file'''
 	root = util.find_root()
 	config = util.config()
 	c = util.connection()
 	remote_path = util.remote_path()
 
+	if as_json:
+		util.loader(suspend=True)
+
 	backups_dir = pathlib.Path(root + '/.backups')
 	backups_dir.mkdir(parents=True, exist_ok=True)
 	filename = datetime.now().strftime('%Y-%m-%d-%H%M%S.sql.gz')
 
-	click.echo('# Exporting WordPress database')
+	if not as_json:
+		click.echo('# Exporting WordPress database')
 
 	try:
 		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot "wordpress_%s" | gzip -c9 > %s/%s' % (config['namespace'], remote_path, filename))
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
-	click.echo('- Export completed, downloading')
+	if not as_json:
+		click.echo('- Export completed, downloading')
 
 	args = ['-t']
 	source = 'root@%s:%s/%s' % (config['hostname'], remote_path, filename)
@@ -105,11 +113,15 @@ def export():
 	if returncode != 0:
 		raise click.ClickException('An error occurred in rsync. Please try again.')
 
-	click.echo('- Cleaning up production')
+	if not as_json:
+		click.echo('- Cleaning up production')
 
 	try:
 		c.run('rm %s/%s' % (remote_path, filename))
 	except:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
-	click.echo('- Database export saved to .backups/%s' % filename)
+	if not as_json:
+		click.echo('- Database export saved to .backups/%s' % filename)
+	else:
+		click.echo(json.dumps(destination))
