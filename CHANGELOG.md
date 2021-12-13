@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.2] - 2021-12-13
+
 * Added: New `sail cron` commands to add, remove and view system cron entries
 * Added: Default fastcgi_cache configuration, compatible with most advanced-cache.php-based caching plugins
 * Added: A `--json` flag to the `sail db export` command for easier integration with third-party scripts
