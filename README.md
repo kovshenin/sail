@@ -1,5 +1,7 @@
 # Deploy WordPress to DigitalOcean with Sail
 
+[![Join the chat at https://gitter.im/kovshenin/sail](https://badges.gitter.im/kovshenin/sail.svg)](https://gitter.im/kovshenin/sail?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [Sail](https://sailed.io) is a free CLI tool to deploy, manage and scale WordPress applications
 in the DigitalOcean cloud. Visit [our knowledgebase](https://sailed.io/kb/) for the complete
 documentation. For support and announcements [join our Slack](https://join.slack.com/t/sailed/shared_invite/zt-vgnf8dfb-oPH1ZY1IwFSg_WyECYh5ow).
