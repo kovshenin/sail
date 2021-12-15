@@ -86,6 +86,21 @@ def request(endpoint, **kwargs):
 
 	return data
 
+def wait_for_task(task_id, timeout=30, interval=1):
+	data = {}
+
+	def _wait():
+		nonlocal data
+
+		data = request('/status/%s/' % task_id)
+		if data.get('task_state') == 'failure':
+			raise click.ClickException('Task state failure')
+
+		return data.get('task_state') == 'success'
+
+	wait(_wait, timeout=timeout, interval=interval)
+	return data
+
 def wait(condition, timeout=30, interval=1, *args):
 	'''Wait for condition every interval or timeout.'''
 	start = time.time()
@@ -302,3 +317,14 @@ def remote_path(directory=None):
 
 def join(split_command):
 	return ' '.join(shlex.quote(arg) for arg in split_command)
+
+def premium():
+	_config = config()
+	return bool(_config.get('premium', False))
+
+def sizeof_fmt(num, suffix="B"):
+	for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+		if abs(num) < 1024.0:
+			return f'{num:3.1f}{unit}{suffix}'
+		num /= 1024.0
+	return f'{num:.1f}Yi{suffix}'

@@ -15,6 +15,7 @@ def config(name, value=None, delete=False):
 		'email',
 		'api-base',
 		'keep',
+		'premium',
 	]
 
 	if name not in valid_names:

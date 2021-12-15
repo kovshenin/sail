@@ -154,6 +154,15 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 
 	primary_url = util.primary_url()
 
+	# Automatically enable premium if it's been set up
+	premium_license = util.get_sail_default('premium')
+	premium_email = util.get_sail_default('email')
+	if premium_license and premium_email:
+		try:
+			ctx.invoke(sail.premium.enable)
+		except:
+			click.echo('Warning: could not initialize Sail Premium. Please contact support.')
+
 	click.echo()
 	click.echo('# Success. The ship has sailed!')
 
