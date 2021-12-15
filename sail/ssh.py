@@ -19,7 +19,7 @@ def key():
 
 @key.command()
 @click.argument('path', nargs=1)
-def add(path):
+def add(path, quiet=False):
 	'''Add an SSH key to the production server by filename or GitHub URL'''
 	c = util.connection()
 
@@ -60,13 +60,14 @@ def add(path):
 
 	existing = _list(c)
 
-	click.echo('# Adding SSH keys:')
+	if not quiet: click.echo('# Adding SSH keys:')
+
 	for fingerprint, key in to_add.items():
 		if fingerprint in existing:
-			click.echo('- Skipped %s (already exists)' % fingerprint)
+			if not quiet: click.echo('- Skipped %s (already exists)' % fingerprint)
 			continue
 
-		click.echo('- Added %s' % fingerprint)
+		if not quiet: click.echo('- Added %s' % fingerprint)
 		c.run(util.join(['echo', key]) + ' >> /root/.ssh/authorized_keys', hide=True)
 
 def _list(c):
