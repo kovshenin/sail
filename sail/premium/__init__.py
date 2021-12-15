@@ -18,7 +18,7 @@ def premium_init():
 
 @cli.group()
 def premium():
-	'''Add, remove and update domains associated with your site'''
+	'''Enable or disable Sail Premium for your application'''
 	pass
 
 @premium.command()
