@@ -4,7 +4,25 @@ import requests, json, os, subprocess, time
 import click, hashlib, pathlib, shutil
 from datetime import datetime
 
-@cli.command()
+@cli.group(invoke_without_command=True)
+@click.pass_context
+def backup(ctx):
+	'''Create, restore and manage application backups'''
+	# Default subcommand for back-compat
+	if not ctx.invoked_subcommand:
+		return ctx.forward(create)
+
+@cli.command(name='restore')
+@click.argument('path', nargs=1, required=True)
+@click.option('--yes', '-y', is_flag=True, help='Skip the AYS message and force yes')
+@click.option('--skip-db', is_flag=True, help='Do not import the database')
+@click.option('--skip-uploads', is_flag=True, help='Do not import uploads')
+@click.pass_context
+def restore_compat(ctx, path, yes, skip_db, skip_uploads):
+	'''Restore your application files, uploads and database from a backup file'''
+	return ctx.forward(restore)
+
+@backup.command()
 @click.argument('path', nargs=1, required=True)
 @click.option('--yes', '-y', is_flag=True, help='Skip the AYS message and force yes')
 @click.option('--skip-db', is_flag=True, help='Do not import the database')
@@ -117,8 +135,8 @@ def restore(path, yes, skip_db, skip_uploads):
 	shutil.rmtree(progress_dir)
 	click.echo('- Backup restored successfully. Your local copy may be out of date.')
 
-@cli.command()
-def backup():
+@backup.command()
+def create():
 	'''Backup your production files and database to your local .backups directory'''
 	root = util.find_root()
 	config = util.config()
