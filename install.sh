@@ -51,6 +51,8 @@ if [[ -z ${PYTHON_BIN} ]]; then
 	abort "Sail CLI requires Python version ${REQUIRED_PYTHON_VERSION} and above."
 fi
 
+$PYTHON_BIN -m venv --help || abort "Sail CLI requires the venv module for Python."
+
 if [ -d $INSTALL_DIR ]; then
 	# Make sure it's a Sail CLI installation
 	if [ ! -f "$INSTALL_DIR/sail.py" ]; then
