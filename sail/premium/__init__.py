@@ -1,3 +1,5 @@
+import sail
+
 from sail import cli, util, ssh
 
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -79,6 +81,23 @@ def enable(ctx):
 		'private_key': private_key,
 		'namespace': config['namespace'],
 	})
+
+	c = util.connection()
+
+	click.echo('- Updating remote configs')
+
+	# Updated main/shared configs for <= 0.10.2.
+	c.put(sail.TEMPLATES_PATH + '/nginx.main.conf', '/etc/nginx/nginx.conf')
+	c.put(sail.TEMPLATES_PATH + '/nginx.shared.conf', '/etc/nginx/conf.d/extras/sail.conf')
+	c.put(sail.TEMPLATES_PATH + '/prepend.php', '/etc/sail/prepend.php')
+
+	# Premium configs.
+	c.put(sail.TEMPLATES_PATH + '/nginx.main.premium.conf', '/etc/nginx/conf.d/extras/sail.main.premium.conf')
+	c.put(sail.TEMPLATES_PATH + '/nginx.premium.conf', '/etc/nginx/conf.d/extras/sail.premium.conf')
+	c.put(sail.TEMPLATES_PATH + '/premium.php', '/etc/sail/premium.php')
+
+	# Make sure certbot.conf is in action.
+	c.run('systemctl reload nginx')
 
 	click.echo('- Updating .sail/config.json')
 	config['premium'] = license

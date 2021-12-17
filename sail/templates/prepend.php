@@ -4,6 +4,11 @@ class Sail_Profiler {
 	private static $key;
 
 	public static function init() {
+		// Load premium modules if any.
+		if ( file_exists( __DIR__ . '/premium.php' ) ) {
+			include_once( __DIR__ . '/premium.php' );
+		}
+
 		if ( ! empty( $_SERVER['HTTP_X_SAIL_PROFILE'] ) ) {
 			self::$key = $_SERVER['HTTP_X_SAIL_PROFILE'];
 		} elseif ( ! empty( $_REQUEST['SAIL_PROFILE'] ) ) {
