@@ -24,8 +24,9 @@ def premium():
 	pass
 
 @premium.command()
+@click.option('--force', is_flag=True, help='Force enable routine, even if already premium.')
 @click.pass_context
-def enable(ctx):
+def enable(ctx, force):
 	'''Provision premium features for this application.'''
 	config = util.config()
 	root = util.find_root()
@@ -34,9 +35,8 @@ def enable(ctx):
 
 	click.echo('# Setting up Sail Premium')
 
-	if config.get('premium'):
-		# raise click.ClickException('Premium features have already been enabled for this application.')
-		pass
+	if config.get('premium') and not force:
+		raise click.ClickException('Premium features have already been enabled for this application.')
 
 	if not license:
 		raise click.ClickException('Premium license key not found. Set one with: sail config premium LICENSE_KEY')
