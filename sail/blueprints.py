@@ -237,6 +237,7 @@ def _bp_postfix(data):
 		c.run('debconf-set-selections <<< \'postfix postfix/relayhost string %s\'' % relay_host)
 		c.run(wait + 'apt update && DEBIAN_FRONTEND=noninteractive apt install -y postfix libsasl2-modules', timeout=300)
 		c.run('usermod -a -G mail www-data', warn=True)
+		c.run('usermod -a -G mail postfix', warn=True)
 
 	click.echo('- Configuring postfix')
 
