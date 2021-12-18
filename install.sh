@@ -39,6 +39,7 @@ test_python() {
 
 git --version || abort "Sail CLI requires Git."
 curl --version || abort "Sail CLI requires the cURL binary."
+rsync --version || abort "Sail CLI requires rsync."
 
 PYTHON_BIN=""
 if test_python python; then
@@ -51,7 +52,8 @@ if [[ -z ${PYTHON_BIN} ]]; then
 	abort "Sail CLI requires Python version ${REQUIRED_PYTHON_VERSION} and above."
 fi
 
-$PYTHON_BIN -m venv --help || abort "Sail CLI requires the venv module for Python."
+$PYTHON_BIN -m venv --help > /dev/null || abort "Sail CLI requires the venv module for Python."
+$PYTHON_BIN -m ensurepip --version || abort "Sail CLI requires the python3-venv and python3-pip."
 
 if [ -d $INSTALL_DIR ]; then
 	# Make sure it's a Sail CLI installation
@@ -83,14 +85,15 @@ $SUDO git clone https://github.com/kovshenin/sail.git . || abort "Could not clon
 $SUDO git fetch --all --tags || abort "Could not fetch tags from Git repository."
 $SUDO git checkout "${TARGET_VERSION}" || abort "Could not find target version: ${TARGET_VERSION}."
 
-$SUDO $PYTHON_BIN -m venv "${INSTALL_DIR}/.env"
-$SUDO .env/bin/pip install -r requirements.txt
-$SUDO .env/bin/python setup.py install
+$SUDO $PYTHON_BIN -m venv "${INSTALL_DIR}/.env" || abort "Could not initialize a Python venv."
+$SUDO .env/bin/python -m ensurepip --upgrade || abort "Could not upgrade pip."
+$SUDO .env/bin/pip install -r requirements.txt || abort "Could not install dependencies."
+$SUDO .env/bin/python setup.py install || abort "Something went wrong during setup.py install."
 
 $SUDO rm "${BIN_DIR}/sail"
-$SUDO ln -s "${INSTALL_DIR}/.env/bin/sail" "${BIN_DIR}/sail"
+$SUDO ln -s "${INSTALL_DIR}/.env/bin/sail" "${BIN_DIR}/sail" || abort "Could not symlink ${INSTALL_DIR}"
 
-sail_version=$("${BIN_DIR}/sail" --version)
+sail_version=$("${BIN_DIR}/sail" --version) || abort "Could not determine Sail CLI version. Install might be corrupted."
 
 echo
 echo "# Sail CLI installed successfully"
