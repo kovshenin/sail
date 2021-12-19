@@ -163,7 +163,11 @@ def _render_health(status, j):
 
 	percent = click.style(f'{percent:.0%} used', fg=_status_color(status['disk']['status']))
 	label = 'Disk'.rjust(j)
-	click.echo(f'{label}: {percent}, {used}/{total} GB')
+
+	used = util.sizeof_fmt(used)
+	total = util.sizeof_fmt(total)
+
+	click.echo(f'{label}: {percent}, {used} of {total}')
 
 @monitor.command()
 @click.argument('minutes', nargs=1, required=True)
