@@ -138,14 +138,20 @@ def info(timestamp, as_json):
 		click.echo(json.dumps(backup))
 		return
 
-	click.echo('# Backup %s' % backup['timestamp'])
-	click.echo('- Description: %(description)s' % backup)
-	click.echo('- Status: %(status)s' % backup)
-	click.echo('- Date/Time: %s' % datetime.fromtimestamp(int(backup['timestamp'])))
-	click.echo('- Size: %s' % util.sizeof_fmt(int(backup['size'])))
+	j = 13
+
+	click.echo()
+	click.echo('Backup:'.rjust(j) + ' %s' % backup['timestamp'])
+	click.echo('Description:'.rjust(j) + ' %(description)s' % backup)
+	click.echo('Status:'.rjust(j) + ' %(status)s' % backup)
+	click.echo('Date/Time:'.rjust(j) + ' %s' % datetime.fromtimestamp(int(backup['timestamp'])))
+	click.echo('Size:'.rjust(j) + ' %s' % util.sizeof_fmt(int(backup['size'])))
 
 	if backup.get('export') == 'pending':
-		click.echo('- Export: pending')
+		click.echo('Export:'.rjust(j) + ' pending')
 	elif backup.get('export'):
-		click.echo('- Export URL: %s' % backup['export']['url'])
-		click.echo('- Export Expires: %s' % datetime.fromtimestamp(int(backup['export']['expires'])))
+		click.echo()
+		click.echo('Export URL:'.rjust(j) + ' %s' % backup['export']['url'])
+		click.echo('Expires:'.rjust(j) + ' %s' % datetime.fromtimestamp(int(backup['export']['expires'])))
+
+	click.echo()
