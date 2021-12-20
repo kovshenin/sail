@@ -26,7 +26,7 @@ def status(as_json):
 		click.echo(json.dumps(status))
 		return
 
-	j = 10
+	j = 11
 	click.echo()
 
 	# Status
@@ -36,26 +36,27 @@ def status(as_json):
 
 	duration = format(str(timedelta(seconds=duration)))
 	st_code = status['reason']['code']
-	label = 'Status'.rjust(j)
-	label_r = 'Reason'.rjust(j)
+
+	label = util.label('Status:', j)
+	label_r = util.label('Reason:', j)
 
 	if status['status'] == 'up':
 		st_string = click.style('  UP  ', bg='green')
-		click.echo(f'{label}: {st_string} HTTP/{st_code} for {duration}')
+		click.echo(f'{label} {st_string} HTTP/{st_code} for {duration}')
 	elif status['status'] == 'down':
 		st_string = click.style(' DOWN ', bg='red')
 		st_reason_description = click.style(f'HTTP/{st_code} ' + status['reason']['description'], fg='red')
-		click.echo(f'{label}: {st_string} for {duration}')
-		click.echo(f'{label_r}: {st_reason_description}')
+		click.echo(f'{label} {st_string} for {duration}')
+		click.echo(f'{label_r} {st_reason_description}')
 	else:
 		st_string = click.style(' UNKNOWN ', bg='bright_black')
-		click.echo(f'{label}: {st_string} for {duration}')
+		click.echo(f'{label} {st_string} for {duration}')
 
 	def _uptime_color(v):
 		if v == 0:
 			return 'bright_black'
 		if v >= 99.95:
-			return 'green'
+			return 'white'
 		if v >= 99.00:
 			return 'yellow'
 		return 'red'
@@ -67,15 +68,15 @@ def status(as_json):
 		v = floor(status['uptime'][i] * 100) / 100
 		uptime[i] = click.style('{0:.2f}%'.format(v), fg=_uptime_color(v))
 
-	label = 'Uptime'.rjust(j)
+	label = util.label('Uptime:', j)
 	uptime_24h, uptime_7d, uptime_30d = uptime['24h'], uptime['7d'], uptime['30d']
-	click.echo(f'{label}: {uptime_24h} in 24h, {uptime_7d} in 7d, {uptime_30d} in 30d')
+	click.echo(f'{label} {uptime_24h} in 24h, {uptime_7d} in 7d, {uptime_30d} in 30d')
 
 	def _get_response_time_color(v):
 		if v <= 0:
 			return 'bright_black'
 		if v <= 500:
-			return 'green'
+			return 'white'
 		if v < 1000:
 			return 'yellow'
 		return 'red'
@@ -83,30 +84,29 @@ def status(as_json):
 	# Response Time
 	response_time = status.get('response_time')
 	response_time = click.style('{:,} ms'.format(response_time), fg=_get_response_time_color(response_time))
-	label = 'Avg. Resp'.rjust(j)
-	click.echo(f'{label}: {response_time}')
+	label = util.label('Avg. Resp:', j)
+	click.echo(f'{label} {response_time}')
+
+	# Alerts/contacts
+	state = click.style(status['alerts']['state'].title(), fg=_status_color(status['alerts']['status']))
+	contacts = status['alerts']['contacts']
+	unverified = status['alerts']['unverified']
+	label = util.label('Alerts:', j)
+
+	if unverified > 0:
+		click.echo(f'{label} {state} ({contacts} contacts, {unverified} unverified)')
+	else:
+		click.echo(f'{label} {state} ({contacts} contacts)')
 
 	# Render health-check results
 	click.echo()
 	_render_health(status, j)
 
-	# Alerts/contacts
-	click.echo()
-	state = click.style(status['alerts']['state'].title(), fg=_status_color(status['alerts']['status']))
-	contacts = status['alerts']['contacts']
-	unverified = status['alerts']['unverified']
-	label = 'Alerts'.rjust(j)
-
-	if unverified > 0:
-		click.echo(f'{label}: {state} ({contacts} contacts, {unverified} unverified)')
-	else:
-		click.echo(f'{label}: {state} ({contacts} contacts)')
-
 	click.echo()
 
 def _status_color(s):
 	if s == 'ok':
-		return 'green'
+		return 'white'
 	elif s == 'warn':
 		return 'yellow'
 	elif s == 'critical':
@@ -117,10 +117,10 @@ def _status_color(s):
 def _render_health(status, j):
 	timestamp = status.get('health_timestamp', None)
 	if not timestamp:
-		for label in ['Core', 'Plugins', 'Themes', 'Server', 'Disk']:
-			label = label.rjust(j)
+		for label in ['Core:', 'Plugins:', 'Themes:', 'Server:', 'Disk:', 'Updated:']:
+			label = util.label(label, j)
 			value = click.style('pending', fg=_status_color('unknown'))
-			click.echo(f'{label}: {value}')
+			click.echo(f'{label} {value}')
 
 		return
 
@@ -128,46 +128,50 @@ def _render_health(status, j):
 	core_version = status['core']['version']
 	latest_core_version = status['core']['latest']
 	core_version = click.style(core_version, fg=_status_color(status['core']['status']))
-	label = 'Core'.rjust(j)
+	label = util.label('Core:', j)
 
 	if core_version == latest_core_version:
-		click.echo(f'{label}: {core_version} (latest)')
+		click.echo(f'{label} {core_version} (latest)')
 	else:
-		click.echo(f'{label}: {core_version} (latest: {latest_core_version})')
+		click.echo(f'{label} {core_version} (latest: {latest_core_version})')
 
 	# Plugins
 	total = status['plugins']['total']
 	updates = status['plugins']['updates']
 	uptodate = total - updates
 	output = click.style(f'{uptodate}/{total} plugins', fg=_status_color(status['plugins']['status']))
-	label = 'Plugins'.rjust(j)
-	click.echo(f'{label}: {output} up to date')
+	label = util.label('Plugins:', j)
+	click.echo(f'{label} {output} up to date')
 
 	# Themes
 	total = status['themes']['total']
 	updates = status['themes']['updates']
 	uptodate = total - updates
 	output = click.style(f'{uptodate}/{total} themes', fg=_status_color(status['themes']['status']))
-	label = 'Themes'.rjust(j)
-	click.echo(f'{label}: {output} up to date')
+	label = util.label('Themes:', j)
+	click.echo(f'{label} {output} up to date')
 
 	# Server
 	updates = status['packages']['updates']
 	updates = click.style(f'{updates} packages', fg=_status_color(status['packages']['status']))
-	label = 'Server'.rjust(j)
-	click.echo(f'{label}: {updates} with updates')
+	label = util.label('Server:', j)
+	click.echo(f'{label} {updates} with updates')
 
 	used = status['disk']['used']
 	total = status['disk']['total']
 	percent = used / total
 
 	percent = click.style(f'{percent:.0%} used', fg=_status_color(status['disk']['status']))
-	label = 'Disk'.rjust(j)
+	label = util.label('Disk:', j)
 
 	used = util.sizeof_fmt(used)
 	total = util.sizeof_fmt(total)
 
-	click.echo(f'{label}: {percent}, {used} of {total}')
+	click.echo(f'{label} {percent}, {used} of {total}')
+
+	updated = datetime.fromtimestamp(timestamp)
+	label = util.label('Updated:', j)
+	click.echo(f'{label} {updated}')
 
 @monitor.command()
 @click.argument('minutes', nargs=1, required=True)
@@ -186,23 +190,53 @@ def snooze(minutes):
 		unit = 'm'
 
 	timestamp += value * map[unit]
+
+	click.echo()
+	click.echo('Snoozing monitor')
+	click.secho('  Requesting remote monitor to snooze', fg='bright_black')
+
 	util.request('/premium/monitor/snooze/', method='POST', json={
 		'timestamp': timestamp,
 	})
 
-	click.echo('Snoozed')
+	click.secho('  Snooze acknowledged', fg='bright_black')
+
+	click.echo()
+	util.success('Monitor snoozed')
+	click.echo()
 
 @monitor.command()
 def unsnooze():
 	'''Unsnooze monitoring alerts'''
+
+	click.echo()
+	click.echo('Unsnoozing monitor')
+	click.secho('  Requesting remote monitor to unsnooze', fg='bright_black')
+
 	util.request('/premium/monitor/snooze/', method='DELETE')
-	click.echo('Unsnoozed')
+
+	click.secho('  Unsnooze acknowledged', fg='bright_black')
+
+	click.echo()
+	util.success('Monitor unsnoozed')
+	click.echo()
+
 
 @monitor.command()
 def enable():
 	'''Enable monitoring for this application'''
+
+	click.echo()
+	click.echo('Enabling monitoring')
+	click.secho('  Requesting remote monitor enable', fg='bright_black')
+
 	util.request('/premium/monitor/enable/', method='POST')
-	click.echo('Monitoring enabled')
+
+	click.secho('  Request acknowledged', fg='bright_black')
+
+	click.echo()
+	util.success('Monitoring enabled. Status: sail monitor status')
+	click.echo()
 
 @monitor.command()
 @click.option('--yes', '-y', is_flag=True, help='Force yes on the AYS message')
@@ -211,8 +245,17 @@ def disable(yes):
 	if not yes:
 		click.confirm('All monitoring and uptime data will be deleted. Are you sure?', abort=True)
 
+	click.echo()
+	click.echo('Disabling monitoring')
+	click.secho('  Requesting remote monitor disable', fg='bright_black')
+
 	util.request('/premium/monitor/disable/', method='POST')
-	click.echo('Monitoring disabled')
+
+	click.secho('  Request acknowledged', fg='bright_black')
+
+	click.echo()
+	util.success('Monitoring disabled.')
+	click.echo()
 
 @monitor.group(invoke_without_command=True)
 @click.pass_context
@@ -227,17 +270,39 @@ def list():
 	contacts = util.request('/premium/monitor/contacts/')
 
 	if len(contacts) < 1:
-		click.echo('No contacts found')
-		click.echo('Add contacts using: sail monitor contact add SUBJECT')
-		exit()
+		click.echo()
+		util.failure('No contacts found')
+		click.echo('Add contacts using: sail monitor contact add <subject>')
+		click.echo()
+		return
 
-	t = PrettyTable(['Subject', 'Status'])
+	j = 9
+	has_pending = False
 
+	click.echo()
 	for contact in contacts:
-		t.add_row([contact['subject'], contact['status']])
+		label = util.label('Subject:', j)
+		subject = contact['subject']
+		click.echo(f'{label} {subject}')
 
-	t.align = 'l'
-	click.echo(t.get_string())
+		label = util.label('Added:', j)
+		added = datetime.fromtimestamp(contact['created'])
+		click.echo(f'{label} {added}')
+
+		label = util.label('Status:', j)
+		status = contact['status']
+
+		if status != 'ready':
+			has_pending = True
+			status = click.style(status, fg='red')
+
+		click.echo(f'{label} {status}')
+		click.echo()
+
+	if has_pending:
+		click.echo('Some contacts are pending verification!')
+		click.echo('Verify with: sail monitor contact verify <subject> <code>')
+		click.echo()
 
 @contact.command()
 @click.argument('subject', nargs=1, required=True)
@@ -248,12 +313,14 @@ def add(subject):
 	})
 
 	if request['status'] == 'pending':
-		click.echo('Contact added, pending verification')
-		click.echo('Verify using: sail monitor contact verify %s CODE' % subject)
+		click.echo()
+		util.success('Contact added, pending verification')
+		click.echo('Verify using: sail monitor contact verify %s <code>' % subject)
+		click.echo()
 	elif request['status'] == 'ready':
-		click.echo('Contact added sucessfully, pre-verified')
+		util.success('Contact added sucessfully, pre-verified')
 	else:
-		click.echo('Could not add this contact')
+		util.failure('Could not add this contact')
 
 @contact.command()
 @click.argument('subject', nargs=1, required=True)
@@ -263,7 +330,7 @@ def delete(subject):
 		'subject': subject,
 	})
 
-	click.echo('Contact deleted successfully')
+	util.success('Contact deleted successfully')
 
 @contact.command()
 @click.argument('subject', nargs=1, required=True)
@@ -275,4 +342,4 @@ def verify(subject, code):
 		'code': code,
 	})
 
-	click.echo('Contact verified successfully')
+	util.success('Contact verified successfully')
