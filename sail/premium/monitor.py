@@ -127,13 +127,13 @@ def _render_health(status, j):
 	# Core
 	core_version = status['core']['version']
 	latest_core_version = status['core']['latest']
-	core_version = click.style(core_version, fg=_status_color(status['core']['status']))
+	core_version_s = click.style(core_version, fg=_status_color(status['core']['status']))
 	label = util.label('Core:', j)
 
 	if core_version == latest_core_version:
-		click.echo(f'{label} {core_version} (latest)')
+		click.echo(f'{label} {core_version_s} (latest)')
 	else:
-		click.echo(f'{label} {core_version} (latest: {latest_core_version})')
+		click.echo(f'{label} {core_version_s} (latest: {latest_core_version})')
 
 	# Plugins
 	total = status['plugins']['total']
