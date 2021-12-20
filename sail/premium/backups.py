@@ -2,10 +2,10 @@ import sail
 
 from sail import cli, util
 
-import requests, json, os, subprocess, time
-import click, hashlib, pathlib, shutil
+import json, os
+import click, pathlib
+
 from datetime import datetime
-from prettytable import PrettyTable
 
 @cli.group(invoke_without_command=True)
 @click.pass_context
@@ -37,7 +37,9 @@ def restore(path, yes, skip_db, skip_uploads):
 	if not path.isnumeric() or pathlib.Path(path).exists():
 		return ctx.invoke(sail.backups.restore)
 
-	click.echo('# Restoring a remote backup')
+	click.echo()
+	click.echo('Restoring backup')
+	click.secho('  Requesting remote backup restore', fg='bright_black')
 
 	request = util.request('/premium/backups/restore/', method='POST', json={
 		'timestamp': path,
@@ -47,10 +49,14 @@ def restore(path, yes, skip_db, skip_uploads):
 
 	task_id = request['task_id']
 
-	click.echo('- Waiting for task to complete')
+	click.secho('  Request received, waiting for task to complete', fg='bright_black')
 	data = util.wait_for_task(task_id, 3600, 10)
 
-	click.echo('- Remote backup restored successfully. Your local copy may be out of date!')
+	click.secho('  Task completed successfully', fg='bright_black')
+
+	click.echo()
+	util.success('Remote backup restored. Local copy may be out of date!')
+	click.echo()
 
 @backup.command()
 @click.option('--local', is_flag=True, help='Force a local backup instead of remote')
@@ -67,7 +73,9 @@ def create(ctx, local, description):
 	if local:
 		return ctx.invoke(sail.backups.create)
 
-	click.echo('# Scheduling a remote backup task')
+	click.echo()
+	click.echo('Creating a backup')
+	click.secho('  Requesting remote backup create', fg='bright_black')
 
 	request = util.request('/premium/backups/create/', method='POST', json={
 		'description': description,
@@ -75,10 +83,14 @@ def create(ctx, local, description):
 
 	task_id = request['task_id']
 
-	click.echo('- Waiting for task to complete')
+	click.secho('  Request received, waiting for task to complete', fg='bright_black')
 	data = util.wait_for_task(task_id, 3600, 10)
 
-	click.echo('- Remote backup completed')
+	click.secho('  Task completed successfully', fg='bright_black')
+
+	click.echo()
+	util.success('Remote backup created successfully')
+	click.echo()
 
 @backup.command(name='list')
 def list_cmd():
@@ -88,17 +100,52 @@ def list_cmd():
 
 	backups = util.request('/premium/backups/list/')
 
-	t = PrettyTable(['Timestamp', 'Date/Time', 'Size', 'Description'])
+	width, height = os.get_terminal_size()
+	i = 0
 
 	for backup in backups:
-		size = util.sizeof_fmt(int(backup['size']))
-		date = datetime.fromtimestamp(int(backup['timestamp']))
-		t.add_row([backup['timestamp'], date, size, backup['description']])
+		timestamp = int(backup['timestamp'])
 
-	t.align = 'l'
-	t.sortby = 'Timestamp'
-	click.echo(t.get_string())
-	click.echo('Restore with: sail backup restore TIMESTAMP')
+		ts = timestamp
+		description = backup['description']
+		size = util.sizeof_fmt(int(backup['size']))
+		date = datetime.fromtimestamp(timestamp)
+
+		# Truncate description
+		maxlength = width - len(f'{ts} {size} {date}') - 4
+		if len(description) > maxlength:
+			description = description[:maxlength-5] + '...'
+
+		dots_n = len(f'{ts} {description}') + len(f'{size} {date}')
+		dots_n = width - dots_n - 4
+
+		ts = click.style(ts, fg='green')
+		dots = click.style('-'*dots_n, fg='bright_black')
+		size = click.style(size, fg='bright_black')
+		date = click.style(date, fg='bright_black')
+
+		if i % (height / 2) == 0:
+			click.echo()
+			left = ' Timestamp  Description'
+			right = 'Size           Date/Time '.rjust(width - len(left))
+			click.secho(left + right, fg='bright_black')
+			click.echo()
+
+		click.echo(f' {ts} {description} {dots} {size} {date}')
+		i += 1
+
+	j = 11
+
+	click.echo()
+	label = util.label('Info:', j)
+	click.echo(f'{label} sail backup info <timestamp>')
+
+	label = util.label('Restore:', j)
+	click.echo(f'{label} sail backup restore <timestamp>')
+
+	label = util.label('Export:', j)
+	click.echo(f'{label} sail backup export <timestamp>')
+	click.echo()
 
 @backup.command()
 @click.argument('timestamp', nargs=1, required=True)
@@ -107,7 +154,9 @@ def export(ctx, timestamp):
 	'''Export a remote backup to a downloadable .tar.gz archive'''
 	config = util.config()
 
-	click.echo('# Exporting a remote backup')
+	click.echo()
+	click.echo('Exporting backup')
+	click.secho('  Requesting remote backup export', fg='bright_black')
 
 	request = util.request('/premium/backups/export/', method='POST', json={
 		'timestamp': timestamp,
@@ -115,12 +164,10 @@ def export(ctx, timestamp):
 
 	task_id = request['task_id']
 
-	click.echo('- Waiting for task to complete')
+	click.secho('  Request received, waiting for task to complete', fg='bright_black')
 	data = util.wait_for_task(task_id, 3600, 10)
 
-	click.echo('- Export completed')
-	click.echo()
-
+	click.secho('  Task completed successfully', fg='bright_black')
 	ctx.invoke(info, timestamp=timestamp)
 
 @backup.command()
@@ -139,19 +186,46 @@ def info(timestamp, as_json):
 		return
 
 	j = 13
+	timestamp = int(backup['timestamp'])
 
 	click.echo()
-	click.echo('Backup:'.rjust(j) + ' %s' % backup['timestamp'])
-	click.echo('Description:'.rjust(j) + ' %(description)s' % backup)
-	click.echo('Status:'.rjust(j) + ' %(status)s' % backup)
-	click.echo('Date/Time:'.rjust(j) + ' %s' % datetime.fromtimestamp(int(backup['timestamp'])))
-	click.echo('Size:'.rjust(j) + ' %s' % util.sizeof_fmt(int(backup['size'])))
+
+	label = util.label('Backup:', j)
+	click.echo(f'{label} {timestamp}')
+
+	label = util.label('Description:', j)
+	description = backup['description']
+	click.echo(f'{label} {description}')
+
+	label = util.label('Status:', j)
+	status = backup['status']
+	click.echo(f'{label} {status}')
+
+	label = util.label('Date/Time:', j)
+	dt = datetime.fromtimestamp(timestamp)
+	click.echo(f'{label} {dt}')
+
+	label = util.label('Size:', j)
+	size = util.sizeof_fmt(int(backup['size']))
+	click.echo(f'{label} {size}')
+
+	click.echo()
+	label = util.label('Restore:', j)
+	click.echo(f'{label} sail backup restore {timestamp}')
 
 	if backup.get('export') == 'pending':
-		click.echo('Export:'.rjust(j) + ' pending')
+		label = util.label('Export:', j)
+		click.echo(f'{label} pending')
 	elif backup.get('export'):
-		click.echo()
-		click.echo('Export URL:'.rjust(j) + ' %s' % backup['export']['url'])
-		click.echo('Expires:'.rjust(j) + ' %s' % datetime.fromtimestamp(int(backup['export']['expires'])))
+		label = util.label('Exported:', j)
+		export_url = backup['export']['url']
+		click.echo(f'{label} {export_url}')
+
+		label = util.label('Until:', j)
+		export_expires = datetime.fromtimestamp(int(backup['export']['expires']))
+		click.echo(f'{label} {export_expires}')
+	else:
+		label = util.label('Export:', j)
+		click.echo(f'{label} sail backup export {timestamp}')
 
 	click.echo()
