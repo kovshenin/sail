@@ -9,6 +9,10 @@ class Sail_Premium {
 	}
 
 	public static function init_action() {
+		if ( ! apply_filters( 'sail_resize_images', true ) ) {
+			return;
+		}
+
 		add_filter( 'jetpack_photon_override_image_downsize', '__return_true' );
 		add_filter( 'wp_get_attachment_metadata', [ __CLASS__, 'wp_get_attachment_metadata' ], 10, 2 );
 		add_filter( 'render_block_core/image', [ __CLASS__, 'render_block_core_image' ], 10, 2 );
