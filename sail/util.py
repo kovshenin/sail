@@ -5,6 +5,10 @@ import json, click, requests, shlex, subprocess
 import fabric, paramiko
 import jinja2
 
+class SailException(click.ClickException):
+	def show(self, file=None):
+		click.echo(click.style('Error: ', fg='red') + self.format_message(), err=True)
+
 _debug = False
 def debug(set=None):
 	'''Get or set debug mode'''
@@ -71,7 +75,7 @@ def request(endpoint, **kwargs):
 		response = session.send(request)
 	except Exception as e:
 		dlog('Exception: %s' % repr(e))
-		raise click.ClickException('Could not contact the Sail API. Try again later.')
+		raise SailException('Could not contact the Sail API. Try again later.')
 
 	dlog('Response: [%d] %s' % (response.status_code, repr(response.text)))
 
@@ -79,10 +83,10 @@ def request(endpoint, **kwargs):
 		data = response.json()
 	except Exception as e:
 		dlog('Exception: %s' % repr(e))
-		raise click.ClickException('Invalid response from the Sail API. Try again later.')
+		raise SailException('Invalid response from the Sail API. Try again later.')
 
 	if not response.ok:
-		raise click.ClickException('API error: %s' % data.get('error'))
+		raise SailException('API error: %s' % data.get('error'))
 
 	return data
 
@@ -94,7 +98,7 @@ def wait_for_task(task_id, timeout=30, interval=1):
 
 		data = request('/status/%s/' % task_id)
 		if data.get('task_state') == 'failure':
-			raise click.ClickException('Task state failure')
+			raise SailException('Task state failure')
 
 		return data.get('task_state') == 'success'
 
@@ -130,13 +134,13 @@ def config():
 	root = find_root()
 
 	if not root:
-		raise click.ClickException('Could not parse .sail/config.json. If this is a new project run: sail init')
+		raise SailException('Could not parse .sail/config.json. If this is a new project run: sail init')
 
 	with open(root + '/.sail/config.json') as f:
 		_config = json.load(f)
 
 	if not _config:
-		raise click.ClickException('Could not parse .sail/config.json. If this is a new project run: sail init')
+		raise SailException('Could not parse .sail/config.json. If this is a new project run: sail init')
 
 	# Back-compat
 	if 'hostname' not in _config:
@@ -329,11 +333,28 @@ def sizeof_fmt(num, suffix="B"):
 		num /= 1024.0
 	return f'{num:.1f}Yi{suffix}'
 
-def label(label, width, fg='green'):
-	return click.style(label.rjust(width), fg=fg)
+## Formatting:
 
-def success(message):
+label_w = 0
+def label_width(width):
+	global label_w
+	label_w = width
+
+def label(label, fg='green'):
+	global label_w
+	return click.style(label.rjust(label_w), fg=fg)
+
+def success(message, padding=True):
+	if padding: click.echo()
 	click.echo(click.style('Success: ', fg='green') + message)
+	if padding: click.echo()
 
 def failure(message):
 	click.echo(click.style('Error: ', fg='red') + message)
+
+def heading(message, padding=True):
+	if padding: click.echo()
+	click.echo(message)
+
+def item(message):
+	click.secho('  ' + message, fg='bright_black')

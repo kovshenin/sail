@@ -39,16 +39,16 @@ def import_cmd(path):
 
 	path = pathlib.Path(path).resolve()
 	if not path.exists():
-		raise click.ClickException('File does not exist')
+		raise util.SailException('File does not exist')
 
 	if not path.name.endswith('.sql') and not path.name.endswith('.sql.gz'):
-		raise click.ClickException('This does not look like a .sql or .sql.gz file')
+		raise util.SailException('This does not look like a .sql or .sql.gz file')
 
 	temp_name = '%s.%s' % (hashlib.sha256(os.urandom(32)).hexdigest()[:8], path.name)
 	is_gz = path.name.endswith('.sql.gz')
 
-	click.echo('# Importing WordPress database')
-	click.echo('- Uploading database file to production')
+	util.heading('Importing WordPress database')
+	util.item('Uploading database file to production')
 
 	args = ['-t']
 	source = path
@@ -56,27 +56,27 @@ def import_cmd(path):
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred in rsync. Please try again.')
+		raise util.SailException('An error occurred in rsync. Please try again.')
 
 	# TODO: Maybe do an atomic import which deletes tables that no longer exist
 	# by doing a rename.
 
-	click.echo('- Importing database into MySQL')
+	util.item('Importing database into MySQL')
 	cat_bin = 'zcat' if is_gz else 'cat'
 
 	try:
 		c.run('%s %s/%s | mysql -uroot "wordpress_%s"' % (cat_bin, remote_path, temp_name, config['namespace']))
 	except:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
-	click.echo('- Cleaning up production')
+	util.item('Cleaning up production')
 
 	try:
 		c.run('rm %s/%s' % (remote_path, temp_name))
 	except:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
-	click.echo('- Database imported')
+	util.success('Database imported')
 
 @db.command()
 @click.option('--json', 'as_json', is_flag=True, help='Output in JSON format')
@@ -95,15 +95,15 @@ def export(as_json):
 	filename = datetime.now().strftime('%Y-%m-%d-%H%M%S.sql.gz')
 
 	if not as_json:
-		click.echo('# Exporting WordPress database')
+		util.heading('Exporting WordPress database')
 
 	try:
 		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot "wordpress_%s" | gzip -c9 > %s/%s' % (config['namespace'], remote_path, filename))
 	except:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	if not as_json:
-		click.echo('- Export completed, downloading')
+		util.item('Export completed, downloading')
 
 	args = ['-t']
 	source = 'root@%s:%s/%s' % (config['hostname'], remote_path, filename)
@@ -111,17 +111,17 @@ def export(as_json):
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred in rsync. Please try again.')
+		raise util.SailException('An error occurred in rsync. Please try again.')
 
 	if not as_json:
-		click.echo('- Cleaning up production')
+		util.item('Cleaning up production')
 
 	try:
 		c.run('rm %s/%s' % (remote_path, filename))
 	except:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	if not as_json:
-		click.echo('- Database export saved to .backups/%s' % filename)
+		util.success('Database export saved to .backups/%s' % filename)
 	else:
 		click.echo(json.dumps(destination))

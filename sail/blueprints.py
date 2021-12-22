@@ -42,10 +42,10 @@ def blueprint(path):
 		path = pathlib.Path(__file__).parent / 'blueprints' / path.name
 
 	if not path.exists():
-		raise click.ClickException('File does not exist')
+		raise util.SailException('File does not exist')
 
 	if not path.name.endswith('.yml') and not path.name.endswith('.yaml'):
-		raise click.ClickException('Blueprint files must be .yml or .yaml')
+		raise util.SailException('Blueprint files must be .yml or .yaml')
 
 	with path.open() as f:
 		s = f.read()
@@ -89,7 +89,7 @@ def blueprint(path):
 			try:
 				value = _type(value)
 			except ValueError:
-				raise click.ClickException('Could not convert %s to %s' % (repr(value), repr(_type)))
+				raise util.SailException('Could not convert %s to %s' % (repr(value), repr(_type)))
 
 		vars[var['name']] = value
 
@@ -97,27 +97,27 @@ def blueprint(path):
 	s = re.sub(r'\${{([^}]+?)}}', _parse_variables, s)
 	blueprint = yaml.safe_load(s)
 
-	click.echo('# Applying blueprint: %s' % path.name)
+	util.heading('Applying blueprint: %s' % path.name)
 
 	for section, data in blueprint.items():
 		if section == 'plugins' or section == 'themes':
 			try:
 				_bp_install_wp_products(section, data)
 			except invoke.exceptions.UnexpectedExit as e:
-				raise click.ClickException(e.result.stderr)
+				raise util.SailException(e.result.stderr)
 
 		elif section == 'options':
 			try:
 				_bp_update_options(data)
 			except invoke.exceptions.UnexpectedExit as e:
-				raise click.ClickException(e.result.stderr)
+				raise util.SailException(e.result.stderr)
 			continue
 
 		elif section == 'define':
 			try:
 				_bp_define_constants(data)
 			except invoke.exceptions.UnexpectedExit as e:
-				raise click.ClickException(e.result.stderr)
+				raise util.SailException(e.result.stderr)
 
 		elif section == 'fail2ban':
 			_bp_fail2ban(data)
@@ -131,13 +131,13 @@ def blueprint(path):
 		elif section == 'apt':
 			_bp_apt(data)
 
-	click.echo('- Blueprint applied successfully')
+	util.success('Blueprint applied successfully')
 
 def _bp_apt(items):
 	c = util.connection()
 
 	if 'selections' in items:
-		click.echo('- Setting debconf selections')
+		util.item('Setting debconf selections')
 		selections = items['selections']
 		for line in selections:
 			command = util.join(['echo', line]) + ' | debconf-set-selections'
@@ -145,10 +145,10 @@ def _bp_apt(items):
 
 	if 'install' in items:
 		wait = 'while fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/{lock,lock-frontend} >/dev/null 2>&1; do sleep 1; done && '
-		click.echo('- Updating package lists')
+		util.item('Updating package lists')
 		c.run(wait + 'DEBIAN_FRONTEND=noninteractive apt update', timeout=300)
 
-		click.echo('- Installing packages')
+		util.item('Installing packages')
 		packages = items['install']
 		command = wait + util.join(['DEBIAN_FRONTEND=noninteractive', 'apt', 'install', '-y'] + packages)
 
@@ -158,9 +158,9 @@ def _bp_apt(items):
 			err = e.result.stderr
 			err = err.replace('WARNING: apt does not have a stable CLI interface. Use with caution in scripts.', '')
 			err = err.strip()
-			raise click.ClickException('Error: %s' % err)
+			raise util.SailException('Error: %s' % err)
 		except invoke.exceptions.CommandTimedOut as e:
-			raise click.ClickException('Timeout')
+			raise util.SailException('Timeout')
 
 def _bp_dns(records):
 	config = util.config()
@@ -176,7 +176,7 @@ def _bp_dns(records):
 	# Make sure all domains exist
 	for domain, records in domains.items():
 		if domain not in [d['name'] for d in config['domains']]:
-			raise click.ClickException('This domain does not exist. To add use: sail domain add')
+			raise util.SailException('This domain does not exist. To add use: sail domain add')
 
 	for domain, records in domains.items():
 		do_domain = digitalocean.Domain(token=config['provider_token'], name=domain)
@@ -191,11 +191,11 @@ def _bp_dns(records):
 					continue
 
 			if exists:
-				click.echo('- Skipping %s record for %s.%s, already exists' %
+				util.item('Skipping %s record for %s.%s, already exists' %
 					(record['type'], record['name'], record['domain']))
 				continue
 
-			click.echo('- Creating %s record for %s.%s' %
+			util.item('Creating %s record for %s.%s' %
 				(record['type'], record['name'], record['domain']))
 
 			try:
@@ -213,7 +213,7 @@ def _bp_dns(records):
 						data=record['value']
 					)
 			except Exception as e:
-				raise click.ClickException(str(e))
+				raise util.SailException(str(e))
 
 def _bp_postfix(data):
 	config = util.config()
@@ -222,29 +222,29 @@ def _bp_postfix(data):
 
 	mode = data.get('mode')
 	if mode != 'relay':
-		raise click.ClickException('Unsupported mode')
+		raise util.SailException('Unsupported mode')
 
 	relay_host = data.get('host')
 	if not relay_host:
-		raise click.ClickException('Invalid relay host')
+		raise util.SailException('Invalid relay host')
 
 	wait = 'while fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/{lock,lock-frontend} >/dev/null 2>&1; do sleep 1; done && '
 	status = c.run('dpkg -s postfix', warn=True)
 	if not status or status.stdout.find('Status: install ok installed') < 0:
-		click.echo('- Installing postfix')
+		util.item('Installing postfix')
 		c.run('debconf-set-selections <<< \'postfix postfix/main_mailer_type select Satellite system\'')
 		c.run('debconf-set-selections <<< \'postfix postfix/mailname string %s\'' % config['hostname'])
 		c.run('debconf-set-selections <<< \'postfix postfix/relayhost string %s\'' % relay_host)
 		c.run(wait + 'apt update && DEBIAN_FRONTEND=noninteractive apt install -y postfix libsasl2-modules', timeout=300)
 		c.run('usermod -a -G mail www-data', warn=True)
 
-	click.echo('- Configuring postfix')
+	util.item('Configuring postfix')
 
 	try:
 		postfix_config = json.loads(c.run('cat /etc/sail/postfix.json').stdout)
-		click.echo('- Updating existing /etc/sail/postfix.json')
+		util.item('Updating existing /etc/sail/postfix.json')
 	except:
-		click.echo('- Creating new /etc/sail/postfix.json')
+		util.item('Creating new /etc/sail/postfix.json')
 		postfix_config = {}
 
 	postfix_config[namespace] = {
@@ -299,10 +299,10 @@ def _bp_fail2ban(jails):
 	wait = 'while fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/{lock,lock-frontend} >/dev/null 2>&1; do sleep 1; done && '
 	status = c.run('dpkg -s fail2ban', warn=True)
 	if not status or status.stdout.find('Status: install ok installed') < 0:
-		click.echo('- Installing fail2ban')
+		util.item('Installing fail2ban')
 		c.run(wait + 'apt update && apt install -y fail2ban', timeout=300)
 
-	click.echo('- Configuring fail2ban rules')
+	util.item('Configuring fail2ban rules')
 	# Make sure mu-plugins exists
 	c.run('sudo -u www-data mkdir -p %s/public/wp-content/mu-plugins/' % remote_path)
 
@@ -320,12 +320,12 @@ def _bp_fail2ban(jails):
 def _bp_define_constants(constants):
 	c = util.connection()
 
-	click.echo('- Updating wp-config.php constants')
+	util.item('Updating wp-config.php constants')
 	wp = 'sudo -u www-data wp --path=%s --skip-themes --skip-plugins ' % util.remote_path('/public')
 
 	for name, value in constants.items():
 		if type(value) not in [str, float, int, bool]:
-			raise click.ClickException('Invalid data type for %s' % name)
+			raise util.SailException('Invalid data type for %s' % name)
 
 		raw = []
 
@@ -342,7 +342,7 @@ def _bp_define_constants(constants):
 def _bp_update_options(options):
 	c = util.connection()
 
-	click.echo('- Applying options')
+	util.item('Applying options')
 	wp = 'sudo -u www-data wp --path=%s --skip-themes --skip-plugins ' % util.remote_path('/public')
 
 	for option_name, data in options.items():
@@ -364,7 +364,7 @@ def _bp_update_options(options):
 			option_value = data
 
 		if not delete and type(option_value) not in [str, int, float]:
-			raise click.ClickException('Invalid value type for %s' % option_name)
+			raise util.SailException('Invalid value type for %s' % option_name)
 
 		if type(option_value) is str:
 			option_value = option_value.strip('\n')
@@ -394,12 +394,12 @@ def _bp_install_wp_products(what, products):
 
 		if type(data) == dict:
 			if not data.get('url'):
-				raise click.ClickException('Could not find %s: %s' % (what[:-1], slug))
+				raise util.SailException('Could not find %s: %s' % (what[:-1], slug))
 
 			custom[slug] = data
 			continue
 
-		raise click.ClickException('Unknown %s specification: %s' % (what[:-1], slug))
+		raise util.SailException('Unknown %s specification: %s' % (what[:-1], slug))
 
 	if not wporg and not custom:
 		return
@@ -407,20 +407,20 @@ def _bp_install_wp_products(what, products):
 	c = util.connection()
 	wp = 'sudo -u www-data wp --path=%s ' % util.remote_path('/public')
 
-	click.echo('- Installing %s' % what)
+	util.item('Installing %s' % what)
 
 	for slug, version in wporg.items():
-		click.echo('- wporg/%s=%s' % (slug, version))
+		util.item('wporg/%s=%s' % (slug, version))
 		_version = ['--version=%s' % version] if version != 'latest' else []
 		r = c.run(wp + util.join([what[:-1], 'install', '--force', slug] + _version), timeout=30)
 
 	for slug, data in custom.items():
 		url = data.get('url')
-		click.echo('thirdparty/%s' % slug)
+		util.item('thirdparty/%s' % slug)
 		c.run(wp + util.join([what[:-1], 'install', '--force', url]), timeout=30)
 
 	if what == 'plugins':
-		click.echo('- Activating plugins')
+		util.item('Activating plugins')
 
 		if wporg:
 			c.run(wp + util.join(['plugin', 'activate'] + list(wporg.keys())), timeout=60)
@@ -429,6 +429,6 @@ def _bp_install_wp_products(what, products):
 			c.run(wp + util.join(['plugin', 'activate'] + list(custom.keys())), timeout=60)
 
 	else: # themes
-		click.echo('- Activating theme')
+		util.item('Activating theme')
 		last = list(products.keys())[-1]
 		c.run(wp + util.join(['theme', 'activate', last]), timeout=60)
