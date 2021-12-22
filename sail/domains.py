@@ -18,7 +18,9 @@ def listcmd():
 	'''List domains associated with your site'''
 	config = util.config()
 
-	click.echo('# Domains')
+	util.heading('Domains')
+	click.echo()
+
 	for domain in config['domains']:
 		flags = []
 		for flag in ['internal', 'https', 'primary']:
@@ -29,7 +31,9 @@ def listcmd():
 		if flags:
 			sflags = ' (%s)' % ', '.join(flags)
 
-		click.echo('- ' + domain['name'] + sflags)
+		click.echo('  ' + domain['name'] + sflags)
+
+	click.echo()
 
 @domain.command()
 @click.argument('domain', nargs=1)
@@ -39,14 +43,14 @@ def make_primary(domain, force, skip_replace):
 	'''Set a domain as primary, update siteurl/home, search-replace all links'''
 	config = util.config()
 
-	click.echo('# Updating primary domain')
+	util.heading('Updating primary domain')
 
 	if domain not in [d['name'] for d in config['domains']]:
-		raise click.ClickException('Can not make primary, domain does not exist')
+		raise util.SailException('Can not make primary, domain does not exist')
 
 	domain = [d for d in config['domains'] if d['name'] == domain][0]
 	if domain['primary'] and not force:
-		raise click.ClickException('Domain %s already set as primary. Use --force to force' % domain['name'])
+		raise util.SailException('Domain %s already set as primary. Use --force to force' % domain['name'])
 
 	c = util.connection()
 	wp = 'sudo -u www-data wp --path=%s --skip-themes --skip-plugins ' % util.remote_path('/public/')
@@ -54,12 +58,12 @@ def make_primary(domain, force, skip_replace):
 	home = c.run(wp + 'option get home').stdout.strip()
 	current = urllib.parse.urlparse(home).netloc
 	proto = 'https://' if domain['https'] else 'http://'
-	click.echo('- Current primary domain: %s' % current)
+	util.item('Current primary domain: %s' % current)
 
 	if skip_replace:
-		click.echo('- Skipping search-replace')
+		util.item('Skipping search-replace')
 	else:
-		click.echo('- Running search-replace')
+		util.item('Running search-replace')
 
 		for sproto in ['https://', 'http://']:
 			c.run(wp + util.join([
@@ -70,22 +74,22 @@ def make_primary(domain, force, skip_replace):
 			]))
 
 		# Flush object cache
-		click.echo('- Flushing object cache')
+		util.item('Flushing object cache')
 		c.run(wp + 'cache flush')
 
 	# Update config.json
-	click.echo('- Updating .sail/config.json')
+	util.item('Updating .sail/config.json')
 	for i, d in enumerate(config['domains']):
 		config['domains'][i]['primary'] = d['name'] == domain['name']
 
 	util.update_config(config)
 
 	if config['namespace'] == 'default':
-		click.echo('- Renaming droplet')
+		util.item('Renaming droplet')
 		droplet = digitalocean.Droplet(token=config['provider_token'], id=config['droplet_id'])
 		droplet.rename(domain['name'])
 
-	click.echo('- Primary domain updated successfully')
+	util.success('Primary domain updated successfully')
 
 @domain.command()
 @click.argument('domains', nargs=-1)
@@ -100,16 +104,16 @@ def make_https(domains, agree_tos):
 		click.confirm('Do you agree to the Let\'s Encrypt ToS?', abort=True)
 
 	if not domains:
-		raise click.ClickException('At least one domain is required')
+		raise util.SailException('At least one domain is required')
 
 	groups = []
 	domains, subdomains = _parse_domains(domains)
 
-	click.echo('# Requesting and installing SSL for domains')
+	util.heading('Requesting and installing SSL for domains')
 
 	for domain in domains + subdomains:
 		if domain.fqdn not in [d['name'] for d in config['domains']]:
-			raise click.ClickException('Domain %s does not exist, please add it first' % domain.fqdn)
+			raise util.SailException('Domain %s does not exist, please add it first' % domain.fqdn)
 
 	for domain in domains:
 		if domain.fqdn not in groups:
@@ -133,7 +137,7 @@ def make_https(domains, agree_tos):
 		names.extend([d.fqdn for d in _doms if d.fqdn == group])
 		names.extend([s.fqdn for s in _subs if s.registered_domain == group or s.fqdn == group])
 
-		click.echo('- Requesting SSL certificate for %s' % group)
+		util.item('Requesting certificate for %s' % group)
 		args = ['certbot', '-n', 'certonly', '-m', config['email'], '--agree-tos',
 			'--standalone', '--http-01-port', '8088', '--expand',
 		]
@@ -146,7 +150,7 @@ def make_https(domains, agree_tos):
 			c.run(util.join(args))
 		except Exception as e:
 			util.dlog(e)
-			raise click.ClickException('Could not obtain SSL certificate for %s. Use --debug for more info.' % group)
+			raise util.SailException('Could not obtain SSL certificate for %s. Use --debug for more info.' % group)
 
 		# Update .sail/config.json
 		for i, d in enumerate(config['domains']):
@@ -155,10 +159,10 @@ def make_https(domains, agree_tos):
 
 		util.update_config(config)
 
+	util.item('Generating nginx configuration')
 	_update_nginx_config()
 
-	click.echo('- SSL certificates installed')
-	click.echo('- Don\'t forget to: sail domain make-primary')
+	util.success('SSL certificates installed. Don\'t forget to: sail domain make-primary')
 
 @domain.command()
 @click.option('--skip-dns', is_flag=True, help='Do not add or update DNS records')
@@ -168,11 +172,11 @@ def add(domains, skip_dns):
 	config = util.config()
 
 	if not domains:
-		raise click.ClickException('At least one domain is required')
+		raise util.SailException('At least one domain is required')
 
 	domains, subdomains = _parse_domains(domains)
 
-	click.echo('# Adding domains')
+	util.heading('Adding domains')
 
 	# Add all domains and subs to config.json
 	for domain in domains + subdomains:
@@ -185,15 +189,17 @@ def add(domains, skip_dns):
 			})
 
 			util.update_config(config)
-			click.echo('- Adding %s to .sail/config.json' % domain.fqdn)
+			util.item('Adding %s to .sail/config.json' % domain.fqdn)
 		else:
-			click.echo('- Domain %s already exists is .sail/config.json' % domain.fqdn)
+			util.item('Domain %s already exists is .sail/config.json' % domain.fqdn)
 
+	util.item('Generating nginx configuration')
 	_update_nginx_config()
 
 	# Bail early if skipping
 	if skip_dns:
-		click.echo('- Skipping updating DNS records')
+		util.item('Skipping updating DNS records')
+		util.success('Domain name added')
 		return
 
 	manager = digitalocean.Manager(token=config['provider_token'])
@@ -211,14 +217,14 @@ def add(domains, skip_dns):
 			try:
 				do_domain.create()
 				existing.append(do_domain)
-				click.echo('- Creating DNS zone and record for %s' % domain.fqdn)
+				util.item('Creating DNS zone and record for %s' % domain.fqdn)
 			except:
-				raise click.ClickException('- Could not create DNS zone for %s' % domain.fqdn)
+				raise util.SailException('- Could not create DNS zone for %s' % domain.fqdn)
 
 			continue
 
 		# DNS zone exists, try and update it
-		click.echo('- Updating DNS records for %s' % domain.fqdn)
+		util.item('Updating DNS records for %s' % domain.fqdn)
 		do_domain = digitalocean.Domain(token=config['provider_token'], name=domain.fqdn)
 		records = do_domain.get_records()
 		exists = False
@@ -228,23 +234,23 @@ def add(domains, skip_dns):
 				continue
 
 			if r.data == config['ip']:
-				click.echo('- DNS record for %s exists and is correct' % domain.fqdn)
+				util.item('DNS record for %s exists and is correct' % domain.fqdn)
 				exists = True
 				continue
 
 			# Delete the remaining records.
 			r.destroy()
-			click.echo('- Deleting DNS record for %s, incorrect existing record' % domain.fqdn)
+			util.item('Deleting DNS record for %s, incorrect existing record' % domain.fqdn)
 
 		if not exists:
-			click.echo('- Adding new DNS record for %s' % domain.fqdn)
+			util.item('Adding new DNS record for %s' % domain.fqdn)
 			do_domain.create_new_domain_record(name='@', type='A', data=config['ip'])
 
 	# Add all subdomains
 	for subdomain in subdomains:
 		# TODO: Add support for orphaned subdomains
 		if subdomain.registered_domain not in [d.name for d in existing]:
-			click.echo('- Skipping DNS for %s, zone not found' % subdomain.fqdn)
+			util.item('Skipping DNS for %s, zone not found' % subdomain.fqdn)
 			continue
 
 		do_domain = digitalocean.Domain(token=config['provider_token'], name=subdomain.registered_domain)
@@ -256,17 +262,19 @@ def add(domains, skip_dns):
 				continue
 
 			if r.type == 'A' and r.data == config['ip']:
-				click.echo('- Skipping DNS record for %s, existing record is correct' % subdomain.fqdn)
+				util.item('Skipping DNS record for %s, existing record is correct' % subdomain.fqdn)
 				exists = True
 				continue
 
 			# Delete the remaining records.
 			r.destroy()
-			click.echo('- Deleting DNS record for %s, incorrect exesting record' % subdomain.fqdn)
+			util.item('Deleting DNS record for %s, incorrect exesting record' % subdomain.fqdn)
 
 		if not exists:
-			click.echo('- Adding new DNS record for %s' % subdomain.fqdn)
+			util.item('Adding new DNS record for %s' % subdomain.fqdn)
 			do_domain.create_new_domain_record(name=subdomain.subdomain, type='A', data=config['ip'])
+
+	util.success('Domain name added')
 
 @domain.command()
 @click.option('--skip-dns', is_flag=True, help='Do not delete DNS records')
@@ -277,27 +285,29 @@ def delete(domains, skip_dns, zone):
 	config = util.config()
 
 	if not domains:
-		raise click.ClickException('At least one domain is required')
+		raise util.SailException('At least one domain is required')
 
 	domains, subdomains = _parse_domains(domains)
 
-	click.echo('# Deleting domains')
+	util.heading('Deleting domains')
 
 	# Remove all domains and subs from config.json
 	for domain in domains + subdomains:
 		if domain.fqdn in [d['name'] for d in config['domains']]:
 			config['domains'] = [d for d in config['domains'] if d['name'] != domain.fqdn]
 			util.update_config(config)
-			click.echo('- Deleting %s from .sail/config.json' % domain.fqdn)
+			util.item('Deleting %s from .sail/config.json' % domain.fqdn)
 		else:
-			click.echo('- Domain %s does not exist in .sail/config.json' % domain.fqdn)
+			util.item('Domain %s does not exist in .sail/config.json' % domain.fqdn)
 
+	util.item('Generating nginx configuration')
 	_update_nginx_config()
 	# TODO: Maybe delete SSL certs for this domain
 
 	# Bail early if skipping
 	if skip_dns:
-		click.echo('- Skipping updating DNS records')
+		util.item('Skipping updating DNS records')
+		util.success('Domain deleted')
 		return
 
 	# Delete orphans if the entire zone is going to be deleted.
@@ -306,11 +316,13 @@ def delete(domains, skip_dns, zone):
 			_, _subs = _parse_domains([d['name'] for d in config['domains'] if d['internal'] != True])
 			for _sub in _subs:
 				if _sub.registered_domain == domain.fqdn:
-					click.echo('- Deleting orphaned subdomain %s from .sail/config.json' % _sub.fqdn)
+					util.item('Deleting orphaned subdomain %s from .sail/config.json' % _sub.fqdn)
 					config['domains'] = [d for d in config['domains'] if d['name'] != _sub.fqdn]
 					util.update_config(config)
 
 	_delete_dns_records(domains, subdomains, force_delete_zones=zone)
+
+	util.success('Domain deleted')
 
 def _delete_dns_records(domains, subdomains, force_delete_zones=False):
 	config = util.config()
@@ -320,7 +332,7 @@ def _delete_dns_records(domains, subdomains, force_delete_zones=False):
 	# Remove subdomains first
 	for subdomain in subdomains:
 		if subdomain.registered_domain not in [d.name for d in existing]:
-			click.echo('- Skipping DNS for %s, zone not found' % subdomain.fqdn)
+			util.item('Skipping DNS for %s, zone not found' % subdomain.fqdn)
 			continue
 
 		do_domain = digitalocean.Domain(token=config['provider_token'], name=subdomain.registered_domain)
@@ -333,16 +345,16 @@ def _delete_dns_records(domains, subdomains, force_delete_zones=False):
 
 			if r.data == config['ip']:
 				exists = True
-				click.echo('- Deleting A record for %s' % subdomain.fqdn)
+				util.item('Deleting A record for %s' % subdomain.fqdn)
 				r.destroy()
 
 		if not exists:
-			click.echo('- No A records to delete for %s' % subdomain.fqdn)
+			util.item('No A records to delete for %s' % subdomain.fqdn)
 
 	# Remove domains
 	for domain in domains:
 		if domain.fqdn not in [d.name for d in existing]:
-			click.echo('- Skipping DNS for %s, zone not found' % domain.fqdn)
+			util.item('Skipping DNS for %s, zone not found' % domain.fqdn)
 			continue
 
 		try:
@@ -352,14 +364,14 @@ def _delete_dns_records(domains, subdomains, force_delete_zones=False):
 			delete_zone = True
 
 			if force_delete_zones:
-				click.echo('- Deleting DNS zone for %s, forced' % domain.fqdn)
+				util.item('Deleting DNS zone for %s, forced' % domain.fqdn)
 				do_domain.destroy()
 				continue
 
 			for r in records:
 				if r.name == '@' and r.type == 'A' and r.data == config['ip']:
 					exists = True
-					click.echo('- Deleting A record for %s' % domain.fqdn)
+					util.item('Deleting A record for %s' % domain.fqdn)
 					r.destroy()
 					continue
 
@@ -373,15 +385,15 @@ def _delete_dns_records(domains, subdomains, force_delete_zones=False):
 				delete_zone = False
 
 			if not exists:
-				click.echo('- No A records to delete for %s' % domain.fqdn)
+				util.item('No A records to delete for %s' % domain.fqdn)
 
 			if delete_zone:
 				do_domain.destroy()
-				click.echo('- Deleting DNS zone for %s' % domain.fqdn)
+				util.item('Deleting DNS zone for %s' % domain.fqdn)
 			else:
-				click.echo('- Skipping deleting DNS zone for %s, other records exist' % domain.fqdn)
+				util.item('Skipping deleting DNS zone for %s, other records exist' % domain.fqdn)
 		except:
-			click.echo('- Could not delete DNS zone for %s' % domain.fqdn)
+			util.item('Could not delete DNS zone for %s' % domain.fqdn)
 
 def _update_nginx_config():
 	config = util.config()
@@ -417,7 +429,6 @@ def _update_nginx_config():
 
 	http_names = list(set(server_names).difference(set(https_names)))
 
-	click.echo('- Generating nginx configuration')
 	c.put(io.StringIO(util.template('nginx.server.conf', {
 		'certificates': certificates,
 		'https_names': https_names,
@@ -435,11 +446,11 @@ def _parse_domains(input_domains):
 	for domain in input_domains:
 		ex = tldextract.extract(domain, include_psl_private_domains=True)
 		if not ex.domain or not ex.suffix:
-			raise click.ClickException('Bad domain: %s' % domain)
+			raise util.SailException('Bad domain: %s' % domain)
 
 		# No internal domains
 		if ex.domain in ['sailed', 'justsailed'] and ex.suffix == 'io':
-			raise click.ClickException('Bad domain: %s' % domain)
+			raise util.SailException('Bad domain: %s' % domain)
 
 		if ex.subdomain:
 			subdomains.append(ex)

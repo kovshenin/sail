@@ -52,10 +52,14 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Option api-base set', result.output)
 
+		# Delete a premium config if one is set
+		result = self.runner.invoke(cli, ['config', 'premium', '--delete'])
+		# We don't care about the result here.
+
 	def test_001_init(self):
 		result = self.runner.invoke(cli, ['init'])
 		self.assertEqual(result.exit_code, 0)
-		self.assertIn('Success. The ship has sailed!', result.output)
+		self.assertIn('The ship has sailed!', result.output)
 
 	def test_002_wp_home(self):
 		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'home'])

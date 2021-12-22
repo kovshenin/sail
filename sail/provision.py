@@ -29,39 +29,39 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	root = util.find_root()
 
 	if root and os.path.exists(root + '/.sail'):
-		raise click.ClickException('This ship has already sailed. Pick another one or remove the .sail directory.')
+		raise util.SailException('This ship has already sailed. Pick another one or remove the .sail directory.')
 
 	files = os.listdir(path='.')
 	if files and not force:
-		raise click.ClickException('This project directory is not empty, can not init here. Override with --force, can destroy existing files.')
+		raise util.SailException('This project directory is not empty, can not init here. Override with --force, can destroy existing files.')
 
 	if namespace and not re.match(r'^[a-zA-Z0-9_.-]+$', namespace):
-		raise click.ClickException('Invalid namespace. Namespaces can be alpha-numeric and contain the following characters: _.-')
+		raise util.SailException('Invalid namespace. Namespaces can be alpha-numeric and contain the following characters: _.-')
 
 	namespace = namespace.lower()
 
 	if environment:
 		environment = pathlib.Path(environment) / '.sail'
 		if not environment.is_dir():
-			raise click.ClickException('Not a valid Sail environment: %s' % environment.resolve())
+			raise util.SailException('Not a valid Sail environment: %s' % environment.resolve())
 
 		if not (environment / 'config.json').is_file():
-			raise click.ClickException('Not a valid Sail environment: %s' % environment.resolve())
+			raise util.SailException('Not a valid Sail environment: %s' % environment.resolve())
 
 		if not (environment / 'ssh.key').is_file() or not (environment / 'ssh.key.pub').is_file():
-			raise click.ClickException('Could not read SSH keys from: %s' % environment.resolve())
+			raise util.SailException('Could not read SSH keys from: %s' % environment.resolve())
 
 		with (environment / 'config.json').open('r') as f:
 			env_config = json.load(f)
 
 		if packaging.version.parse(env_config.get('version')) < packaging.version.parse('0.10.0'):
-			raise click.ClickException('The target environment version is lower than the supported minimum. Please upgrade the environment first.')
+			raise util.SailException('The target environment version is lower than the supported minimum. Please upgrade the environment first.')
 
 		if env_config.get('namespace', 'default').lower() == namespace:
-			raise click.ClickException('The "%s" namespace is already in use in the target environment. Please use a different namespace.' % namespace)
+			raise util.SailException('The "%s" namespace is already in use in the target environment. Please use a different namespace.' % namespace)
 
 		if not env_config.get('provider_token'):
-			raise click.ClickException('Could not find a provider token in the target environment.')
+			raise util.SailException('Could not find a provider token in the target environment.')
 
 		# Force the same provider token
 		provider_token = env_config.get('provider_token')
@@ -70,26 +70,26 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 		provider_token = util.get_sail_default('provider-token')
 
 	if not provider_token:
-		raise click.ClickException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
+		raise util.SailException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
 
 	# Make sure the provider token works
 	try:
 		account = digitalocean.Account(token=provider_token)
 		account.load()
 		if account.status != 'active':
-			raise click.ClickException('This DigitalOcean account is not active.')
+			raise util.SailException('This DigitalOcean account is not active.')
 		if not account.email_verified:
-			raise click.ClickException('This DigitalOcean account e-mail is not verified.')
+			raise util.SailException('This DigitalOcean account e-mail is not verified.')
 	except:
-		raise click.ClickException('Invalid prodiver token.')
+		raise util.SailException('Invalid prodiver token.')
 
 	if not email:
 		email = util.get_sail_default('email')
 
 	if not email:
-		raise click.ClickException('You need to provide an admin e-mail address with --email, or set a default one with: sail config email <e-mail>')
+		raise util.SailException('You need to provide an admin e-mail address with --email, or set a default one with: sail config email <e-mail>')
 
-	click.echo('# Initializing')
+	util.heading('Initializing')
 
 	response = util.request('/init/', json={
 		'email': email,
@@ -100,12 +100,12 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	secret = response['secret']
 	hostname = response['hostname']
 
-	click.echo('- Claimed application id: %s' % app_id)
+	util.item('Claimed application id: %s' % app_id)
 
 	os.mkdir('.sail')
 	root = util.find_root()
 
-	click.echo('- Writing .sail/config.json')
+	util.item('Writing .sail/config.json')
 	config = {
 		'app_id': app_id,
 		'secret': secret,
@@ -142,10 +142,10 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	_install(passwords)
 
 	# Add the default WP cron schedule.
-	ctx.invoke(cron.add, schedule='*/5', command=('wp cron event run --due-now',))
+	ctx.invoke(cron.add, schedule='*/5', command=('wp cron event run --due-now',), quiet=True)
 
 	# Download files from production
-	ctx.invoke(deploy.download, yes=True)
+	ctx.invoke(deploy.download, yes=True, doing_init=True)
 
 	# Create a local empty wp-contents/upload directory
 	content_dir = '%s/wp-content/uploads' % root
@@ -154,68 +154,99 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 
 	primary_url = util.primary_url()
 
+	# Automatically enable premium if it's been set up
+	premium_license = util.get_sail_default('premium')
+	premium_email = util.get_sail_default('email')
+	if premium_license and premium_email:
+		try:
+			ctx.invoke(sail.premium.enable, doing_init=True)
+		except:
+			util.item('Could not initialize Premium')
+
+	util.heading('Initialization successful')
+	util.item('The ship has sailed!')
 	click.echo()
-	click.echo('# Success. The ship has sailed!')
+
+	util.label_width(10)
+
+	label = util.label('URL:')
+	click.echo(f'{label} {primary_url}')
+
+	label = util.label('Login:')
+	click.echo(f'{label} {primary_url}/wp-login.php')
+
+	label = util.label('Username:')
+	click.echo(f'{label} {email}')
+
+	label = util.label('Password:')
+	password = passwords['wp']
+	click.echo(f'{label} {password}')
 
 	click.echo()
-	click.echo('- URL: %s' % primary_url)
-	click.echo('- Login: %s/wp-login.php' % primary_url)
-	click.echo('- Username: %s' % email)
-	click.echo('- Password: %s (change me!)' % passwords['wp'])
+
+	label = util.label('SSH Host:')
+	hostname = config['hostname']
+	click.echo(f'{label} {hostname}')
+
+	label = util.label('SSH Port:')
+	click.echo(f'{label} 22')
+
+	label = util.label('Username:')
+	click.echo(f'{label} root')
+
+	label = util.label('SSH Key:')
+	click.echo(f'{label} .sail/ssh.key')
+
+	label = util.label('App root:')
+	app_root = util.remote_path()
+	click.echo(f'{label} {app_root}')
 
 	click.echo()
-	click.echo('- SSH/SFTP Access Details')
-	click.echo('- Host: %s' % config['hostname'])
-	click.echo('- Port: 22')
-	click.echo('- Username: root')
-	click.echo('- SSH Key: .sail/ssh.key')
-	click.echo('- App root: %s' % util.remote_path())
-	click.echo('- To open an interactive shell run: sail ssh')
-
-	click.echo()
+	click.echo('To open an interactive shell run: sail ssh')
 	click.echo('For support and documentation visit sailed.io')
+	click.echo()
 
 def _copy_environment(environment):
 	root = util.find_root()
 	config = util.config()
 
-	click.echo('- Copying environment')
+	util.item('Copying environment')
 
 	shutil.copy(environment / 'ssh.key', '%s/.sail/ssh.key' % root)
 	os.chmod('%s/.sail/ssh.key' % root, 0o600)
 	shutil.copy(environment / 'ssh.key.pub', '%s/.sail/ssh.key.pub' % root)
 	os.chmod('%s/.sail/ssh.key.pub' % root, 0o644)
 
-	click.echo('- Requesting DNS record')
+	util.item('Requesting DNS record')
 	response = util.request('/ip/', json={
 		'ip': config['ip'],
 	})
 
-	click.echo('- Checking SSH connection')
+	util.item('Checking SSH connection')
 	c = util.connection()
 
 	try:
 		c.run('hostname')
 	except Exception as e:
 		raise e
-		raise click.ClickException('Could not connect via SSH. Make sure the environment is healthy.')
+		raise util.SailException('Could not connect via SSH. Make sure the environment is healthy.')
 
 	try:
 		remote_config = json.loads(c.run('cat /etc/sail/config.json').stdout)
 	except:
-		raise click.ClickException('Could not read /etc/sail/config.json')
+		raise util.SailException('Could not read /etc/sail/config.json')
 
 	if not remote_config.get('namespaces'):
-		raise click.ClickException('Could not find any namespaces data in the remote config. This environment looks broken.')
+		raise util.SailException('Could not find any namespaces data in the remote config. This environment looks broken.')
 
 	# Make sure our new namespace is unique
 	if config['namespace'] in remote_config['namespaces']:
-		raise click.ClickException('The "%s" namespace already exists in this environment.' % config['namespace'])
+		raise util.SailException('The "%s" namespace already exists in this environment.' % config['namespace'])
 
 	remote_config['namespaces'].append(config['namespace'])
 	c.put(io.StringIO(json.dumps(remote_config)), '/etc/sail/config.json')
 
-	click.echo('- Writing server keys to .sail/known_hosts')
+	util.item('Writing server keys to .sail/known_hosts')
 	with open('%s/.sail/known_hosts' % root, 'w+') as f:
 		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', config['ip'],
 			config['hostname']], stdout=f, stderr=subprocess.DEVNULL)
@@ -224,7 +255,7 @@ def _provision(provider_token, size, region):
 	root = util.find_root()
 	config = util.config()
 
-	click.echo('- Provisioning servers')
+	util.item('Provisioning servers')
 
 	# Generate a key pair.
 	key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -239,7 +270,7 @@ def _provision(provider_token, size, region):
 		serialization.PublicFormat.OpenSSH
 	).decode('utf8')
 
-	click.echo('- Writing SSH keys to .sail/ssh.key')
+	util.item('Writing SSH keys to .sail/ssh.key')
 	with open('%s/.sail/ssh.key' % root, 'w+') as f:
 		f.write(private_key)
 	os.chmod('%s/.sail/ssh.key' % root, 0o600)
@@ -248,7 +279,7 @@ def _provision(provider_token, size, region):
 		f.write(public_key)
 	os.chmod('%s/.sail/ssh.key.pub' % root, 0o644)
 
-	click.echo('- Uploading SSH key to DigitalOcean')
+	util.item('Uploading SSH key to DigitalOcean')
 
 	key = digitalocean.SSHKey(
 		token=provider_token,
@@ -261,9 +292,9 @@ def _provision(provider_token, size, region):
 		key.load()
 	except Exception as e:
 		print(e)
-		raise click.ClickException('Could not upload SSH key. Make sure token is RW.')
+		raise util.SailException('Could not upload SSH key. Make sure token is RW.')
 
-	click.echo('- Creating a new Droplet')
+	util.item('Creating a new Droplet')
 
 	with open(sail.TEMPLATES_PATH + '/cloud-config.yaml', 'r') as f:
 		cloud_config = f.read()
@@ -283,9 +314,9 @@ def _provision(provider_token, size, region):
 	try:
 		droplet.create()
 	except Exception as e:
-		raise click.ClickException('Cloud not create new droplet. Please try again later.')
+		raise util.SailException('Cloud not create new droplet. Please try again later.')
 
-	click.echo('- Waiting for Droplet to boot')
+	util.item('Waiting for Droplet to boot')
 
 	completed = False
 	while not completed:
@@ -297,7 +328,7 @@ def _provision(provider_token, size, region):
 				completed = True
 				break
 
-	click.echo('- Waiting for IP address')
+	util.item('Waiting for IP address')
 
 	def wait_for_ip():
 		droplet.load()
@@ -307,7 +338,7 @@ def _provision(provider_token, size, region):
 
 	util.wait(wait_for_ip, timeout=120, interval=10)
 
-	click.echo('- Droplet up and running, requesting DNS record')
+	util.item('Droplet up and running, requesting DNS record')
 	response = util.request('/ip/', json={
 		'ip': droplet.ip_address,
 	})
@@ -317,7 +348,7 @@ def _provision(provider_token, size, region):
 	config['key_id'] = key.id
 	util.update_config(config)
 
-	click.echo('- Waiting for SSH')
+	util.item('Waiting for SSH')
 	c = util.connection()
 
 	def wait_for_ssh():
@@ -330,7 +361,7 @@ def _provision(provider_token, size, region):
 
 	util.wait(wait_for_ssh, timeout=120, interval=10)
 
-	click.echo('- Writing server keys to .sail/known_hosts')
+	util.item('Writing server keys to .sail/known_hosts')
 	with open('%s/.sail/known_hosts' % root, 'w+') as f:
 		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', config['ip'],
 			config['hostname']], stdout=f, stderr=subprocess.DEVNULL)
@@ -339,7 +370,7 @@ def _configure():
 	config = util.config()
 	c = util.connection()
 
-	click.echo('- Configuring software')
+	util.item('Configuring software')
 
 	# Generate an /etc/sail/config.json
 	config_json = {
@@ -360,7 +391,7 @@ def _configure():
 
 		return False
 
-	click.echo('- Waiting for cloud-init to complete')
+	util.item('Waiting for cloud-init to complete')
 	util.wait(wait_for_cloud_init, timeout=900, interval=10)
 
 	c.run('mkdir -p /etc/nginx/conf.d/extras')
@@ -389,7 +420,7 @@ def _install(passwords):
 	c = util.connection()
 
 	# Request an SSL cert
-	click.echo('- Requesting SSL certificate')
+	util.item('Requesting SSL certificate')
 
 	retry = 3
 	https = False
@@ -401,10 +432,10 @@ def _install(passwords):
 			break
 		except:
 			if retry:
-				click.echo('- Certbot failed, retrying')
+				util.item('Certbot failed, retrying')
 				time.sleep(10)
 			else:
-				click.echo('- Certbot failed, skipping SSL')
+				util.item('Certbot failed, skipping SSL')
 
 	# Update the domains config.
 	config['domains'].append({
@@ -416,6 +447,7 @@ def _install(passwords):
 	util.update_config(config)
 
 	# Update nginx configs with cert data.
+	util.item('Generating nginx configuration')
 	domains._update_nginx_config()
 
 	# Prepare release directories
@@ -426,13 +458,13 @@ def _install(passwords):
 	c.run('chown -R www-data. %s' % remote_path)
 
 	# Create a MySQL database
-	click.echo('- Setting up the MySQL database')
+	util.item('Setting up the MySQL database')
 
 	c.run('mysql -e "CREATE DATABASE \\`wordpress_%s\\`;"' % config['namespace'])
 	c.run('mysql -e "CREATE USER \\`wordpress_%s\\`@localhost IDENTIFIED BY \'%s\'"' % (config['namespace'], passwords['mysql']))
 	c.run('mysql -e "GRANT ALL PRIVILEGES ON \\`wordpress_%s\\`.* TO \\`wordpress_%s\\`@localhost;"' % (config['namespace'], config['namespace']))
 
-	click.echo('- Downloading and installing WordPress')
+	util.item('Downloading and installing WordPress')
 	wp = 'sudo -u www-data wp --path=%s/releases/1337 ' % remote_path
 
 	c.run(wp + 'core download')
@@ -466,7 +498,7 @@ def _install(passwords):
 	]))
 
 	# Do da deploy.
-	click.echo('- Cleaning up')
+	util.item('Cleaning up')
 	c.run('rm -rf %s/public' % remote_path)
 	c.run('ln -sfn %s/releases/1337 %s/public' % (remote_path, remote_path))
 	c.run('rm -rf %s/public/wp-content/uploads && ln -sfn %s/uploads %s/public/wp-content/uploads' % (
@@ -488,7 +520,7 @@ def destroy(yes, environment, skip_dns):
 	if not yes:
 		click.confirm('All application data will be scrubbed and irretrievable. Are you sure?', abort=True)
 
-	click.echo('# Destroying application')
+	util.heading('Destroying application')
 
 	namespaces = []
 	try:
@@ -502,25 +534,31 @@ def destroy(yes, environment, skip_dns):
 	if len(namespaces) < 1 or namespaces == [config['namespace']]:
 		environment = True
 	elif not environment and config['namespace'] == 'default':
-		raise click.ClickException('You asked to destroy the default namespace, but other namespaces exist in this environment. Use --environment to destroy the entire environment.')
+		raise util.SailException('You asked to destroy the default namespace, but other namespaces exist in this environment. Use --environment to destroy the entire environment.')
 
 	try:
+		util.item('Releasing .justsailed.io subdomain')
 		data = util.request('/destroy/', method='DELETE')
 	except:
 		pass
 
 	if not skip_dns:
+		util.item('Removing DNS records')
 		_domains = [d['name'] for d in config.get('domains', []) if not d['internal']]
 		_domains, _subdomains = domains._parse_domains(_domains)
 		domains._delete_dns_records(_domains, _subdomains)
 
 	if environment:
+		util.item('Destroying environment')
 		_destroy_environment()
 	else:
+		util.item('Destroying namespace')
 		_destroy_namespace()
 
-	click.echo('- Removing .sail/*')
+	util.item('Removing .sail/*')
 	shutil.rmtree(root + '/.sail')
+
+	util.success('Destroyed successfully')
 
 def _destroy_namespace():
 	config = util.config()
@@ -550,9 +588,9 @@ def _destroy_environment():
 			id=config['droplet_id']
 		)
 		droplet.destroy()
-		click.echo('- Droplet destroyed successfully')
+		util.item('Droplet destroyed successfully')
 	except Exception as e:
-		click.echo('- Error destroying droplet')
+		util.item('Error destroying droplet')
 
 	try:
 		key = digitalocean.SSHKey(
@@ -560,9 +598,9 @@ def _destroy_environment():
 			id=config['key_id']
 		)
 		key.destroy()
-		click.echo('- SSH key destroyed successfully')
+		util.item('SSH key destroyed successfully')
 	except:
-		click.echo('- Error destroying SSH key')
+		util.item('Error destroying SSH key')
 
 @cli.command()
 @click.option('--provider-token', help='Your DigitalOcean API token, must be read-write. You can set a default token with: sail config provider-token <token>')
@@ -579,7 +617,7 @@ def sizes(provider_token):
 		provider_token = util.get_sail_default('provider-token')
 
 	if not provider_token:
-		raise click.ClickException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
+		raise util.SailException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
 
 	click.echo('# Getting available droplet sizes')
 
@@ -610,7 +648,7 @@ def regions(provider_token):
 		provider_token = util.get_sail_default('provider-token')
 
 	if not provider_token:
-		raise click.ClickException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
+		raise util.SailException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
 
 	click.echo('# Getting available regions')
 

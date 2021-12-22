@@ -26,7 +26,7 @@ def _get_extend_filters(paths, prefix=None):
 		try:
 			relative = _entry.resolve().relative_to(root)
 		except ValueError:
-			raise click.ClickException('Could not resolve path: %s' % entry)
+			raise util.SailException('Could not resolve path: %s' % entry)
 
 		if prefix:
 			try:
@@ -98,7 +98,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 	if dry_run:
 		return ctx.invoke(diff, path=path)
 
-	click.echo('# Deploying to production')
+	util.heading('Deploying to production')
 
 	hooks = []
 	failed = []
@@ -107,7 +107,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 		hooks = glob(root + '/.sail/pre-deploy') + glob(root + '/.sail/pre-deploy.*')
 
 	if len(hooks) > 0:
-		click.echo('- Running pre-deploy hooks')
+		util.item('Running pre-deploy hooks')
 
 	for hook in hooks:
 		f = pathlib.Path(hook)
@@ -120,20 +120,20 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 			failed.append(f)
 
 	if len(failed) > 0:
-		click.echo('- One or more pre-deploy hooks failed. Aborting deploy.')
+		util.item('One or more pre-deploy hooks failed. Aborting deploy.')
 		for f in failed:
-			click.echo('- Failed: %s' % f)
+			util.item('Failed: %s' % f)
 
 		exit()
 
-	click.echo('- Preparing release directory')
+	util.item('Preparing release directory')
 	c = util.connection()
 	remote_path = util.remote_path()
 
 	c.run('mkdir -p %s/releases/%s' % (remote_path, release))
 	c.run('rsync -rogtl %s/public/ %s/releases/%s' % (remote_path, remote_path, release))
 
-	click.echo('- Uploading application files to production')
+	util.item('Uploading application files to production')
 
 	# Parse .deployignore.
 	filters = _get_deployignore_filters()
@@ -148,10 +148,10 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 	)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred during upload. Please try again.')
+		raise util.SailException('An error occurred during upload. Please try again.')
 
 	if with_uploads:
-		click.echo('- Uploading wp-content/uploads')
+		util.item('Uploading wp-content/uploads')
 
 		# Send uploads to production
 		returncode, stdout, stderr = util.rsync(
@@ -163,15 +163,15 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 		)
 
 		if returncode != 0:
-			raise click.ClickException('An error occurred during upload. Please try again.')
+			raise util.SailException('An error occurred during upload. Please try again.')
 
-	click.echo('- Deploying release: %s' % release)
+	util.item('Deploying release: %s' % release)
 
-	click.echo('- Updating symlinks')
+	util.item('Updating symlinks')
 	c.run('sudo -u www-data ln -sfn %s/uploads %s/releases/%s/wp-content/uploads' % (remote_path, remote_path, release))
 	c.run('sudo -u www-data ln -sfn %s/releases/%s %s/public' % (remote_path, release, remote_path))
 
-	click.echo('- Reloading services')
+	util.item('Reloading services')
 	c.run('nginx -s reload')
 	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
 
@@ -188,12 +188,12 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 	keep = min(keep, 30)
 
 	if len(releases) > keep:
-		click.echo('- Removing outdated releases')
+		util.item('Removing outdated releases')
 		remove = sorted(releases)[:len(releases)-keep]
 		for key in remove:
 			c.run(util.join(['rm', '-rf', '%s/releases/%s' % (remote_path, key)]))
 
-	click.echo('- Successfully deployed %s' % release)
+	util.success('Successfully deployed %s' % release)
 
 @cli.command()
 @click.argument('release', required=False, type=int, nargs=1)
@@ -205,43 +205,49 @@ def rollback(release=None, releases=False):
 	remote_path = util.remote_path()
 
 	if releases or not release:
+		util.heading('Fetching available releases')
+
 		_releases = c.run('ls %s/releases' % remote_path)
 		_releases = re.findall('\d+', _releases.stdout)
 
 		if len(_releases) < 1:
-			raise click.ClickException('Could not find any releases')
+			raise util.SailException('Could not find any releases')
 
 		try:
+			util.item('Determining current release')
 			_current = c.run('readlink %s/public' % remote_path).stdout.strip().split('/')[-1]
 		except:
 			_current = '0'
 
-		click.echo('# Available releases:')
+		click.echo()
+
 		for r in _releases:
 			flags = '(current)' if r == _current else ''
-			click.echo('- %s %s' % (r, flags))
+			click.secho('  %s %s' % (r, flags))
 
 		click.echo()
-		click.echo('Rollback with: sail rollback <release>')
+		click.echo('Rollback: sail rollback <release>')
+		click.echo()
 		return
 
 	if release:
 		release = str(release)
 
-	click.echo('# Rolling back to %s' % release)
+	util.heading('Rolling back to %s' % release)
 
+	util.item('Fetching releases')
 	_releases = c.run('ls %s/releases' % remote_path).stdout.strip().split('\n')
 	if release not in _releases:
-		raise click.ClickException('Invalid release. To get a list run: sail rollback --releases')
+		raise util.SailException('Invalid release. To get a list run: sail rollback --releases')
 
-	click.echo('- Updating symlinks')
+	util.item('Updating symlinks')
 	c.run('ln -sfn %s/releases/%s %s/public' % (remote_path, release, remote_path))
 
-	click.echo('- Reloading services')
+	util.item('Reloading services')
 	c.run('nginx -s reload')
 	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
 
-	click.echo('- Successfully rolled back to %s' % release)
+	util.success('Successfully rolled back to %s' % release)
 
 @cli.command()
 @click.argument('path', nargs=-1, required=False)
@@ -250,7 +256,7 @@ def rollback(release=None, releases=False):
 @click.option('--delete', is_flag=True, help='Delete files from local copy that do not exist on production')
 @click.option('--dry-run', is_flag=True, help='Show changes about to be downloaded to the working copy')
 @click.pass_context
-def download(ctx, path, yes, with_uploads, delete, dry_run):
+def download(ctx, path, yes, with_uploads, delete, dry_run, doing_init=False):
 	'''Download files from production to your working copy'''
 	root = util.find_root()
 	config = util.config()
@@ -266,7 +272,8 @@ def download(ctx, path, yes, with_uploads, delete, dry_run):
 	if dry_run:
 		return ctx.invoke(diff, path=path, reverse=True)
 
-	click.echo('# Downloading application files from production')
+	util.heading('Downloading production data')
+	util.item('Downloading application files from production')
 
 	returncode, stdout, stderr = util.rsync(
 		args=['-rtl'] + delete,
@@ -276,10 +283,10 @@ def download(ctx, path, yes, with_uploads, delete, dry_run):
 	)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred during download. Please try again.')
+		raise util.SailException('An error occurred during download. Please try again.')
 
 	if with_uploads:
-		click.echo('- Downloading wp-content/uploads')
+		util.item('Downloading wp-content/uploads')
 
 		# Download uploads from production
 		returncode, stdout, stderr = util.rsync(
@@ -291,9 +298,13 @@ def download(ctx, path, yes, with_uploads, delete, dry_run):
 		)
 
 		if returncode != 0:
-			raise click.ClickException('An error occurred during download. Please try again.')
+			raise util.SailException('An error occurred during download. Please try again.')
 
-	click.echo('- Files download completed')
+	util.item('All download tasks completed')
+
+	# Don't show success during provision/init.
+	if not doing_init:
+		util.success('Files download completed')
 
 @cli.command()
 @click.argument('path', nargs=-1, required=False)
@@ -307,7 +318,7 @@ def diff(path, reverse, raw):
 	if raw:
 		util.loader(suspend=True)
 	else:
-		click.echo('# Comparing files')
+		util.heading('Comparing files')
 
 	destination = 'root@%s:%s' % (config['hostname'], util.remote_path('/public/'))
 	source = '%s/' % root
@@ -324,29 +335,35 @@ def diff(path, reverse, raw):
 	labels = {'created': 'New', 'deleted': 'Delete', 'updated': 'Update'}
 	for op in ['created', 'updated', 'deleted']:
 		for filename in files[op]:
-			empty = False
+			if empty:
+				empty = False
+				click.echo()
+
 			if raw:
 				click.echo(filename)
 			else:
-				click.secho('- %s: %s' % (labels[op], filename), fg=colors[op])
+				click.secho('  %s: %s' % (labels[op], filename), fg=colors[op])
 
 	# TODO: Compare uploads if requested --with-uploads
 
 	if empty and not raw:
-		click.echo('- No changes')
+		util.item('No changes')
+
+	if not raw:
+		click.echo()
 
 def _diff(source, destination, extend_filters=[]):
 	'''Compare application files between environments'''
 	root = util.find_root()
 
 	if source == destination:
-		raise click.ClickException('Can not compare apples to apples')
+		raise util.SailException('Can not compare apples to apples')
 
 	args = ['-rlci', '--delete', '--dry-run']
 	returncode, stdout, stderr = util.rsync(args, source, destination, extend_filters=extend_filters)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred in rsync. Please try again.')
+		raise util.SailException('An error occurred in rsync. Please try again.')
 
 	files = {
 		'created': [],
