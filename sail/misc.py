@@ -19,7 +19,7 @@ def config(name, value=None, delete=False):
 	]
 
 	if name not in valid_names:
-		raise click.ClickException('Invalid config name: %s' % name)
+		raise util.SailException('Invalid config name: %s' % name)
 
 	filename = (pathlib.Path.home() / '.sail-defaults.json').resolve()
 	data = {}
@@ -32,16 +32,16 @@ def config(name, value=None, delete=False):
 
 	if not value and not delete:
 		if name not in data:
-			raise click.ClickException('The option is not set')
+			raise util.SailException('The option is not set')
 
 		click.echo(data[name])
 		return
 
 	if value and delete:
-		raise click.ClickException('The --delete flag does not expect an option value')
+		raise util.SailException('The --delete flag does not expect an option value')
 
 	if delete and name not in data:
-		raise click.ClickException('The option is not set, nothing to delete')
+		raise util.SailException('The option is not set, nothing to delete')
 
 	if delete:
 		del data[name]
@@ -79,7 +79,7 @@ def admin():
 
 	primary = [d for d in config['domains'] if d['primary']]
 	if len(primary) < 1:
-		raise click.ClickException('Could not find primary domain')
+		raise util.SailException('Could not find primary domain')
 
 	primary = primary[0]
 	url = ('https://' if primary.get('https') else 'http://') + primary['name']

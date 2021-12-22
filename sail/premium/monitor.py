@@ -182,7 +182,7 @@ def snooze(minutes):
 	search = re.search(r'^(\d+)(s|h|m|d)?$', minutes)
 
 	if not search:
-		raise click.ClickException('Invalid snooze format.')
+		raise util.SailException('Invalid snooze format.')
 
 	value = int(search.group(1))
 	unit = search.group(2)

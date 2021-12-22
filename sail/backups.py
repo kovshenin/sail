@@ -35,13 +35,13 @@ def restore(path, yes, skip_db, skip_uploads):
 
 	path = pathlib.Path(path)
 	if not path.exists():
-		raise click.ClickException('File does not exist')
+		raise util.SailException('File does not exist')
 
 	if path.name.endswith('.sql.gz') or path.name.endswith('.sql'):
-		raise click.ClickException('Looks like a database-only backup. Try: sail db import')
+		raise util.SailException('Looks like a database-only backup. Try: sail db import')
 
 	if not path.name.endswith('.tar.gz'):
-		raise click.ClickException('Doesn\'t look like a backup file')
+		raise util.SailException('Doesn\'t look like a backup file')
 
 	if not yes:
 		click.confirm('This will restore a full backup to production. Continue?', abort=True)
@@ -68,12 +68,12 @@ def restore(path, yes, skip_db, skip_uploads):
 
 	if p.returncode != 0:
 		shutil.rmtree(progress_dir)
-		raise click.ClickException('An error occurred during backup. Please try again.')
+		raise util.SailException('An error occurred during backup. Please try again.')
 
 	for x in progress_dir.iterdir():
 		if x.name not in ['www', 'database.sql.gz', 'uploads']:
 			shutil.rmtree(progress_dir)
-			raise click.ClickException('Unexpected file in backup archive: %s' % x.name)
+			raise util.SailException('Unexpected file in backup archive: %s' % x.name)
 
 	if skip_uploads:
 		util.item('Skipping uploads')
@@ -87,7 +87,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 		if returncode != 0:
 			shutil.rmtree(progress_dir)
-			raise click.ClickException('An error occurred during restore. Please try again.')
+			raise util.SailException('An error occurred during restore. Please try again.')
 
 	util.item('Importing application files')
 
@@ -98,7 +98,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 	if returncode != 0:
 		shutil.rmtree(progress_dir)
-		raise click.ClickException('An error occurred during restore. Please try again.')
+		raise util.SailException('An error occurred during restore. Please try again.')
 
 	if skip_db:
 		util.item('Skipping database import')
@@ -112,7 +112,7 @@ def restore(path, yes, skip_db, skip_uploads):
 
 		if returncode != 0:
 			shutil.rmtree(progress_dir)
-			raise click.ClickException('An error occurred in rsync. Please try again.')
+			raise util.SailException('An error occurred in rsync. Please try again.')
 
 		util.item('Importing database into MySQL')
 
@@ -122,7 +122,7 @@ def restore(path, yes, skip_db, skip_uploads):
 			c.run('zcat %s/%s | mysql -uroot "wordpress_%s"' % (remote_path, database_filename, config['namespace']))
 		except:
 			shutil.rmtree(progress_dir)
-			raise click.ClickException('An error occurred in SSH. Please try again.')
+			raise util.SailException('An error occurred in SSH. Please try again.')
 
 		util.item('Cleaning up production')
 
@@ -130,7 +130,7 @@ def restore(path, yes, skip_db, skip_uploads):
 			c.run('rm %s/%s' % (remote_path, database_filename)) # TODO: Move to /tmp maybe, or /root
 		except:
 			shutil.rmtree(progress_dir)
-			raise click.ClickException('An error occurred in SSH. Please try again.')
+			raise util.SailException('An error occurred in SSH. Please try again.')
 
 	shutil.rmtree(progress_dir)
 
@@ -164,7 +164,7 @@ def create():
 
 	if returncode != 0:
 		shutil.rmtree(progress_dir)
-		raise click.ClickException('An error occurred during backup. Please try again.')
+		raise util.SailException('An error occurred during backup. Please try again.')
 
 	util.item('Downloading uploads')
 
@@ -175,7 +175,7 @@ def create():
 
 	if returncode != 0:
 		shutil.rmtree(progress_dir)
-		raise click.ClickException('An error occurred during backup. Please try again.')
+		raise util.SailException('An error occurred during backup. Please try again.')
 
 	util.item('Exporting WordPress database')
 
@@ -183,7 +183,7 @@ def create():
 		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot "wordpress_%s" | gzip -c9 > %s/%s' % (config['namespace'], remote_path, database_filename))
 	except:
 		shutil.rmtree(progress_dir)
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	util.item('Export completed, downloading database')
 
@@ -194,7 +194,7 @@ def create():
 
 	if returncode != 0:
 		shutil.rmtree(progress_dir)
-		raise click.ClickException('An error occurred in rsync. Please try again.')
+		raise util.SailException('An error occurred in rsync. Please try again.')
 
 	util.item('Cleaning up production')
 
@@ -202,7 +202,7 @@ def create():
 		c.run('rm %s/%s' % (remote_path, database_filename))
 	except:
 		shutil.rmtree(progress_dir)
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	timestamp = datetime.now().strftime('%Y-%m-%d-%H%M%S.tar.gz')
 	target = pathlib.Path(backups_dir / timestamp)
@@ -218,7 +218,7 @@ def create():
 
 	if p.returncode != 0:
 		shutil.rmtree(progress_dir)
-		raise click.ClickException('An error occurred during backup. Please try again.')
+		raise util.SailException('An error occurred during backup. Please try again.')
 
 	shutil.rmtree(progress_dir)
 

@@ -54,7 +54,7 @@ def delete(id):
 	cron_data = config.get('cron', {})
 
 	if id not in cron_data:
-		raise click.ClickException('Could not find cron entry by id.')
+		raise util.SailException('Could not find cron entry by id.')
 
 	del cron_data[id]
 	config['cron'] = cron_data
@@ -79,7 +79,7 @@ def add(schedule, command, root, quiet):
 	c = util.connection()
 
 	if len(command) < 1:
-		raise click.ClickException('Invalid cron command.')
+		raise util.SailException('Invalid cron command.')
 
 	command = ' '.join(command)
 
@@ -96,7 +96,7 @@ def add(schedule, command, root, quiet):
 	# Verify schedule
 	parts = schedule.split(' ')
 	if len(parts) > 5:
-		raise click.ClickException('Invalid schedule.')
+		raise util.SailException('Invalid schedule.')
 
 	# Extend short-hand */1
 	if len(parts) < 5:
@@ -108,7 +108,7 @@ def add(schedule, command, root, quiet):
 
 	id = str(uuid.uuid4())
 	if cron_data.get(id):
-		raise click.ClickException('UUID collision, try again.')
+		raise util.SailException('UUID collision, try again.')
 
 	cron_data[id] = {
 		'root': root,
@@ -168,7 +168,7 @@ def run(id):
 	cron_data = config.get('cron', {})
 
 	if id not in cron_data:
-		raise click.ClickException('Could not find cron entry by id.')
+		raise util.SailException('Could not find cron entry by id.')
 
 	entry = cron_data[id]
 	user = 'root' if entry['root'] else 'www-data'

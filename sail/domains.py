@@ -46,11 +46,11 @@ def make_primary(domain, force, skip_replace):
 	util.heading('Updating primary domain')
 
 	if domain not in [d['name'] for d in config['domains']]:
-		raise click.ClickException('Can not make primary, domain does not exist')
+		raise util.SailException('Can not make primary, domain does not exist')
 
 	domain = [d for d in config['domains'] if d['name'] == domain][0]
 	if domain['primary'] and not force:
-		raise click.ClickException('Domain %s already set as primary. Use --force to force' % domain['name'])
+		raise util.SailException('Domain %s already set as primary. Use --force to force' % domain['name'])
 
 	c = util.connection()
 	wp = 'sudo -u www-data wp --path=%s --skip-themes --skip-plugins ' % util.remote_path('/public/')
@@ -104,7 +104,7 @@ def make_https(domains, agree_tos):
 		click.confirm('Do you agree to the Let\'s Encrypt ToS?', abort=True)
 
 	if not domains:
-		raise click.ClickException('At least one domain is required')
+		raise util.SailException('At least one domain is required')
 
 	groups = []
 	domains, subdomains = _parse_domains(domains)
@@ -113,7 +113,7 @@ def make_https(domains, agree_tos):
 
 	for domain in domains + subdomains:
 		if domain.fqdn not in [d['name'] for d in config['domains']]:
-			raise click.ClickException('Domain %s does not exist, please add it first' % domain.fqdn)
+			raise util.SailException('Domain %s does not exist, please add it first' % domain.fqdn)
 
 	for domain in domains:
 		if domain.fqdn not in groups:
@@ -150,7 +150,7 @@ def make_https(domains, agree_tos):
 			c.run(util.join(args))
 		except Exception as e:
 			util.dlog(e)
-			raise click.ClickException('Could not obtain SSL certificate for %s. Use --debug for more info.' % group)
+			raise util.SailException('Could not obtain SSL certificate for %s. Use --debug for more info.' % group)
 
 		# Update .sail/config.json
 		for i, d in enumerate(config['domains']):
@@ -172,7 +172,7 @@ def add(domains, skip_dns):
 	config = util.config()
 
 	if not domains:
-		raise click.ClickException('At least one domain is required')
+		raise util.SailException('At least one domain is required')
 
 	domains, subdomains = _parse_domains(domains)
 
@@ -219,7 +219,7 @@ def add(domains, skip_dns):
 				existing.append(do_domain)
 				util.item('Creating DNS zone and record for %s' % domain.fqdn)
 			except:
-				raise click.ClickException('- Could not create DNS zone for %s' % domain.fqdn)
+				raise util.SailException('- Could not create DNS zone for %s' % domain.fqdn)
 
 			continue
 
@@ -285,7 +285,7 @@ def delete(domains, skip_dns, zone):
 	config = util.config()
 
 	if not domains:
-		raise click.ClickException('At least one domain is required')
+		raise util.SailException('At least one domain is required')
 
 	domains, subdomains = _parse_domains(domains)
 
@@ -446,11 +446,11 @@ def _parse_domains(input_domains):
 	for domain in input_domains:
 		ex = tldextract.extract(domain, include_psl_private_domains=True)
 		if not ex.domain or not ex.suffix:
-			raise click.ClickException('Bad domain: %s' % domain)
+			raise util.SailException('Bad domain: %s' % domain)
 
 		# No internal domains
 		if ex.domain in ['sailed', 'justsailed'] and ex.suffix == 'io':
-			raise click.ClickException('Bad domain: %s' % domain)
+			raise util.SailException('Bad domain: %s' % domain)
 
 		if ex.subdomain:
 			subdomains.append(ex)

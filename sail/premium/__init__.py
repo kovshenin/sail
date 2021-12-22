@@ -38,13 +38,13 @@ def enable(ctx, force, doing_init=False):
 	util.heading('Setting up Sail Premium')
 
 	if config.get('premium') and not force:
-		raise click.ClickException('Premium features have already been enabled for this application.')
+		raise util.SailException('Premium features have already been enabled for this application.')
 
 	if not license:
-		raise click.ClickException('Premium license key not found. Set one with: sail config premium LICENSE_KEY')
+		raise util.SailException('Premium license key not found. Set one with: sail config premium LICENSE_KEY')
 
 	if not email:
-		raise click.ClickException('Premium requires an e-mail configuration. Set one with: sail config email EMAIL_ADDRESS')
+		raise util.SailException('Premium requires an e-mail configuration. Set one with: sail config email EMAIL_ADDRESS')
 
 	util.item('Verifying license key')
 	response = util.request('/premium/check/', json={
@@ -53,7 +53,7 @@ def enable(ctx, force, doing_init=False):
 	})
 
 	if not response:
-		raise click.ClickException('Could not verify the premium license key.')
+		raise util.SailException('Could not verify the premium license key.')
 
 	util.item('Generating SSH keys')
 

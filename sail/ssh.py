@@ -30,13 +30,13 @@ def add(path, quiet=False):
 
 		r = requests.get(path)
 		if not r.ok:
-			raise click.ClickException('Could not fetch keys from GitHub')
+			raise util.SailException('Could not fetch keys from GitHub')
 
 		keys = r.text.strip().split('\n')
 	else:
 		path = pathlib.Path(path)
 		if not path.exists() or not path.is_file():
-			raise click.ClickException('Provided public key file does not exist')
+			raise util.SailException('Provided public key file does not exist')
 
 		with path.open('r') as f:
 			keys = [f.read().strip()]
@@ -47,7 +47,7 @@ def add(path, quiet=False):
 		items = _key.split()
 		if items[0] not in ['ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521'
 			'ssh-ed25519', 'ssh-dss', 'ssh-rsa']:
-			raise click.ClickException('Unsupported key type: %s' % items[0])
+			raise util.SailException('Unsupported key type: %s' % items[0])
 
 		type = items[0]
 		key = items[1]
@@ -58,7 +58,7 @@ def add(path, quiet=False):
 
 			size, fp, _ = r.stdout.split(maxsplit=2)
 		except:
-			raise click.ClickException('Provided public key is invalid')
+			raise util.SailException('Provided public key is invalid')
 
 		to_add[fp] = _key
 
@@ -142,10 +142,10 @@ def delete(hash):
 
 		_, sail_fp, _ = r.stdout.split(maxsplit=2)
 	except:
-		raise click.ClickException('Could not compute hash of local Sail key')
+		raise util.SailException('Could not compute hash of local Sail key')
 
 	if hash.lower() == sail_fp.lower():
-		raise click.ClickException('This looks like the Sail SSH key, will not delete')
+		raise util.SailException('This looks like the Sail SSH key, will not delete')
 
 	util.item('Fetching existing keys')
 	existing = _list(c)
@@ -155,7 +155,7 @@ def delete(hash):
 		if not index:
 			raise Exception()
 	except:
-		raise click.ClickException('Could not find key with this fingerprint')
+		raise util.SailException('Could not find key with this fingerprint')
 
 	fp = list(existing.keys())[index]
 	key = existing[fp]['key']

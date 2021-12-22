@@ -39,10 +39,10 @@ def import_cmd(path):
 
 	path = pathlib.Path(path).resolve()
 	if not path.exists():
-		raise click.ClickException('File does not exist')
+		raise util.SailException('File does not exist')
 
 	if not path.name.endswith('.sql') and not path.name.endswith('.sql.gz'):
-		raise click.ClickException('This does not look like a .sql or .sql.gz file')
+		raise util.SailException('This does not look like a .sql or .sql.gz file')
 
 	temp_name = '%s.%s' % (hashlib.sha256(os.urandom(32)).hexdigest()[:8], path.name)
 	is_gz = path.name.endswith('.sql.gz')
@@ -56,7 +56,7 @@ def import_cmd(path):
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred in rsync. Please try again.')
+		raise util.SailException('An error occurred in rsync. Please try again.')
 
 	# TODO: Maybe do an atomic import which deletes tables that no longer exist
 	# by doing a rename.
@@ -67,14 +67,14 @@ def import_cmd(path):
 	try:
 		c.run('%s %s/%s | mysql -uroot "wordpress_%s"' % (cat_bin, remote_path, temp_name, config['namespace']))
 	except:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	util.item('Cleaning up production')
 
 	try:
 		c.run('rm %s/%s' % (remote_path, temp_name))
 	except:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	util.success('Database imported')
 
@@ -100,7 +100,7 @@ def export(as_json):
 	try:
 		c.run('mysqldump --quick --single-transaction --default-character-set=utf8mb4 -uroot "wordpress_%s" | gzip -c9 > %s/%s' % (config['namespace'], remote_path, filename))
 	except:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	if not as_json:
 		util.item('Export completed, downloading')
@@ -111,7 +111,7 @@ def export(as_json):
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred in rsync. Please try again.')
+		raise util.SailException('An error occurred in rsync. Please try again.')
 
 	if not as_json:
 		util.item('Cleaning up production')
@@ -119,7 +119,7 @@ def export(as_json):
 	try:
 		c.run('rm %s/%s' % (remote_path, filename))
 	except:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	if not as_json:
 		util.success('Database export saved to .backups/%s' % filename)

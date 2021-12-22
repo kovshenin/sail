@@ -29,39 +29,39 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	root = util.find_root()
 
 	if root and os.path.exists(root + '/.sail'):
-		raise click.ClickException('This ship has already sailed. Pick another one or remove the .sail directory.')
+		raise util.SailException('This ship has already sailed. Pick another one or remove the .sail directory.')
 
 	files = os.listdir(path='.')
 	if files and not force:
-		raise click.ClickException('This project directory is not empty, can not init here. Override with --force, can destroy existing files.')
+		raise util.SailException('This project directory is not empty, can not init here. Override with --force, can destroy existing files.')
 
 	if namespace and not re.match(r'^[a-zA-Z0-9_.-]+$', namespace):
-		raise click.ClickException('Invalid namespace. Namespaces can be alpha-numeric and contain the following characters: _.-')
+		raise util.SailException('Invalid namespace. Namespaces can be alpha-numeric and contain the following characters: _.-')
 
 	namespace = namespace.lower()
 
 	if environment:
 		environment = pathlib.Path(environment) / '.sail'
 		if not environment.is_dir():
-			raise click.ClickException('Not a valid Sail environment: %s' % environment.resolve())
+			raise util.SailException('Not a valid Sail environment: %s' % environment.resolve())
 
 		if not (environment / 'config.json').is_file():
-			raise click.ClickException('Not a valid Sail environment: %s' % environment.resolve())
+			raise util.SailException('Not a valid Sail environment: %s' % environment.resolve())
 
 		if not (environment / 'ssh.key').is_file() or not (environment / 'ssh.key.pub').is_file():
-			raise click.ClickException('Could not read SSH keys from: %s' % environment.resolve())
+			raise util.SailException('Could not read SSH keys from: %s' % environment.resolve())
 
 		with (environment / 'config.json').open('r') as f:
 			env_config = json.load(f)
 
 		if packaging.version.parse(env_config.get('version')) < packaging.version.parse('0.10.0'):
-			raise click.ClickException('The target environment version is lower than the supported minimum. Please upgrade the environment first.')
+			raise util.SailException('The target environment version is lower than the supported minimum. Please upgrade the environment first.')
 
 		if env_config.get('namespace', 'default').lower() == namespace:
-			raise click.ClickException('The "%s" namespace is already in use in the target environment. Please use a different namespace.' % namespace)
+			raise util.SailException('The "%s" namespace is already in use in the target environment. Please use a different namespace.' % namespace)
 
 		if not env_config.get('provider_token'):
-			raise click.ClickException('Could not find a provider token in the target environment.')
+			raise util.SailException('Could not find a provider token in the target environment.')
 
 		# Force the same provider token
 		provider_token = env_config.get('provider_token')
@@ -70,24 +70,24 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 		provider_token = util.get_sail_default('provider-token')
 
 	if not provider_token:
-		raise click.ClickException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
+		raise util.SailException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
 
 	# Make sure the provider token works
 	try:
 		account = digitalocean.Account(token=provider_token)
 		account.load()
 		if account.status != 'active':
-			raise click.ClickException('This DigitalOcean account is not active.')
+			raise util.SailException('This DigitalOcean account is not active.')
 		if not account.email_verified:
-			raise click.ClickException('This DigitalOcean account e-mail is not verified.')
+			raise util.SailException('This DigitalOcean account e-mail is not verified.')
 	except:
-		raise click.ClickException('Invalid prodiver token.')
+		raise util.SailException('Invalid prodiver token.')
 
 	if not email:
 		email = util.get_sail_default('email')
 
 	if not email:
-		raise click.ClickException('You need to provide an admin e-mail address with --email, or set a default one with: sail config email <e-mail>')
+		raise util.SailException('You need to provide an admin e-mail address with --email, or set a default one with: sail config email <e-mail>')
 
 	util.heading('Initializing')
 
@@ -229,19 +229,19 @@ def _copy_environment(environment):
 		c.run('hostname')
 	except Exception as e:
 		raise e
-		raise click.ClickException('Could not connect via SSH. Make sure the environment is healthy.')
+		raise util.SailException('Could not connect via SSH. Make sure the environment is healthy.')
 
 	try:
 		remote_config = json.loads(c.run('cat /etc/sail/config.json').stdout)
 	except:
-		raise click.ClickException('Could not read /etc/sail/config.json')
+		raise util.SailException('Could not read /etc/sail/config.json')
 
 	if not remote_config.get('namespaces'):
-		raise click.ClickException('Could not find any namespaces data in the remote config. This environment looks broken.')
+		raise util.SailException('Could not find any namespaces data in the remote config. This environment looks broken.')
 
 	# Make sure our new namespace is unique
 	if config['namespace'] in remote_config['namespaces']:
-		raise click.ClickException('The "%s" namespace already exists in this environment.' % config['namespace'])
+		raise util.SailException('The "%s" namespace already exists in this environment.' % config['namespace'])
 
 	remote_config['namespaces'].append(config['namespace'])
 	c.put(io.StringIO(json.dumps(remote_config)), '/etc/sail/config.json')
@@ -292,7 +292,7 @@ def _provision(provider_token, size, region):
 		key.load()
 	except Exception as e:
 		print(e)
-		raise click.ClickException('Could not upload SSH key. Make sure token is RW.')
+		raise util.SailException('Could not upload SSH key. Make sure token is RW.')
 
 	click.echo('- Creating a new Droplet')
 
@@ -314,7 +314,7 @@ def _provision(provider_token, size, region):
 	try:
 		droplet.create()
 	except Exception as e:
-		raise click.ClickException('Cloud not create new droplet. Please try again later.')
+		raise util.SailException('Cloud not create new droplet. Please try again later.')
 
 	click.echo('- Waiting for Droplet to boot')
 
@@ -534,7 +534,7 @@ def destroy(yes, environment, skip_dns):
 	if len(namespaces) < 1 or namespaces == [config['namespace']]:
 		environment = True
 	elif not environment and config['namespace'] == 'default':
-		raise click.ClickException('You asked to destroy the default namespace, but other namespaces exist in this environment. Use --environment to destroy the entire environment.')
+		raise util.SailException('You asked to destroy the default namespace, but other namespaces exist in this environment. Use --environment to destroy the entire environment.')
 
 	try:
 		util.item('Releasing .justsailed.io subdomain')
@@ -617,7 +617,7 @@ def sizes(provider_token):
 		provider_token = util.get_sail_default('provider-token')
 
 	if not provider_token:
-		raise click.ClickException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
+		raise util.SailException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
 
 	click.echo('# Getting available droplet sizes')
 
@@ -648,7 +648,7 @@ def regions(provider_token):
 		provider_token = util.get_sail_default('provider-token')
 
 	if not provider_token:
-		raise click.ClickException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
+		raise util.SailException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
 
 	click.echo('# Getting available regions')
 

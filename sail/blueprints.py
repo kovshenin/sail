@@ -42,10 +42,10 @@ def blueprint(path):
 		path = pathlib.Path(__file__).parent / 'blueprints' / path.name
 
 	if not path.exists():
-		raise click.ClickException('File does not exist')
+		raise util.SailException('File does not exist')
 
 	if not path.name.endswith('.yml') and not path.name.endswith('.yaml'):
-		raise click.ClickException('Blueprint files must be .yml or .yaml')
+		raise util.SailException('Blueprint files must be .yml or .yaml')
 
 	with path.open() as f:
 		s = f.read()
@@ -89,7 +89,7 @@ def blueprint(path):
 			try:
 				value = _type(value)
 			except ValueError:
-				raise click.ClickException('Could not convert %s to %s' % (repr(value), repr(_type)))
+				raise util.SailException('Could not convert %s to %s' % (repr(value), repr(_type)))
 
 		vars[var['name']] = value
 
@@ -104,20 +104,20 @@ def blueprint(path):
 			try:
 				_bp_install_wp_products(section, data)
 			except invoke.exceptions.UnexpectedExit as e:
-				raise click.ClickException(e.result.stderr)
+				raise util.SailException(e.result.stderr)
 
 		elif section == 'options':
 			try:
 				_bp_update_options(data)
 			except invoke.exceptions.UnexpectedExit as e:
-				raise click.ClickException(e.result.stderr)
+				raise util.SailException(e.result.stderr)
 			continue
 
 		elif section == 'define':
 			try:
 				_bp_define_constants(data)
 			except invoke.exceptions.UnexpectedExit as e:
-				raise click.ClickException(e.result.stderr)
+				raise util.SailException(e.result.stderr)
 
 		elif section == 'fail2ban':
 			_bp_fail2ban(data)
@@ -158,9 +158,9 @@ def _bp_apt(items):
 			err = e.result.stderr
 			err = err.replace('WARNING: apt does not have a stable CLI interface. Use with caution in scripts.', '')
 			err = err.strip()
-			raise click.ClickException('Error: %s' % err)
+			raise util.SailException('Error: %s' % err)
 		except invoke.exceptions.CommandTimedOut as e:
-			raise click.ClickException('Timeout')
+			raise util.SailException('Timeout')
 
 def _bp_dns(records):
 	config = util.config()
@@ -176,7 +176,7 @@ def _bp_dns(records):
 	# Make sure all domains exist
 	for domain, records in domains.items():
 		if domain not in [d['name'] for d in config['domains']]:
-			raise click.ClickException('This domain does not exist. To add use: sail domain add')
+			raise util.SailException('This domain does not exist. To add use: sail domain add')
 
 	for domain, records in domains.items():
 		do_domain = digitalocean.Domain(token=config['provider_token'], name=domain)
@@ -213,7 +213,7 @@ def _bp_dns(records):
 						data=record['value']
 					)
 			except Exception as e:
-				raise click.ClickException(str(e))
+				raise util.SailException(str(e))
 
 def _bp_postfix(data):
 	config = util.config()
@@ -222,11 +222,11 @@ def _bp_postfix(data):
 
 	mode = data.get('mode')
 	if mode != 'relay':
-		raise click.ClickException('Unsupported mode')
+		raise util.SailException('Unsupported mode')
 
 	relay_host = data.get('host')
 	if not relay_host:
-		raise click.ClickException('Invalid relay host')
+		raise util.SailException('Invalid relay host')
 
 	wait = 'while fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/{lock,lock-frontend} >/dev/null 2>&1; do sleep 1; done && '
 	status = c.run('dpkg -s postfix', warn=True)
@@ -325,7 +325,7 @@ def _bp_define_constants(constants):
 
 	for name, value in constants.items():
 		if type(value) not in [str, float, int, bool]:
-			raise click.ClickException('Invalid data type for %s' % name)
+			raise util.SailException('Invalid data type for %s' % name)
 
 		raw = []
 
@@ -364,7 +364,7 @@ def _bp_update_options(options):
 			option_value = data
 
 		if not delete and type(option_value) not in [str, int, float]:
-			raise click.ClickException('Invalid value type for %s' % option_name)
+			raise util.SailException('Invalid value type for %s' % option_name)
 
 		if type(option_value) is str:
 			option_value = option_value.strip('\n')
@@ -394,12 +394,12 @@ def _bp_install_wp_products(what, products):
 
 		if type(data) == dict:
 			if not data.get('url'):
-				raise click.ClickException('Could not find %s: %s' % (what[:-1], slug))
+				raise util.SailException('Could not find %s: %s' % (what[:-1], slug))
 
 			custom[slug] = data
 			continue
 
-		raise click.ClickException('Unknown %s specification: %s' % (what[:-1], slug))
+		raise util.SailException('Unknown %s specification: %s' % (what[:-1], slug))
 
 	if not wporg and not custom:
 		return

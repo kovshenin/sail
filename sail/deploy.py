@@ -26,7 +26,7 @@ def _get_extend_filters(paths, prefix=None):
 		try:
 			relative = _entry.resolve().relative_to(root)
 		except ValueError:
-			raise click.ClickException('Could not resolve path: %s' % entry)
+			raise util.SailException('Could not resolve path: %s' % entry)
 
 		if prefix:
 			try:
@@ -148,7 +148,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 	)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred during upload. Please try again.')
+		raise util.SailException('An error occurred during upload. Please try again.')
 
 	if with_uploads:
 		util.item('Uploading wp-content/uploads')
@@ -163,7 +163,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 		)
 
 		if returncode != 0:
-			raise click.ClickException('An error occurred during upload. Please try again.')
+			raise util.SailException('An error occurred during upload. Please try again.')
 
 	util.item('Deploying release: %s' % release)
 
@@ -211,7 +211,7 @@ def rollback(release=None, releases=False):
 		_releases = re.findall('\d+', _releases.stdout)
 
 		if len(_releases) < 1:
-			raise click.ClickException('Could not find any releases')
+			raise util.SailException('Could not find any releases')
 
 		try:
 			util.item('Determining current release')
@@ -238,7 +238,7 @@ def rollback(release=None, releases=False):
 	util.item('Fetching releases')
 	_releases = c.run('ls %s/releases' % remote_path).stdout.strip().split('\n')
 	if release not in _releases:
-		raise click.ClickException('Invalid release. To get a list run: sail rollback --releases')
+		raise util.SailException('Invalid release. To get a list run: sail rollback --releases')
 
 	util.item('Updating symlinks')
 	c.run('ln -sfn %s/releases/%s %s/public' % (remote_path, release, remote_path))
@@ -283,7 +283,7 @@ def download(ctx, path, yes, with_uploads, delete, dry_run, doing_init=False):
 	)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred during download. Please try again.')
+		raise util.SailException('An error occurred during download. Please try again.')
 
 	if with_uploads:
 		util.item('Downloading wp-content/uploads')
@@ -298,7 +298,7 @@ def download(ctx, path, yes, with_uploads, delete, dry_run, doing_init=False):
 		)
 
 		if returncode != 0:
-			raise click.ClickException('An error occurred during download. Please try again.')
+			raise util.SailException('An error occurred during download. Please try again.')
 
 	util.item('All download tasks completed')
 
@@ -357,13 +357,13 @@ def _diff(source, destination, extend_filters=[]):
 	root = util.find_root()
 
 	if source == destination:
-		raise click.ClickException('Can not compare apples to apples')
+		raise util.SailException('Can not compare apples to apples')
 
 	args = ['-rlci', '--delete', '--dry-run']
 	returncode, stdout, stderr = util.rsync(args, source, destination, extend_filters=extend_filters)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred in rsync. Please try again.')
+		raise util.SailException('An error occurred in rsync. Please try again.')
 
 	files = {
 		'created': [],

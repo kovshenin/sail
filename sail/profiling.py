@@ -50,14 +50,14 @@ def open(path):
 	'''Open the profile browser with the specified JSON file'''
 	path = pathlib.Path(path)
 	if not path.exists() or not path.is_file():
-		raise click.ClickException('The profile file is invalid or does not exist')
+		raise util.SailException('The profile file is invalid or does not exist')
 
 	with path.open('r') as f:
 		try:
 			profile_data = json.load(f)
 			xhprof_data = profile_data['xhprof']
 		except:
-			raise click.ClickException('This profile file is invalid, invalid or incomplete JSON')
+			raise util.SailException('This profile file is invalid, invalid or incomplete JSON')
 
 	del profile_data['xhprof']
 
@@ -134,7 +134,7 @@ def run(ctx, url):
 	config = util.config()
 
 	if 'profile_key' not in config:
-		raise click.ClickException('Profile key not found in .sail/config.json')
+		raise util.SailException('Profile key not found in .sail/config.json')
 
 	url = urlparse(url)
 	host = config['hostname']
@@ -161,10 +161,10 @@ def run(ctx, url):
 	try:
 		response = session.send(request, allow_redirects=False)
 	except:
-		raise click.ClickException('Could not make profiling request.')
+		raise util.SailException('Could not make profiling request.')
 
 	if 'X-Sail-Profile' not in response.headers:
-		raise click.ClickException('X-Sail-Profile header not found in response. Check your profile key.')
+		raise util.SailException('X-Sail-Profile header not found in response. Check your profile key.')
 
 	filename = response.headers['X-Sail-Profile']
 	profile_path = ctx.invoke(download, path=filename)
@@ -178,7 +178,7 @@ def key(header):
 	config = util.config()
 
 	if 'profile_key' not in config:
-		raise click.ClickException('Profile key not found in .sail/config.json')
+		raise util.SailException('Profile key not found in .sail/config.json')
 
 	if header:
 		click.echo('X-Sail-Profile: %s' % config['profile_key'], nl=False)
@@ -195,7 +195,7 @@ def curl(ctx, command):
 	config = util.config()
 
 	if 'profile_key' not in config:
-		raise click.ClickException('Profile key not found in .sail/config.json')
+		raise util.SailException('Profile key not found in .sail/config.json')
 
 	command = list(command)
 	command = ['-s', '-v', '-H', 'X-Sail-Profile: %s' % config['profile_key']] + command
@@ -209,11 +209,11 @@ def curl(ctx, command):
 	stdout, stderr = p.communicate()
 
 	if p.returncode != 0:
-		raise click.ClickException('An error occurred in cURL. Please try again.')
+		raise util.SailException('An error occurred in cURL. Please try again.')
 
 	matches = re.search(r'^<\s*X-Sail-Profile: (.+)$', stderr, re.MULTILINE)
 	if not matches:
-		raise click.ClickException('Could not find profile filename from headers')
+		raise util.SailException('Could not find profile filename from headers')
 
 	filename = matches.group(1)
 	profile_path = ctx.invoke(download, path=filename)
@@ -232,7 +232,7 @@ def download(ctx, path):
 		util.heading('Downloading profile')
 
 	if 'profile_key' not in config:
-		raise click.ClickException('Profile key not found in .sail/config.json')
+		raise util.SailException('Profile key not found in .sail/config.json')
 
 	profiles_dir = pathlib.Path(root + '/.profiles')
 	profiles_dir.mkdir(parents=True, exist_ok=True)
@@ -246,7 +246,7 @@ def download(ctx, path):
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
-		raise click.ClickException('An error occurred in rsync. Please try again.')
+		raise util.SailException('An error occurred in rsync. Please try again.')
 
 	util.item('Cleaning up production')
 
@@ -263,7 +263,7 @@ def download(ctx, path):
 		util.loader()
 
 	if p.returncode != 0:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	util.item('Profile saved to .profiles/%s' % dest_filename)
 	click.echo()
@@ -295,7 +295,7 @@ def clean():
 		pass
 
 	if p.returncode != 0:
-		raise click.ClickException('An error occurred in SSH. Please try again.')
+		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	util.success('Cleanup complete')
 

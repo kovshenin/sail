@@ -64,7 +64,7 @@ def create(ctx, local, description):
 	config = util.config()
 
 	if local and description:
-		raise click.ClickException('Descriptions are only supported for remote backups.')
+		raise util.SailException('Descriptions are only supported for remote backups.')
 
 	# Invoke the local backup command if asked for --local
 	if local:
@@ -89,7 +89,7 @@ def create(ctx, local, description):
 def list_cmd():
 	'''List available managed backups'''
 	if not util.premium():
-		raise click.ClickException('Premium features are not enabled for this application. Learn more: https://sailed.io/premium/')
+		raise util.SailException('Premium features are not enabled for this application. Learn more: https://sailed.io/premium/')
 
 	backups = util.request('/premium/backups/list/')
 
