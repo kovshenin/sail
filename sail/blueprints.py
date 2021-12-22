@@ -13,7 +13,7 @@ import invoke
 
 @click.argument('path', nargs=-1, required=True)
 @cli.command(context_settings=dict(ignore_unknown_options=True))
-def blueprint(path):
+def blueprint(path, doing_init=False):
 	'''Run a blueprint file against your application'''
 	config = util.config()
 
@@ -131,7 +131,9 @@ def blueprint(path):
 		elif section == 'apt':
 			_bp_apt(data)
 
-	util.success('Blueprint applied successfully')
+	# Don't show success during provision
+	if not doing_init:
+		util.success('Blueprint applied successfully')
 
 def _bp_apt(items):
 	c = util.connection()

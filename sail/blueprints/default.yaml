@@ -1,0 +1,19 @@
+---
+version: 1
+
+# Install plugins from the WordPress.org repo or custom sources.
+# All plugins will be activated after all of them are installed.
+plugins:
+  surge: latest
+
+# Configure and launch a fail2ban service on this server. Several jails are
+# available by default:
+# - wordpress-auth: ban failed login attempts
+# - wordpress-auth-long: longer-term ban for really persistent bots
+# - wordpress-pingback: protect against wp.pingback attacks
+# - sshd: ban failed ssh attempts
+fail2ban:
+  wordpress-auth
+  wordpress-auth-long
+  wordpress-pingback
+  sshd

@@ -61,6 +61,10 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('The ship has sailed!', result.output)
 
+		# Default bp applied.
+		self.assertIn('Applying blueprint: default.yaml', result.output)
+		self.assertNotIn('Could not apply blueprint', result.output)
+
 	def test_002_wp_home(self):
 		result = self.runner.invoke(cli, ['wp', 'option', 'get', 'home'])
 		self.assertEqual(result.exit_code, 0)
@@ -409,12 +413,7 @@ class TestEnd2End(unittest.TestCase):
 
 	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_012_blueprint_fail2ban(self):
-		result = self.runner.invoke(cli, ['blueprint', 'test_fail2ban.yaml'])
-		self.assertEqual(result.exit_code, 0)
-		self.assertIn('Installing fail2ban', result.output)
-		self.assertIn('Configuring fail2ban rules', result.output)
-
-		# Running again should not install.
+		# Fail2ban should be already installed via default.yaml
 		result = self.runner.invoke(cli, ['blueprint', 'test_fail2ban.yaml'])
 		self.assertEqual(result.exit_code, 0)
 		self.assertNotIn('Installing fail2ban', result.output)
