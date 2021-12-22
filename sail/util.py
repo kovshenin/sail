@@ -329,11 +329,28 @@ def sizeof_fmt(num, suffix="B"):
 		num /= 1024.0
 	return f'{num:.1f}Yi{suffix}'
 
-def label(label, width, fg='green'):
-	return click.style(label.rjust(width), fg=fg)
+## Formatting:
 
-def success(message):
+label_w = 0
+def label_width(width):
+	global label_w
+	label_w = width
+
+def label(label, fg='green'):
+	global label_w
+	return click.style(label.rjust(label_w), fg=fg)
+
+def success(message, padding=True):
+	if padding: click.echo()
 	click.echo(click.style('Success: ', fg='green') + message)
+	if padding: click.echo()
 
 def failure(message):
 	click.echo(click.style('Error: ', fg='red') + message)
+
+def heading(message, padding=True):
+	if padding: click.echo()
+	click.echo(message)
+
+def item(message):
+	click.secho('  ' + message, fg='bright_black')

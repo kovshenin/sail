@@ -89,7 +89,7 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	if not email:
 		raise click.ClickException('You need to provide an admin e-mail address with --email, or set a default one with: sail config email <e-mail>')
 
-	click.echo('# Initializing')
+	util.heading('Initializing')
 
 	response = util.request('/init/', json={
 		'email': email,
@@ -100,12 +100,12 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	secret = response['secret']
 	hostname = response['hostname']
 
-	click.echo('- Claimed application id: %s' % app_id)
+	util.item('Claimed application id: %s' % app_id)
 
 	os.mkdir('.sail')
 	root = util.find_root()
 
-	click.echo('- Writing .sail/config.json')
+	util.item('Writing .sail/config.json')
 	config = {
 		'app_id': app_id,
 		'secret': secret,
@@ -142,10 +142,10 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	_install(passwords)
 
 	# Add the default WP cron schedule.
-	ctx.invoke(cron.add, schedule='*/5', command=('wp cron event run --due-now',))
+	ctx.invoke(cron.add, schedule='*/5', command=('wp cron event run --due-now',), quiet=True)
 
 	# Download files from production
-	ctx.invoke(deploy.download, yes=True)
+	ctx.invoke(deploy.download, yes=True, doing_init=True)
 
 	# Create a local empty wp-contents/upload directory
 	content_dir = '%s/wp-content/uploads' % root
@@ -159,48 +159,70 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	premium_email = util.get_sail_default('email')
 	if premium_license and premium_email:
 		try:
-			ctx.invoke(sail.premium.enable)
+			ctx.invoke(sail.premium.enable, doing_init=True)
 		except:
-			click.echo('Warning: could not initialize Sail Premium. Please contact support.')
+			util.item('Could not initialize Premium')
+
+	util.heading('Initialization successful')
+	util.item('The ship has sailed!')
+	click.echo()
+
+	util.label_width(10)
+
+	label = util.label('URL:')
+	click.echo(f'{label} {primary_url}')
+
+	label = util.label('Login:')
+	click.echo(f'{label} {primary_url}/wp-login.php')
+
+	label = util.label('Username:')
+	click.echo(f'{label} {email}')
+
+	label = util.label('Password:')
+	password = passwords['wp']
+	click.echo(f'{label} {password}')
 
 	click.echo()
-	click.echo('# Success. The ship has sailed!')
+
+	label = util.label('SSH Host:')
+	hostname = config['hostname']
+	click.echo(f'{label} {hostname}')
+
+	label = util.label('SSH Port:')
+	click.echo(f'{label} 22')
+
+	label = util.label('Username:')
+	click.echo(f'{label} root')
+
+	label = util.label('SSH Key:')
+	click.echo(f'{label} .sail/ssh.key')
+
+	label = util.label('App root:')
+	app_root = util.remote_path()
+	click.echo(f'{label} {app_root}')
 
 	click.echo()
-	click.echo('- URL: %s' % primary_url)
-	click.echo('- Login: %s/wp-login.php' % primary_url)
-	click.echo('- Username: %s' % email)
-	click.echo('- Password: %s (change me!)' % passwords['wp'])
-
-	click.echo()
-	click.echo('- SSH/SFTP Access Details')
-	click.echo('- Host: %s' % config['hostname'])
-	click.echo('- Port: 22')
-	click.echo('- Username: root')
-	click.echo('- SSH Key: .sail/ssh.key')
-	click.echo('- App root: %s' % util.remote_path())
-	click.echo('- To open an interactive shell run: sail ssh')
-
-	click.echo()
+	click.echo('To open an interactive shell run: sail ssh')
 	click.echo('For support and documentation visit sailed.io')
+	click.echo()
 
 def _copy_environment(environment):
 	root = util.find_root()
 	config = util.config()
 
-	click.echo('- Copying environment')
+	util.item('Copying environment')
 
 	shutil.copy(environment / 'ssh.key', '%s/.sail/ssh.key' % root)
 	os.chmod('%s/.sail/ssh.key' % root, 0o600)
 	shutil.copy(environment / 'ssh.key.pub', '%s/.sail/ssh.key.pub' % root)
 	os.chmod('%s/.sail/ssh.key.pub' % root, 0o644)
 
-	click.echo('- Requesting DNS record')
+	util.item('Requesting DNS record')
 	response = util.request('/ip/', json={
 		'ip': config['ip'],
 	})
 
-	click.echo('- Checking SSH connection')
+	util.item('Checking SSH connection')
 	c = util.connection()
 
 	try:
@@ -224,7 +246,7 @@ def _copy_environment(environment):
 	remote_config['namespaces'].append(config['namespace'])
 	c.put(io.StringIO(json.dumps(remote_config)), '/etc/sail/config.json')
 
-	click.echo('- Writing server keys to .sail/known_hosts')
+	util.item('Writing server keys to .sail/known_hosts')
 	with open('%s/.sail/known_hosts' % root, 'w+') as f:
 		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', config['ip'],
 			config['hostname']], stdout=f, stderr=subprocess.DEVNULL)
@@ -398,7 +420,7 @@ def _install(passwords):
 	c = util.connection()
 
 	# Request an SSL cert
-	click.echo('- Requesting SSL certificate')
+	util.item('Requesting SSL certificate')
 
 	retry = 3
 	https = False
@@ -410,10 +432,10 @@ def _install(passwords):
 			break
 		except:
 			if retry:
-				click.echo('- Certbot failed, retrying')
+				util.item('Certbot failed, retrying')
 				time.sleep(10)
 			else:
-				click.echo('- Certbot failed, skipping SSL')
+				util.item('Certbot failed, skipping SSL')
 
 	# Update the domains config.
 	config['domains'].append({
@@ -425,6 +447,7 @@ def _install(passwords):
 	util.update_config(config)
 
 	# Update nginx configs with cert data.
+	util.item('Generating nginx configuration')
 	domains._update_nginx_config()
 
 	# Prepare release directories
@@ -435,13 +458,13 @@ def _install(passwords):
 	c.run('chown -R www-data. %s' % remote_path)
 
 	# Create a MySQL database
-	click.echo('- Setting up the MySQL database')
+	util.item('Setting up the MySQL database')
 
 	c.run('mysql -e "CREATE DATABASE \\`wordpress_%s\\`;"' % config['namespace'])
 	c.run('mysql -e "CREATE USER \\`wordpress_%s\\`@localhost IDENTIFIED BY \'%s\'"' % (config['namespace'], passwords['mysql']))
 	c.run('mysql -e "GRANT ALL PRIVILEGES ON \\`wordpress_%s\\`.* TO \\`wordpress_%s\\`@localhost;"' % (config['namespace'], config['namespace']))
 
-	click.echo('- Downloading and installing WordPress')
+	util.item('Downloading and installing WordPress')
 	wp = 'sudo -u www-data wp --path=%s/releases/1337 ' % remote_path
 
 	c.run(wp + 'core download')
@@ -475,7 +498,7 @@ def _install(passwords):
 	]))
 
 	# Do da deploy.
-	click.echo('- Cleaning up')
+	util.item('Cleaning up')
 	c.run('rm -rf %s/public' % remote_path)
 	c.run('ln -sfn %s/releases/1337 %s/public' % (remote_path, remote_path))
 	c.run('rm -rf %s/public/wp-content/uploads && ln -sfn %s/uploads %s/public/wp-content/uploads' % (
@@ -497,7 +520,7 @@ def destroy(yes, environment, skip_dns):
 	if not yes:
 		click.confirm('All application data will be scrubbed and irretrievable. Are you sure?', abort=True)
 
-	click.echo('# Destroying application')
+	util.heading('Destroying application')
 
 	namespaces = []
 	try:
@@ -514,22 +537,28 @@ def destroy(yes, environment, skip_dns):
 		raise click.ClickException('You asked to destroy the default namespace, but other namespaces exist in this environment. Use --environment to destroy the entire environment.')
 
 	try:
+		util.item('Releasing .justsailed.io subdomain')
 		data = util.request('/destroy/', method='DELETE')
 	except:
 		pass
 
 	if not skip_dns:
+		util.item('Removing DNS records')
 		_domains = [d['name'] for d in config.get('domains', []) if not d['internal']]
 		_domains, _subdomains = domains._parse_domains(_domains)
 		domains._delete_dns_records(_domains, _subdomains)
 
 	if environment:
+		util.item('Destroying environment')
 		_destroy_environment()
 	else:
+		util.item('Destroying namespace')
 		_destroy_namespace()
 
-	click.echo('- Removing .sail/*')
+	util.item('Removing .sail/*')
 	shutil.rmtree(root + '/.sail')
+
+	util.success('Destroyed successfully')
 
 def _destroy_namespace():
 	config = util.config()
@@ -559,9 +588,9 @@ def _destroy_environment():
 			id=config['droplet_id']
 		)
 		droplet.destroy()
-		click.echo('- Droplet destroyed successfully')
+		util.item('Droplet destroyed successfully')
 	except Exception as e:
-		click.echo('- Error destroying droplet')
+		util.item('Error destroying droplet')
 
 	try:
 		key = digitalocean.SSHKey(
@@ -569,9 +598,9 @@ def _destroy_environment():
 			id=config['key_id']
 		)
 		key.destroy()
-		click.echo('- SSH key destroyed successfully')
+		util.item('SSH key destroyed successfully')
 	except:
-		click.echo('- Error destroying SSH key')
+		util.item('Error destroying SSH key')
 
 @cli.command()
 @click.option('--provider-token', help='Your DigitalOcean API token, must be read-write. You can set a default token with: sail config provider-token <token>')

@@ -24,12 +24,24 @@ def list(as_json):
 		click.echo('No cron entries found')
 		return
 
-	click.echo('# System Cron Entries')
+	util.label_width(10)
+
+	click.echo()
 	for id, entry in cron_data.items():
-		click.echo('- id: %s' % id)
-		click.echo('  user: %s' % ('www-data' if not entry['root'] else 'root'))
-		click.echo('  schedule: %s' % entry['schedule'])
-		click.echo('  command: %s' % entry['command'])
+		label = util.label('Id:')
+		click.echo(f'{label} {id}')
+
+		label = util.label('User:')
+		user = ('www-data' if not entry['root'] else 'root')
+		click.echo(f'{label} {user}')
+
+		label = util.label('Schedule:')
+		schedule = entry['schedule']
+		click.echo(f'{label} {schedule}')
+
+		label = util.label('Command:')
+		command = entry['command']
+		click.echo(f'{label} {command}')
 		click.echo()
 
 @cron.command()
@@ -47,17 +59,21 @@ def delete(id):
 	del cron_data[id]
 	config['cron'] = cron_data
 
-	click.echo('- Updating .sail/config.json')
+	util.heading('Deleting cron job')
+	util.item('Updating .sail/config.json')
 	util.update_config(config)
 
-	click.echo('- Generating /etc/cron.d/sail-%s' % config['namespace'])
+	util.item('Generating /etc/cron.d/sail-%s' % config['namespace'])
 	_generate_cron()
+
+	util.success('Cron job delete successfully')
 
 @cron.command()
 @click.argument('schedule', nargs=1)
 @click.argument('command', nargs=-1)
 @click.option('--root', is_flag=True, help='Run command as root')
-def add(schedule, command, root):
+@click.option('--quiet', '-q', is_flag=True, help='Suppress output')
+def add(schedule, command, root, quiet):
 	'''Add a new system cron job'''
 	config = util.config()
 	c = util.connection()
@@ -101,11 +117,20 @@ def add(schedule, command, root):
 	}
 
 	config['cron'] = cron_data
-	click.echo('- Updating .sail/config.json')
+
+	if not quiet:
+		util.heading('Adding a cron job')
+		util.item('Updating .sail/config.json')
+
 	util.update_config(config)
 
-	click.echo('- Generating /etc/cron.d/sail-%s' % config['namespace'])
+	if not quiet:
+		util.item('Generating /etc/cron.d/sail-%s' % config['namespace'])
+
 	_generate_cron()
+
+	if not quiet:
+		util.success('Cron job added successfully')
 
 def _generate_cron():
 	config = util.config()

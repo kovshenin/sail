@@ -21,9 +21,13 @@ def key():
 @click.argument('path', nargs=1)
 def add(path, quiet=False):
 	'''Add an SSH key to the production server by filename or GitHub URL'''
+	if not quiet: util.heading('Adding SSH keys')
+
 	c = util.connection()
 
 	if path.startswith('https://github.com/'):
+		if not quiet: util.item('Fetching keys from GitHub')
+
 		r = requests.get(path)
 		if not r.ok:
 			raise click.ClickException('Could not fetch keys from GitHub')
@@ -60,15 +64,15 @@ def add(path, quiet=False):
 
 	existing = _list(c)
 
-	if not quiet: click.echo('# Adding SSH keys:')
-
 	for fingerprint, key in to_add.items():
 		if fingerprint in existing:
-			if not quiet: click.echo('- Skipped %s (already exists)' % fingerprint)
+			if not quiet: util.item('Skipped %s (already exists)' % fingerprint)
 			continue
 
-		if not quiet: click.echo('- Added %s' % fingerprint)
+		if not quiet: util.item('Added %s' % fingerprint)
 		c.run(util.join(['echo', key]) + ' >> /root/.ssh/authorized_keys', hide=True)
+
+	if not quiet: util.success('Done')
 
 def _list(c):
 	keys = io.BytesIO()
@@ -103,6 +107,10 @@ def _list(c):
 @click.option('--json', 'as_json', is_flag=True, help='Output in JSON format')
 def listcmd(as_json):
 	'''List currently authorized SSH keys on the production server'''
+	if not as_json:
+		util.heading('Listing SSH keys')
+		util.item('Gathering remote SSH keys')
+
 	c = util.connection()
 	data = _list(c)
 
@@ -110,9 +118,11 @@ def listcmd(as_json):
 		click.echo(json.dumps(data.keys()))
 		return
 
-	click.echo('# SSH Keys:')
+	click.echo()
 	for fingerprint, key in data.items():
-		click.echo('- ' + fingerprint)
+		click.echo('  ' + fingerprint)
+
+	click.echo()
 
 @key.command()
 @click.argument('hash', nargs=1)
@@ -121,6 +131,9 @@ def delete(hash):
 	root = util.find_root()
 	with open('%s/.sail/ssh.key.pub' % root, 'r') as f:
 		sail_pub_key = f.read()
+
+	util.heading('Deleting SSH key')
+	util.item('Computing key hash')
 
 	c = util.connection()
 	try:
@@ -134,10 +147,14 @@ def delete(hash):
 	if hash.lower() == sail_fp.lower():
 		raise click.ClickException('This looks like the Sail SSH key, will not delete')
 
+	util.item('Fetching existing keys')
 	existing = _list(c)
-	index = [k.lower() for k in existing.keys()].index(hash.lower())
 
-	if not index:
+	try:
+		index = [k.lower() for k in existing.keys()].index(hash.lower())
+		if not index:
+			raise Exception()
+	except:
 		raise click.ClickException('Could not find key with this fingerprint')
 
 	fp = list(existing.keys())[index]
@@ -145,7 +162,8 @@ def delete(hash):
 
 	regex = key.replace('/', '\/')
 	c.run(util.join(['sed', '-i', '/^%s/d' % regex, '/root/.ssh/authorized_keys']), hide=True)
-	click.echo('Removed SSH key %s' % fp)
+
+	util.success('Removed key: %s' % fp)
 
 @ssh.command()
 @click.option('--root', is_flag=True, help='Login as the root user')

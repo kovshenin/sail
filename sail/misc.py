@@ -136,12 +136,33 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 	)
 
 @cli.command('info')
-def info():
+@click.option('--json', 'as_json', is_flag=True, help='Output as a JSON string')
+def info(as_json):
 	'''Show current sail information'''
 	config = util.config()
 
-	click.echo('App ID: %(app_id)s' % config)
-	click.echo('Namespace: %(namespace)s' % config)
-	click.echo('Hostname: %(hostname)s' % config)
-	click.echo('IP: %(ip)s' % config)
-	click.echo('Version: %(version)s' % config)
+	util.label_width(12)
+
+	labels = {
+		'app_id': 'App ID',
+		'namespace': 'Namespace',
+		'hostname': 'Hostname',
+		'ip': 'IP Address',
+		'version': 'Version',
+	}
+
+	if as_json:
+		data = {}
+		for key in labels:
+			data[key] = config[key]
+
+		return click.echo(json.dumps(data))
+
+	click.echo()
+
+	for key, label in labels.items():
+		label = util.label(f'{label}:')
+		value = config[key]
+		click.echo(f'{label} {value}')
+
+	click.echo()

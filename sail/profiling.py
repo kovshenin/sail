@@ -144,10 +144,10 @@ def run(ctx, url):
 	query = '?' + query
 	url_path = url.path if url.path else '/'
 
-	click.echo('# Profiling')
-	click.echo('- Server: %s' % host)
-	click.echo('- Host: %s' % url.netloc)
-	click.echo('- Request: GET %s%s' % (url_path, query))
+	util.heading('Profiling')
+	util.item('Server: %s' % host)
+	util.item('Host: %s' % url.netloc)
+	util.item('Request: GET %s%s' % (url_path, query))
 
 	headers = {
 		'Host': url.netloc,
@@ -199,7 +199,8 @@ def curl(ctx, command):
 
 	command = list(command)
 	command = ['-s', '-v', '-H', 'X-Sail-Profile: %s' % config['profile_key']] + command
-	click.echo('# Running cURL with profiling headers', err=True)
+
+	util.heading('Running cURL with profiling headers', err=True)
 
 	# TODO: Maybe add the SAIL_NOCACHE query var
 	p = subprocess.Popen(['curl'] + command, stdout=subprocess.PIPE,
@@ -220,10 +221,15 @@ def curl(ctx, command):
 
 @profile.command()
 @click.argument('path', nargs=1)
-def download(path):
+@click.pass_context
+def download(ctx, path):
 	'''Download a profile JSON from the production server'''
 	root = util.find_root()
 	config = util.config()
+
+	# Invoked by user, not forwarder/invoked by
+	if ctx.parent and ctx.parent.command == profile:
+		util.heading('Downloading profile')
 
 	if 'profile_key' not in config:
 		raise click.ClickException('Profile key not found in .sail/config.json')
@@ -232,7 +238,7 @@ def download(path):
 	profiles_dir.mkdir(parents=True, exist_ok=True)
 
 	dest_filename = datetime.now().strftime('%Y-%m-%d-%H%M%S.xhprof.json')
-	click.echo('- Downloading profile from %s' % path)
+	util.item('Downloading profile from %s' % path)
 
 	args = ['-t']
 	source = 'root@%s:%s' % (config['hostname'], path)
@@ -242,7 +248,7 @@ def download(path):
 	if returncode != 0:
 		raise click.ClickException('An error occurred in rsync. Please try again.')
 
-	click.echo('- Cleaning up production')
+	util.item('Cleaning up production')
 
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
@@ -259,7 +265,8 @@ def download(path):
 	if p.returncode != 0:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
-	click.echo('- Profile saved to .profiles/%s' % dest_filename)
+	util.item('Profile saved to .profiles/%s' % dest_filename)
+	click.echo()
 	return profiles_dir / dest_filename
 
 @profile.command()
@@ -269,12 +276,12 @@ def clean():
 	config = util.config()
 
 	# Delete local profiles
-	click.echo('# Cleaning up')
-	click.echo('- Deleting local profiles')
+	util.heading('Cleaning up')
+	util.item('Deleting local profiles')
 	profiles_dir = pathlib.Path(root + '/.profiles')
 	shutil.rmtree(profiles_dir)
 
-	click.echo('- Deleting production profiles')
+	util.item('Deleting production profiles')
 	p = subprocess.Popen(['ssh',
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
@@ -285,12 +292,12 @@ def clean():
 	])
 
 	while p.poll() is None:
-		util.loader()
+		pass
 
 	if p.returncode != 0:
 		raise click.ClickException('An error occurred in SSH. Please try again.')
 
-	click.echo('- Done')
+	util.success('Cleanup complete')
 
 def _render_summary(pad, totals):
 	run_id = datetime.fromtimestamp(totals['timestamp']).strftime('%Y-%m-%d %H:%M:%S')

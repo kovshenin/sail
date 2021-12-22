@@ -2,6 +2,8 @@ import sail
 
 from sail import cli, util, ssh
 
+from . import monitor
+
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 
@@ -26,14 +28,14 @@ def premium():
 @premium.command()
 @click.option('--force', is_flag=True, help='Force enable routine, even if already premium.')
 @click.pass_context
-def enable(ctx, force):
+def enable(ctx, force, doing_init=False):
 	'''Provision premium features for this application.'''
 	config = util.config()
 	root = util.find_root()
 	license = util.get_sail_default('premium')
 	email = util.get_sail_default('email')
 
-	click.echo('# Setting up Sail Premium')
+	util.heading('Setting up Sail Premium')
 
 	if config.get('premium') and not force:
 		raise click.ClickException('Premium features have already been enabled for this application.')
@@ -44,7 +46,7 @@ def enable(ctx, force):
 	if not email:
 		raise click.ClickException('Premium requires an e-mail configuration. Set one with: sail config email EMAIL_ADDRESS')
 
-	click.echo('- Verifying license key')
+	util.item('Verifying license key')
 	response = util.request('/premium/check/', json={
 		'email': email,
 		'license': license,
@@ -53,7 +55,7 @@ def enable(ctx, force):
 	if not response:
 		raise click.ClickException('Could not verify the premium license key.')
 
-	click.echo('- Generating SSH keys')
+	util.item('Generating SSH keys')
 
 	# Generate a key pair.
 	key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -74,7 +76,7 @@ def enable(ctx, force):
 
 	ctx.invoke(ssh.add, path='%s/.sail/premium.key.pub' % root, quiet=True)
 
-	click.echo('- Verifying connection')
+	util.item('Verifying connection')
 	response = util.request('/premium/enable/', json={
 		'email': email,
 		'license': license,
@@ -84,7 +86,7 @@ def enable(ctx, force):
 
 	c = util.connection()
 
-	click.echo('- Updating remote configs')
+	util.item('Updating remote configuration files')
 
 	# Updated main/shared configs for <= 0.10.2.
 	c.put(sail.TEMPLATES_PATH + '/nginx.main.conf', '/etc/nginx/nginx.conf')
@@ -96,9 +98,9 @@ def enable(ctx, force):
 	c.put(sail.TEMPLATES_PATH + '/nginx.premium.conf', '/etc/nginx/conf.d/extras/sail.premium.conf')
 	c.put(sail.TEMPLATES_PATH + '/premium.php', '/etc/sail/premium.php')
 
-	# Make sure certbot.conf is in action.
+	# Make sure updated configs are live.
 	c.run('systemctl reload nginx')
 
-	click.echo('- Updating .sail/config.json')
+	util.item('Updating .sail/config.json')
 	config['premium'] = license
 	util.update_config(config)
