@@ -255,7 +255,7 @@ def _provision(provider_token, size, region):
 	root = util.find_root()
 	config = util.config()
 
-	click.echo('- Provisioning servers')
+	util.item('Provisioning servers')
 
 	# Generate a key pair.
 	key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -270,7 +270,7 @@ def _provision(provider_token, size, region):
 		serialization.PublicFormat.OpenSSH
 	).decode('utf8')
 
-	click.echo('- Writing SSH keys to .sail/ssh.key')
+	util.item('Writing SSH keys to .sail/ssh.key')
 	with open('%s/.sail/ssh.key' % root, 'w+') as f:
 		f.write(private_key)
 	os.chmod('%s/.sail/ssh.key' % root, 0o600)
@@ -279,7 +279,7 @@ def _provision(provider_token, size, region):
 		f.write(public_key)
 	os.chmod('%s/.sail/ssh.key.pub' % root, 0o644)
 
-	click.echo('- Uploading SSH key to DigitalOcean')
+	util.item('Uploading SSH key to DigitalOcean')
 
 	key = digitalocean.SSHKey(
 		token=provider_token,
@@ -294,7 +294,7 @@ def _provision(provider_token, size, region):
 		print(e)
 		raise util.SailException('Could not upload SSH key. Make sure token is RW.')
 
-	click.echo('- Creating a new Droplet')
+	util.item('Creating a new Droplet')
 
 	with open(sail.TEMPLATES_PATH + '/cloud-config.yaml', 'r') as f:
 		cloud_config = f.read()
@@ -316,7 +316,7 @@ def _provision(provider_token, size, region):
 	except Exception as e:
 		raise util.SailException('Cloud not create new droplet. Please try again later.')
 
-	click.echo('- Waiting for Droplet to boot')
+	util.item('Waiting for Droplet to boot')
 
 	completed = False
 	while not completed:
@@ -328,7 +328,7 @@ def _provision(provider_token, size, region):
 				completed = True
 				break
 
-	click.echo('- Waiting for IP address')
+	util.item('Waiting for IP address')
 
 	def wait_for_ip():
 		droplet.load()
@@ -338,7 +338,7 @@ def _provision(provider_token, size, region):
 
 	util.wait(wait_for_ip, timeout=120, interval=10)
 
-	click.echo('- Droplet up and running, requesting DNS record')
+	util.item('Droplet up and running, requesting DNS record')
 	response = util.request('/ip/', json={
 		'ip': droplet.ip_address,
 	})
@@ -348,7 +348,7 @@ def _provision(provider_token, size, region):
 	config['key_id'] = key.id
 	util.update_config(config)
 
-	click.echo('- Waiting for SSH')
+	util.item('Waiting for SSH')
 	c = util.connection()
 
 	def wait_for_ssh():
@@ -361,7 +361,7 @@ def _provision(provider_token, size, region):
 
 	util.wait(wait_for_ssh, timeout=120, interval=10)
 
-	click.echo('- Writing server keys to .sail/known_hosts')
+	util.item('Writing server keys to .sail/known_hosts')
 	with open('%s/.sail/known_hosts' % root, 'w+') as f:
 		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', config['ip'],
 			config['hostname']], stdout=f, stderr=subprocess.DEVNULL)
@@ -370,7 +370,7 @@ def _configure():
 	config = util.config()
 	c = util.connection()
 
-	click.echo('- Configuring software')
+	util.item('Configuring software')
 
 	# Generate an /etc/sail/config.json
 	config_json = {
@@ -391,7 +391,7 @@ def _configure():
 
 		return False
 
-	click.echo('- Waiting for cloud-init to complete')
+	util.item('Waiting for cloud-init to complete')
 	util.wait(wait_for_cloud_init, timeout=900, interval=10)
 
 	c.run('mkdir -p /etc/nginx/conf.d/extras')
