@@ -104,3 +104,13 @@ def enable(ctx, force, doing_init=False):
 	util.item('Updating .sail/config.json')
 	config['premium'] = license
 	util.update_config(config)
+
+	try:
+		util.item('Enabling monitoring')
+		ctx.invoke(monitor.enable, quiet=True)
+	except:
+		util.item('Monitoring could not be enabled!')
+
+	# Don't show success during provision/init.
+	if not doing_init:
+		util.success('Premium has been enabled successfully')
