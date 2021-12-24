@@ -1,4 +1,4 @@
-from sail import cli, util, deploy, domains, cron, __version__
+from sail import cli, util, deploy, domains, blueprints, cron, __version__
 
 import sail
 import json
@@ -22,9 +22,10 @@ from prettytable import PrettyTable
 @click.option('--email', help='The admin e-mail address. You can set the default e-mail address with: sail config email <email>')
 @click.option('--namespace', default='default', help='The namespace to use for the new application')
 @click.option('--environment', help='Initialize the application into an existing environment')
+@click.option('--blueprint', 'blueprint', default='default.yaml', help='Apply a blueprint after init, defaults to: default.yaml')
 @click.option('--force', '-f', is_flag=True)
 @click.pass_context
-def init(ctx, provider_token, email, size, region, force, namespace, environment):
+def init(ctx, provider_token, email, size, region, force, namespace, environment, blueprint):
 	'''Initialize and provision a new project'''
 	root = util.find_root()
 
@@ -143,6 +144,13 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 
 	# Add the default WP cron schedule.
 	ctx.invoke(cron.add, schedule='*/5', command=('wp cron event run --due-now',), quiet=True)
+
+	# Run a default blueprint
+	if blueprint and blueprint != 'no' and blueprint != 'none':
+		try:
+			ctx.invoke(blueprints.blueprint, path=[blueprint], doing_init=True)
+		except:
+			util.item('Could not apply blueprint')
 
 	# Download files from production
 	ctx.invoke(deploy.download, yes=True, doing_init=True)
