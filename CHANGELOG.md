@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.10.3] - 2021-12-27
+
+* Added: A default.yaml blueprint, with Surge cache and fail2ban pre-insalled
+* Added: Quite a few colors to most of the Sail commands, better output formatting, output utils
+* Changed: Increased default upload/post max size from 2/8M to 128M in PHP
+* Changed: Increased client_max_body_size from 32M to 128M in Nginx
+* Changed: `sail backup` is now an alias to `sail backup create`, `sail restore` is an alias to `sail backup restore`
+* Changed: Added a `quiet` argument to `ssh key add` to suppress output
+* Changed: Updated various dependencies
+* Changed: Better error handling in install.sh
+* Changed: Cleaned README.md, moved remaining tutorials to the [knowledgebase](https://sailed.io/kb/)
+* Fixed: Installer will no longer fail silently on missing python3-venv module
+* Fixed: Error in postfix unable to read the main.cf configuration file
+* Added: Managed backups `sail backup` (automatic daily and on-demand) via Sail Premium
+* Added: Uptime and health monitoring `sail monitor` with e-mail/SMS alerts via Sail Premium
+* Added: Image optimization and WebP via Sail Premium
+
 ## [0.10.2] - 2021-12-13
 
 * Added: New `sail cron` commands to add, remove and view system cron entries
