@@ -1,5 +1,5 @@
 click==8.0.3
-requests==2.27.0
+requests==2.27.1
 prettytable==2.5.0
 PyYAML==6.0
 fabric==2.6.0
