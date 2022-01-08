@@ -1,6 +1,6 @@
 click==8.0.3
 requests==2.27.1
-prettytable==2.5.0
+prettytable==3.0.0
 PyYAML==6.0
 fabric==2.6.0
 paramiko==2.9.1
