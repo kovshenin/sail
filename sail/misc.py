@@ -99,21 +99,18 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 	root = util.find_root()
 	config = util.config()
 
+	# Global settings
 	settings = []
-	if nginx_access or nginx:
-		settings.append('-t nginx_access')
-	if nginx_error or nginx:
-		settings.append('-t nginx_error')
-	if php_error or php:
-		settings.append('-t php')
+	width, height = os.get_terminal_size()
 
 	if follow:
 		settings.append('--follow')
 	elif lines:
 		settings.append('--lines %d' % lines)
 	else:
-		settings.append('--lines 30')
+		settings.append('--lines %d' % int(height - 1))
 
+	# Journald settings
 	if postfix:
 		settings.append('-t postfix/qmgr')
 		settings.append('-t postfix/pickup')
@@ -123,7 +120,22 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 		settings.append('-t postfix/postsuper')
 		settings.append('-t postfix/postqueue')
 
-	settings = ' '.join(settings)
+	if php_error or php:
+		settings.append('-t php')
+
+	journald_settings = ' '.join(settings)
+	command = 'journalctl --no-hostname --directory=/var/log/journal %s' % journald_settings
+
+	# Non-journald logs.
+	if nginx_access or nginx:
+		command = 'tail /var/log/nginx/access.log %s' % ' '.join(settings)
+		if '--follow' not in settings:
+			command += ' | less -S +G'
+
+	if nginx_error:
+		command = 'tail /var/log/nginx/error.log %s' % ' '.join(settings)
+		if '--follow' not in settings:
+			command += ' | less -S +G'
 
 	os.execlp('ssh', 'ssh', '-tt',
 		'-i', '%s/.sail/ssh.key' % root,
@@ -132,7 +144,7 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 		'-o', 'IdentityFile="%s/.sail/ssh.key"' % root,
 		'-o', 'LogLevel=QUIET',
 		'root@%s' % config['hostname'],
-		'journalctl --no-hostname --directory=/var/log/journal %s' % settings
+		command
 	)
 
 @cli.command('info')
