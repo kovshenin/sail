@@ -44,6 +44,7 @@ Commands:
 	init       Initialize and provision a new project
 	logs       Query and follow logs from the production server
 	profile    Run the profiler to find application performance bottlenecks
+	rebuild    Rebuild an application environment.
 	regions    Get available deployment regions
 	restore    Restore your application files, uploads and database from a file
 	rollback   Rollback production to a previous release
