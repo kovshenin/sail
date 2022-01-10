@@ -5,6 +5,7 @@ import click
 import hashlib
 import pathlib
 import json
+import secrets, string
 
 from datetime import datetime
 
@@ -125,3 +126,31 @@ def export(as_json):
 		util.success('Database export saved to .backups/%s' % filename)
 	else:
 		click.echo(json.dumps(destination))
+
+@db.command()
+def reset_password():
+	'''Reset the WordPress database password and update wp-config.php'''
+	root = util.find_root()
+	config = util.config()
+
+	util.heading('Reseting database password')
+	util.item('Generating new password')
+	password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(48))
+	c = util.connection()
+
+	util.item('Updating database password')
+	c.run('mysql -e "ALTER USER \\`wordpress_%s\\`@localhost IDENTIFIED BY \'%s\'"' % (config['namespace'], password))
+
+	util.item('Updating DB_PASSWORD in wp-config.php')
+	wp = 'sudo -u www-data wp --path=%s --skip-themes --skip-plugins ' % util.remote_path('public')
+	c.run(wp + util.join(['config', 'set', 'DB_PASSWORD', password]))
+
+	util.item('Verifying DB_USER/DB_NAME')
+	for name in ['DB_USER', 'DB_NAME']:
+		value = c.run(wp + util.join(['config', 'get', name])).stdout.strip()
+		expected = 'wordpress_%s' % config['namespace']
+		if value != expected:
+			util.item(f'Updating {name} in wp-config.php')
+			c.run(wp + util.join(['config', 'set', name, expected]))
+
+	util.success('Database password reset. Sync with: sail download wp-config.php')
