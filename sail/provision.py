@@ -479,6 +479,7 @@ def _install(passwords):
 
 	util.item('Downloading and installing WordPress')
 	wp = 'sudo -u www-data wp --path=%s/releases/1337 ' % remote_path
+	admin_user = config['email'].split('@')[0]
 
 	c.run(wp + 'core download')
 	c.run(wp + util.join([
@@ -491,7 +492,7 @@ def _install(passwords):
 		'core', 'install',
 		'--url=%s' % util.primary_url(),
 		'--title=Sailed',
-		'--admin_user=%s' % config['email'],
+		'--admin_user=%s' % admin_user,
 		'--admin_password=%s' % passwords['wp'],
 		'--admin_email=%s' % config['email'],
 		'--skip-email'
