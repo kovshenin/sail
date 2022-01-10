@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+* Added: New `sail rebuild` command to re-provision a fresh environment on the same host
+* Added: New `sail db reset-password` command to reset the database credentials and update wp-config.php
+* Changed: Set the WordPress admin_user to the first part of the provided e-mail, to prevent leaking the full e-mail address
+* Changed: Removed syslog configuration from Nginx for better performance
+* Changed: Updated `sail logs` to work with default Nginx access/error logs in addition to journald
+* Changed: Added `worker_rlimit_nofile` to Nginx to allow more open files
+* Changed: Default `--lines` in `sail logs` will now read terminal height
+* Fixed: Nginx warning on duplicate mime type declaration for font/woff
+
 ## [0.10.3] - 2021-12-27
 
 * Added: A default.yaml blueprint, with Surge cache and fail2ban pre-insalled
