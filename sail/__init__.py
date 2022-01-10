@@ -19,7 +19,7 @@ def cli(debug):
 
 # Command groups
 from sail import provision, deploy, database, backups, domains, misc, profiling
-from sail import ssh, blueprints, cron, premium
+from sail import ssh, blueprints, cron, premium, rebuild
 
 # Initialize premium modules
 premium.premium_init()

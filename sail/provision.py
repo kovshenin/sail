@@ -160,8 +160,6 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	if not os.path.exists(content_dir):
 		os.mkdir(content_dir)
 
-	primary_url = util.primary_url()
-
 	# Automatically enable premium if it's been set up
 	premium_license = util.get_sail_default('premium')
 	premium_email = util.get_sail_default('email')
@@ -172,6 +170,14 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 			util.item('Could not initialize Premium')
 
 	util.heading('Initialization successful')
+	_success(passwords['wp'])
+
+def _success(wp_password):
+	config = util.config()
+	primary_url = util.primary_url()
+	email = config['email']
+	hostname = config['hostname']
+
 	util.item('The ship has sailed!')
 	click.echo()
 
@@ -183,12 +189,11 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	label = util.label('Login:')
 	click.echo(f'{label} {primary_url}/wp-login.php')
 
-	label = util.label('Username:')
+	label = util.label('E-mail:')
 	click.echo(f'{label} {email}')
 
 	label = util.label('Password:')
-	password = passwords['wp']
-	click.echo(f'{label} {password}')
+	click.echo(f'{label} {wp_password}')
 
 	click.echo()
 
