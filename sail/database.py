@@ -4,7 +4,7 @@ import os, subprocess
 import click
 import hashlib
 import pathlib
-import json
+import json, re
 import secrets, string
 
 from datetime import datetime
@@ -31,12 +31,14 @@ def cli():
 
 @db.command(name='import')
 @click.argument('path', nargs=1, required=True)
-def import_cmd(path):
+@click.option('--partial', is_flag=True, help='Do not wipe production database and perform a partial import')
+def import_cmd(path, partial):
 	'''Import a local .sql or .sql.gz file to the production MySQL database'''
 	root = util.find_root()
 	config = util.config()
 	c = util.connection()
 	remote_path = util.remote_path()
+	namespace = config['namespace']
 
 	path = pathlib.Path(path).resolve()
 	if not path.exists():
@@ -45,7 +47,7 @@ def import_cmd(path):
 	if not path.name.endswith('.sql') and not path.name.endswith('.sql.gz'):
 		raise util.SailException('This does not look like a .sql or .sql.gz file')
 
-	temp_name = '%s.%s' % (hashlib.sha256(os.urandom(32)).hexdigest()[:8], path.name)
+	temp_filename = '%s.%s' % (hashlib.sha256(os.urandom(32)).hexdigest()[:8], path.name)
 	is_gz = path.name.endswith('.sql.gz')
 
 	util.heading('Importing WordPress database')
@@ -53,27 +55,95 @@ def import_cmd(path):
 
 	args = ['-t']
 	source = path
-	destination = 'root@%s:%s/%s' % (config['hostname'], remote_path, temp_name)
+	destination = 'root@%s:%s/%s' % (config['hostname'], remote_path, temp_filename)
 	returncode, stdout, stderr = util.rsync(args, source, destination, default_filters=False)
 
 	if returncode != 0:
 		raise util.SailException('An error occurred in rsync. Please try again.')
 
-	# TODO: Maybe do an atomic import which deletes tables that no longer exist
-	# by doing a rename.
-
-	util.item('Importing database into MySQL')
 	cat_bin = 'zcat' if is_gz else 'cat'
+	temp_name = 'import_%s' % hashlib.sha256(os.urandom(32)).hexdigest()[:8]
 
 	try:
-		c.run('%s %s/%s | mysql -uroot "wordpress_%s"' % (cat_bin, remote_path, temp_name, config['namespace']))
-	except:
+		# A partial import, no temp table, no replacements
+		# Run as is on production db.
+		if partial:
+			util.item('Importing database into MySQL')
+			c.run(f'{cat_bin} {remote_path}/{temp_filename} | mysql -uroot "wordpress_{namespace}"')
+
+		# Full import. Try to clean it up as much as possible.
+		else:
+			util.item('Creating temporary database')
+			c.run(f'mysql -uroot -e "CREATE DATABASE \\`{temp_name}\\`;"')
+
+			util.item('Importing into temporary database')
+			c.run(f'{cat_bin} {remote_path}/{temp_filename} | mysql -uroot "{temp_name}"')
+
+			# Fetch all tables and determine table prefix
+			tables = c.run(f'mysql -uroot "{temp_name}" --skip-column-names -e "SHOW TABLES;"').stdout.splitlines()
+			core_tables = ['commentmeta', 'comments', 'links', 'options', 'postmeta',
+				'posts', 'term_relationships', 'term_taxonomy', 'termmeta', 'terms',
+				'usermeta', 'users'
+			]
+
+			prefixes = []
+
+			for table in tables:
+				prefix = re.search(r'^(.+?)(?:\d+_)?(?:%s)$' % '|'.join(core_tables), table)
+				if prefix:
+					prefixes.append(prefix.group(1))
+
+			# Convert to set and make unique
+			prefixes = set(prefixes)
+			if len(prefixes) == 1:
+				prefix = prefixes.pop()
+				util.item(f'Determined table prefix: {prefix}')
+			else:
+				prefix = None
+
+			clean_tables = []
+
+			# Rename
+			if prefix and prefix != 'wp_':
+				for table in tables:
+					if table[:len(prefix)] != prefix:
+						clean_tables.append(table)
+						continue
+
+					table = table[len(prefix):]
+					util.item(f'Renaming {prefix}{table} to wp_{table}')
+					c.run(f'mysql -uroot "{temp_name}" -e "RENAME TABLE \\`{prefix}{table}\\` TO \\`wp_{table}\\`;"')
+					clean_tables.append(f'wp_{table}')
+
+				tables = clean_tables
+
+				util.item(f'Updating prefix in wp_options, wp_usermeta')
+				meta_keys = ['capabilities', 'user_level']
+				option_names = ['user_roles']
+
+				for meta_key in meta_keys:
+					c.run(f'mysql -uroot "{temp_name}" -e "UPDATE \\`wp_usermeta\\` SET meta_key = \'wp_{meta_key}\' WHERE meta_key = \'{prefix}{meta_key}\';"')
+
+				for option_name in option_names:
+					c.run(f'mysql -uroot "{temp_name}" -e "UPDATE \\`wp_options\\` SET option_name = \'wp_{option_name}\' WHERE option_name = \'{prefix}{option_name}\';"')
+
+				util.item('Dropping live database, moving temporary to live')
+				c.run(f'mysql -uroot -e "DROP DATABASE \\`wordpress_{namespace}\\`; CREATE DATABASE \\`wordpress_{namespace}\\`;"')
+				for table in tables:
+					c.run(f'mysql -uroot -e "RENAME TABLE \\`{temp_name}\\`.\\`{table}\\` TO \\`wordpress_{namespace}\\`.\\`{table}\\`;"')
+
+			util.item('Dropping temporary database')
+			c.run(f'mysql -uroot -e "DROP DATABASE \\`{temp_name}\\`;"')
+
+	except Exception as e:
+		util.dlog(str(e))
+		c.run(f'mysql -uroot -e "DROP DATABASE \\`{temp_name}\\`;"', warn=True)
 		raise util.SailException('An error occurred in SSH. Please try again.')
 
 	util.item('Cleaning up production')
 
 	try:
-		c.run('rm %s/%s' % (remote_path, temp_name))
+		c.run(f'rm {remote_path}/{temp_filename}')
 	except:
 		raise util.SailException('An error occurred in SSH. Please try again.')
 
