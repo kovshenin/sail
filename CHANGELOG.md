@@ -2,8 +2,11 @@
 
 ## [Unreleased]
 
+## [0.10.4] - 2022-01-14
+
 * Added: New `sail rebuild` command to re-provision a fresh environment on the same host
 * Added: New `sail db reset-password` command to reset the database credentials and update wp-config.php
+* Added: A `sail db import` will attempt an atomic import via a temporary table, will fix non-standard table prefixes, use `--partial` to override
 * Changed: Set the WordPress admin_user to the first part of the provided e-mail, to prevent leaking the full e-mail address
 * Changed: Removed syslog configuration from Nginx for better performance
 * Changed: Updated `sail logs` to work with default Nginx access/error logs in addition to journald
