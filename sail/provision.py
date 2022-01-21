@@ -142,6 +142,8 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	# Run the installs
 	_install(passwords)
 
+	c = util.connection()
+
 	# Add the default WP cron schedule.
 	ctx.invoke(cron.add, schedule='*/5', command=('wp cron event run --due-now',), quiet=True)
 
@@ -149,6 +151,8 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 	if blueprint and blueprint != 'no' and blueprint != 'none':
 		try:
 			ctx.invoke(blueprints.blueprint, path=[blueprint], doing_init=True)
+			remote_path = util.remote_path()
+			c.run(f'sudo -u www-data wp --path={remote_path}/public option get home')
 		except:
 			util.item('Could not apply blueprint')
 
