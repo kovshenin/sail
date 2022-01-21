@@ -14,9 +14,14 @@ def domain():
 	pass
 
 @domain.command(name='list')
-def listcmd():
+@click.option('--json', 'as_json', is_flag=True, help='Get list of domains as JSON')
+def listcmd(as_json):
 	'''List domains associated with your site'''
 	config = util.config()
+
+	if as_json:
+		click.echo(json.dumps(config['domains']))
+		return
 
 	util.heading('Domains')
 	click.echo()
