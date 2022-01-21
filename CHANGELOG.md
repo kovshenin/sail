@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+* Added: New `--json` flag for `sail domain list`
+* Changed: Deny public access to wp-content/debug.log in default Nginx config
+* Changed: Add logrotate configuration for wp-content/debug.log
+* Changed: Don't allow `sail destroy` on applications with user domains
+* Fixed: Prime the WordPress environment after running a default blueprint at `init`
+
 ## [0.10.4] - 2022-01-14
 
 * Added: New `sail rebuild` command to re-provision a fresh environment on the same host
