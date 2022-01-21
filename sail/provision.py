@@ -412,12 +412,13 @@ def _configure():
 	util.wait(wait_for_cloud_init, timeout=900, interval=10)
 
 	c.run('mkdir -p /etc/nginx/conf.d/extras')
-	c.put(sail.TEMPLATES_PATH + '/nginx.main.conf', '/etc/nginx/nginx.conf')
-	c.put(sail.TEMPLATES_PATH + '/nginx.shared.conf', '/etc/nginx/conf.d/extras/sail.conf')
-	c.put(sail.TEMPLATES_PATH + '/nginx.certbot.conf', '/etc/nginx/conf.d/extras/certbot.conf')
-	c.put(sail.TEMPLATES_PATH + '/prepend.php', '/etc/sail/prepend.php')
-	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/fpm/php.ini')
-	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/cli/php.ini')
+	c.put(sail.TEMPLATES_PATH + '/nginx.main.conf', '/etc/nginx/nginx.conf', preserve_mode=False)
+	c.put(sail.TEMPLATES_PATH + '/nginx.shared.conf', '/etc/nginx/conf.d/extras/sail.conf', preserve_mode=False)
+	c.put(sail.TEMPLATES_PATH + '/nginx.certbot.conf', '/etc/nginx/conf.d/extras/certbot.conf', preserve_mode=False)
+	c.put(sail.TEMPLATES_PATH + '/prepend.php', '/etc/sail/prepend.php', preserve_mode=False)
+	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/fpm/php.ini', preserve_mode=False)
+	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/cli/php.ini', preserve_mode=False)
+	c.put(sail.TEMPLATES_PATH + '/logrotate.conf', '/etc/logrotate.d/sail', preserve_mode=False)
 
 	# Make sure certbot.conf is in action.
 	c.run('systemctl reload nginx')
