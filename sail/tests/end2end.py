@@ -616,6 +616,10 @@ class TestEnd2End(unittest.TestCase):
 		self.assertIn('wp-content/readme.html', diff)
 
 	def test_999_destroy(self):
+		# Remove domains, then destroy.
+		result = self.runner.invoke(cli, ['domain', 'delete', 'saildemo.com', '--zone'])
+		self.assertEqual(result.exit_code, 0)
+
 		result = self.runner.invoke(cli, ['destroy', '-y'])
 		self.assertEqual(result.exit_code, 0)
 
