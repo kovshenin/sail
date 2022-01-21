@@ -539,6 +539,11 @@ def destroy(yes, environment, skip_dns):
 	if not yes:
 		click.confirm('All application data will be scrubbed and irretrievable. Are you sure?', abort=True)
 
+	# Prevent destroying applications with added domains.
+	user_domains = [d['name'] for d in config.get('domains', []) if not d.get('internal')]
+	if len(user_domains) > 0:
+		raise util.SailException('Remove the following domains first: %s' % ', '.join(user_domains))
+
 	util.heading('Destroying application')
 
 	namespaces = []
