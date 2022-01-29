@@ -9,6 +9,7 @@ packages:
   - php-mbstring
   - php-xml
   - php-zip
+  - php-intl
   - nginx
   - certbot
   - mariadb-server
