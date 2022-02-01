@@ -48,6 +48,7 @@ Commands:
 	regions    Get available deployment regions
 	restore    Restore your application files, uploads and database from a file
 	rollback   Rollback production to a previous release
+	sftp       Manage SFTP access on this server
 	sizes      Get available droplet sizes
 	ssh        Open an SSH shell, manage SSH keys and more
 	wp         Run a WP-CLI command on the production host
