@@ -1,0 +1,9 @@
+---
+version: 1
+
+files:
+  /tmp/does.not.exist: /tmp/does.not.exist
+  /tmp/sail.files.test:
+  - /tmp/sail.files.test
+  - /tmp/sail.files.test.2
+  - ~/sail.files.test.3

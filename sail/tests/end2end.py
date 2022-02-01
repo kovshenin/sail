@@ -615,6 +615,29 @@ class TestEnd2End(unittest.TestCase):
 		self.assertNotIn('readme.html', diff)
 		self.assertIn('wp-content/readme.html', diff)
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_019_blueprint_files(self):
+		with open('/tmp/sail.files.test', 'w') as f:
+			f.write('testing %s' % self.home)
+
+		result = self.runner.invoke(cli, ['blueprint', 'test_files.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Blueprint applied successfully', result.output)
+		self.assertIn('Skipping: /tmp/does.not.exist', result.output)
+		self.assertIn('Copying /tmp/sail.files.test', result.output)
+
+		c = util.connection()
+		r = c.run('cat /tmp/sail.files.test')
+		self.assertIn('testing %s' % self.home, r.stdout)
+
+		r = c.run('cat /tmp/sail.files.test.2')
+		self.assertIn('testing %s' % self.home, r.stdout)
+
+		r = c.run('cat /root/sail.files.test.3')
+		self.assertIn('testing %s' % self.home, r.stdout)
+
+		os.unlink('/tmp/sail.files.test')
+
 	def test_999_destroy(self):
 		# Remove domains, then destroy.
 		result = self.runner.invoke(cli, ['domain', 'delete', 'saildemo.com', '--zone'])
