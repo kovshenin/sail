@@ -4,8 +4,7 @@ import sail
 import click
 import digitalocean
 import re
-import shlex, io
-import re
+import shlex, io, os
 import yaml
 import pathlib
 import json
@@ -131,9 +130,34 @@ def blueprint(path, doing_init=False):
 		elif section == 'apt':
 			_bp_apt(data)
 
+		elif section == 'files':
+			_bp_files(data)
+
 	# Don't show success during provision
 	if not doing_init:
 		util.success('Blueprint applied successfully')
+
+def _bp_files(data):
+	c = util.connection()
+
+	util.item('Determining home directory')
+	home = c.run('pwd').stdout.strip()
+	home = pathlib.Path(home)
+
+	for source, destination in data.items():
+		p = pathlib.Path(os.path.expanduser(source))
+
+		if not p.exists():
+			util.item(f'Skipping: {source} (does not exist)')
+			continue
+
+		if type(destination) is str:
+			destination = [destination]
+
+		util.item(f'Copying {source}')
+		for d in destination:
+			d = d.replace('~', str(home))
+			c.put(p, d)
 
 def _bp_apt(items):
 	c = util.connection()

@@ -121,6 +121,12 @@ vars:
   default: 128mb
   option: --redis-maxmemory
 
+files:
+  /path/to/source: /path/to/destination
+  /another/source:
+  - /multiple
+  - /destinations
+
 ################################################################################
 ########### EVERYTHING BELOW THIS LINE IS NOT IMPLEMENTED. YET. ################
 ################################################################################
