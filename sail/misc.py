@@ -92,9 +92,10 @@ def admin():
 @click.option('--nginx-error', '--nginx-errors', is_flag=True)
 @click.option('--php-error', '--php-errors', is_flag=True)
 @click.option('--postfix', '--mail', is_flag=True)
+@click.option('--mysql', '--mariadb', is_flag=True)
 @click.option('--follow', '-f', is_flag=True)
 @click.option('--lines', '-n', type=int)
-def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, lines):
+def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, mysql, follow, lines):
 	'''Query and follow logs from the production server'''
 	root = util.find_root()
 	config = util.config()
@@ -134,6 +135,11 @@ def logs(nginx, php, nginx_access, nginx_error, php_error, postfix, follow, line
 
 	if nginx_error:
 		command = 'tail /var/log/nginx/error.log %s' % ' '.join(settings)
+		if '--follow' not in settings:
+			command += ' | less -S +G'
+
+	if mysql:
+		command = 'tail /var/log/mysql/mariadb-slow.log %s' % ' '.join(settings)
 		if '--follow' not in settings:
 			command += ' | less -S +G'
 

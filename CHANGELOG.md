@@ -5,6 +5,7 @@
 * Added: New `sail sftp enable` and `sail sftp disable` commands to enable/disable SFTP (SSH, scp, rsync, etc.) access for www-data
 * Added: New `files` section support for blueprints
 * Added: New `--json` flag for `sail domain list`
+* Added: Enabled the MySQL slow query log for new provisions, view with `sail logs --mysql`
 * Added: `php-intl` package to cloud-config.yaml
 * Changed: Deny public access to wp-content/debug.log in default Nginx config
 * Changed: Add logrotate configuration for wp-content/debug.log

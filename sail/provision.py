@@ -418,10 +418,14 @@ def _configure():
 	c.put(sail.TEMPLATES_PATH + '/prepend.php', '/etc/sail/prepend.php', preserve_mode=False)
 	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/fpm/php.ini', preserve_mode=False)
 	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/cli/php.ini', preserve_mode=False)
+	c.put(sail.TEMPLATES_PATH + '/mariadb.cnf', '/etc/mysql/mariadb.conf.d/90-sail.cnf', preserve_mode=False)
 	c.put(sail.TEMPLATES_PATH + '/logrotate.conf', '/etc/logrotate.d/sail', preserve_mode=False)
 
 	# Make sure certbot.conf is in action.
 	c.run('systemctl reload nginx')
+
+	# Make sure MariaDB config is active.
+	c.run('systemctl restart mariadb.service')
 
 	# Get xhprof
 	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.2-sail/xhprof.so.gz -o /tmp/xhprof.so.gz')
