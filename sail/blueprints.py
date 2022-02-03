@@ -304,6 +304,7 @@ def _bp_postfix(data):
 	c.put(io.StringIO(util.template('postfix/main.cf', {'hostname': config['hostname']})), '/etc/postfix/main.cf')
 	c.run('chmod 0640 /etc/postfix/main.cf && chown root.mail /etc/postfix/main.cf')
 	c.run('systemctl restart postfix.service')
+	c.run('postfix set-permissions')
 
 	# Set the from name/email in a mu-plugin
 	if data.get('from_name') and data.get('from_email'):
