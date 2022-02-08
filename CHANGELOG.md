@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.5] - 2022-02-08
+
 * Added: New `sail sftp enable` and `sail sftp disable` commands to enable/disable SFTP (SSH, scp, rsync, etc.) access for www-data
 * Added: New `files` section support for blueprints
 * Added: New `--json` flag for `sail domain list`
@@ -11,6 +13,7 @@
 * Changed: Add logrotate configuration for wp-content/debug.log
 * Changed: Don't allow `sail destroy` on applications with user domains
 * Fixed: Prime the WordPress environment after running a default blueprint at `init`
+* Fixed: Postfix permissions (again) causing some configurations to error with permission denied in main.cf
 
 ## [0.10.4] - 2022-01-14
 
