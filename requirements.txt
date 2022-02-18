@@ -1,4 +1,4 @@
-click==8.0.3
+click==8.0.4
 requests==2.27.1
 prettytable==3.1.1
 PyYAML==6.0
