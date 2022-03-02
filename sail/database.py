@@ -127,10 +127,10 @@ def import_cmd(path, partial):
 				for option_name in option_names:
 					c.run(f'mysql -uroot "{temp_name}" -e "UPDATE \\`wp_options\\` SET option_name = \'wp_{option_name}\' WHERE option_name = \'{prefix}{option_name}\';"')
 
-				util.item('Dropping live database, moving temporary to live')
-				c.run(f'mysql -uroot -e "DROP DATABASE \\`wordpress_{namespace}\\`; CREATE DATABASE \\`wordpress_{namespace}\\`;"')
-				for table in tables:
-					c.run(f'mysql -uroot -e "RENAME TABLE \\`{temp_name}\\`.\\`{table}\\` TO \\`wordpress_{namespace}\\`.\\`{table}\\`;"')
+			util.item('Dropping live database, moving temporary to live')
+			c.run(f'mysql -uroot -e "DROP DATABASE \\`wordpress_{namespace}\\`; CREATE DATABASE \\`wordpress_{namespace}\\`;"')
+			for table in tables:
+				c.run(f'mysql -uroot -e "RENAME TABLE \\`{temp_name}\\`.\\`{table}\\` TO \\`wordpress_{namespace}\\`.\\`{table}\\`;"')
 
 			util.item('Dropping temporary database')
 			c.run(f'mysql -uroot -e "DROP DATABASE \\`{temp_name}\\`;"')

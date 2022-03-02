@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+* Fixed: Bug in `sail db import` which didn't allow the database import to complete
+
 ## [0.10.5] - 2022-02-08
 
 * Added: New `sail sftp enable` and `sail sftp disable` commands to enable/disable SFTP (SSH, scp, rsync, etc.) access for www-data
