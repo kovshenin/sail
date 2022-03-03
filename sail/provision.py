@@ -82,7 +82,7 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 		if not account.email_verified:
 			raise util.SailException('This DigitalOcean account e-mail is not verified.')
 	except:
-		raise util.SailException('Invalid prodiver token.')
+		raise util.SailException('Invalid provider token.')
 
 	if not email:
 		email = util.get_sail_default('email')
