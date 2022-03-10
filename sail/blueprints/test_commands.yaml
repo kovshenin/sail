@@ -1,0 +1,8 @@
+---
+version: 1
+
+commands:
+  - id
+  - pwd
+  - cd /tmp && pwd
+  - ['wp', 'option', 'get', 'home']

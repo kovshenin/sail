@@ -133,9 +133,25 @@ def blueprint(path, doing_init=False):
 		elif section == 'files':
 			_bp_files(data)
 
+		elif section == 'commands':
+			_bp_commands(data)
+
 	# Don't show success during provision
 	if not doing_init:
 		util.success('Blueprint applied successfully')
+
+def _bp_commands(data):
+	c = util.connection()
+
+	util.item('Running SSH commands')
+	for command in data:
+		if type(command) is list:
+			command = util.join(command)
+
+		command = 'cd %s && %s' % (util.remote_path('/public'), command)
+		# command = 'sudo -u www-data bash -c "cd %s; bash"' % util.remote_path('/public')
+		command = util.join(['sudo', '-u', 'www-data', 'bash', '-c', command])
+		c.run(command, timeout=30)
 
 def _bp_files(data):
 	c = util.connection()

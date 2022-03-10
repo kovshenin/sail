@@ -127,6 +127,12 @@ files:
   - /multiple
   - /destinations
 
+commands:
+  - id
+  - pwd
+  - cd /tmp && pwd
+  - ['wp', 'option', 'get', 'home']
+
 ################################################################################
 ########### EVERYTHING BELOW THIS LINE IS NOT IMPLEMENTED. YET. ################
 ################################################################################

@@ -638,6 +638,12 @@ class TestEnd2End(unittest.TestCase):
 
 		os.unlink('/tmp/sail.files.test')
 
+	@unittest.skipIf(work_in_progress, 'Work in progress!')
+	def test_020_blueprint_commands(self):
+		result = self.runner.invoke(cli, ['blueprint', 'test_commands.yaml'])
+		self.assertEqual(result.exit_code, 0)
+		self.assertIn('Blueprint applied successfully', result.output)
+
 	def test_999_destroy(self):
 		# Remove domains, then destroy.
 		result = self.runner.invoke(cli, ['domain', 'delete', 'saildemo.com', '--zone'])
