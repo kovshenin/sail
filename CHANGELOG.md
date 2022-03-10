@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
+* Added: New `commands` section for Blueprints to run arbitrary commands via SSH
 * Fixed: Bug in `sail db import` which didn't allow the database import to complete
+* Fixed: Renewals of certs in Certbot should trigger Nginx reload
 
 ## [0.10.5] - 2022-02-08
 
