@@ -421,8 +421,13 @@ def _configure():
 	c.put(sail.TEMPLATES_PATH + '/mariadb.cnf', '/etc/mysql/mariadb.conf.d/90-sail.cnf', preserve_mode=False)
 	c.put(sail.TEMPLATES_PATH + '/logrotate.conf', '/etc/logrotate.d/sail', preserve_mode=False)
 
+	# Certbot post-deploy hook
+	c.run('mkdir -p /etc/letsencrypt/renewal-hooks/deploy/')
+	c.put(sail.TEMPLATES_PATH + '/certbot.deploy.sh', '/etc/letsencrypt/renewal-hooks/deploy/sail.sh', preserve_mode=False)
+	c.run('chmod +x /etc/letsencrypt/renewal-hooks/deploy/sail.sh')
+
 	# Make sure certbot.conf is in action.
-	c.run('systemctl reload nginx')
+	c.run('systemctl reload nginx.service')
 
 	# Make sure MariaDB config is active.
 	c.run('systemctl restart mariadb.service')
