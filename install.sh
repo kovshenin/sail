@@ -88,7 +88,8 @@ $SUDO git fetch --all --tags || abort "Could not fetch tags from Git repository.
 $SUDO git checkout "${TARGET_VERSION}" || abort "Could not find target version: ${TARGET_VERSION}."
 
 $SUDO $PYTHON_BIN -m venv "${INSTALL_DIR}/.env" || abort "Could not initialize a Python venv."
-$SUDO .env/bin/python -m ensurepip --upgrade || abort "Could not upgrade pip."
+$SUDO .env/bin/python -m ensurepip --upgrade || abort "Could not ensure pip."
+$SUDO .env/bin/pip install pip --upgrade || abort "Could not upgrade pip."
 $SUDO .env/bin/pip install -r requirements.txt || abort "Could not install dependencies."
 $SUDO .env/bin/python setup.py install || abort "Something went wrong during setup.py install."
 
