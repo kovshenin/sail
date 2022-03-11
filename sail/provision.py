@@ -10,10 +10,10 @@ import re, secrets, string
 import shlex, time, io, pathlib, jinja2
 import packaging.version
 
+from types import SimpleNamespace
+
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-
-from prettytable import PrettyTable
 
 @cli.command()
 @click.option('--provider-token', help='Your DigitalOcean API token, must be read-write. You can set a default token with: sail config provider-token <token>')
@@ -652,19 +652,60 @@ def sizes(provider_token):
 	if not provider_token:
 		raise util.SailException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
 
-	click.echo('# Getting available droplet sizes')
-
+	sizes = []
 	manager = digitalocean.Manager(token=provider_token)
-	sizes = manager.get_all_sizes()
-	t = PrettyTable(['Size', 'Price', 'Description'])
-
-	for size in sizes:
+	for size in manager.get_all_sizes():
 		if size.available:
-			t.add_row([size.slug, size.price_monthly, size.description])
+			sizes.append(SimpleNamespace(
+				slug=size.slug,
+				price=size.price_monthly,
+				description=size.description,
+				memory=size.memory,
+				vcpus=size.vcpus,
+				disk=size.disk,
+			))
 
-	t.align = 'l'
-	t.sortby = 'Price'
-	click.echo(t.get_string())
+	# JSON
+	# print(json.dumps([s.__dict__ for s in sizes]))
+	width, height = os.get_terminal_size()
+	slug_max_length = max([len(s.slug) for s in sizes])
+	price_max_length = max([len(str(int(s.price))) for s in sizes]) + 1
+	disk_max_length = max([len(str(int(s.disk))) for s in sizes]) + 1
+	memory_max_length = max([len(str(int(s.memory / 1024))) for s in sizes]) + 1
+
+	i = 0
+	for size in sizes:
+		slug = size.slug.rjust(slug_max_length)
+		description = size.description
+		memory = (str(int(size.memory / 1024)) + 'G').rjust(memory_max_length)
+		disk = (str(size.disk) + 'G').rjust(disk_max_length)
+		vcpus = str(size.vcpus) + 'C'
+		price = ('$' + str(int(size.price))).rjust(price_max_length)
+
+		dots_n = len(f'{slug} {description}') + len(f'{vcpus} {memory} {disk} {price}')
+		dots_n = width - dots_n - 4
+		dots = click.style('-'*dots_n, fg='bright_black')
+
+		# Add styles
+		slug = click.style(slug, fg='green')
+		description = click.style(description)
+		memory = click.style(memory, fg='bright_black')
+		disk = click.style(disk, fg='bright_black')
+		vcpus = click.style(vcpus, fg='bright_black')
+		price = click.style(price, fg='bright_black')
+
+		if i % (height / 2) == 0:
+			click.echo()
+			header = 'Slug'.rjust(slug_max_length + 1)
+			header += ' Description'
+			header += 'CPU  RAM  Disk Price '.rjust(width-len(header))
+			click.secho(header, fg='bright_black')
+			click.echo()
+
+		click.echo(f' {slug} {description} {dots} {vcpus} {memory} {disk} {price}')
+		i += 1
+
+	click.echo()
 
 @cli.command()
 @click.option('--provider-token', help='Your DigitalOcean API token, must be read-write. You can set a default token with: sail config provider-token <token>')
