@@ -668,7 +668,8 @@ def sizes(provider_token):
 
 @cli.command()
 @click.option('--provider-token', help='Your DigitalOcean API token, must be read-write. You can set a default token with: sail config provider-token <token>')
-def regions(provider_token):
+@click.option('--json', 'as_json', is_flag=True)
+def regions(provider_token, as_json):
 	'''Get available deployment regions'''
 	root = util.find_root()
 
@@ -683,16 +684,23 @@ def regions(provider_token):
 	if not provider_token:
 		raise util.SailException('You need to provide a DigitalOcean API token with --provider-token, or set a default one with: sail config provider-token <token>')
 
-	click.echo('# Getting available regions')
-
-	t = PrettyTable(['Slug', 'Name'])
-
 	manager = digitalocean.Manager(token=provider_token)
-	regions = manager.get_all_regions()
+	regions = []
+	for region in manager.get_all_regions():
+		if region.available:
+			regions.append({'name': region.name, 'slug': region.slug})
+
+	if as_json:
+		click.echo(json.dumps(regions))
+		return
+
+	click.echo()
+	click.secho(' Slug  Region Name', fg='bright_black')
+	click.echo()
 
 	for region in regions:
-		if region.available:
-			t.add_row([region.slug, region.name])
+		name, slug = region['name'], region['slug']
+		click.secho(f' {slug}', fg='green', nl=False)
+		click.secho(f'  {name}')
 
-	t.align = 'l'
-	click.echo(t.get_string())
+	click.echo()
