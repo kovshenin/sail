@@ -3,8 +3,12 @@
 ## [Unreleased]
 
 * Added: New `commands` section for Blueprints to run arbitrary commands via SSH
+* Added: New `--json` flag for `sail regions`, added some colors
+* Added: New `--json` flag for `sail sizes` and improved output
 * Fixed: Bug in `sail db import` which didn't allow the database import to complete
 * Fixed: Renewals of certs in Certbot should trigger Nginx reload
+* Changed: Bumped minimum Python version to 3.8 in install script, added support for python3.8 binary
+* Changed: Removed PrettyTable dependency
 
 ## [0.10.5] - 2022-02-08
 
