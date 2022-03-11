@@ -5,7 +5,6 @@ import re, os
 import json, time
 
 from datetime import datetime, timedelta
-from prettytable import PrettyTable
 from math import floor
 
 @cli.group(invoke_without_command=True)
