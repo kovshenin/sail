@@ -732,10 +732,13 @@ def regions(provider_token, as_json):
 	regions = []
 	for region in manager.get_all_regions():
 		if region.available:
-			regions.append({'name': region.name, 'slug': region.slug})
+			regions.append(SimpleNamespace(
+				name=region.name,
+				slug=region.slug,
+			))
 
 	if as_json:
-		click.echo(json.dumps(regions))
+		click.echo(json.dumps([r.__dict__ for r in regions]))
 		return
 
 	click.echo()
@@ -743,8 +746,7 @@ def regions(provider_token, as_json):
 	click.echo()
 
 	for region in regions:
-		name, slug = region['name'], region['slug']
-		click.secho(f' {slug}', fg='green', nl=False)
-		click.secho(f'  {name}')
+		click.secho(f' {region.slug}', fg='green', nl=False)
+		click.secho(f'  {region.name}')
 
 	click.echo()
