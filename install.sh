@@ -1,5 +1,5 @@
 #!/bin/bash
-REQUIRED_PYTHON_VERSION=3.6.0
+REQUIRED_PYTHON_VERSION=3.8.0
 INSTALL_DIR=/opt/sail
 BIN_DIR=/usr/local/bin
 REQUESTED_VERSION=$1
@@ -46,6 +46,8 @@ if test_python python; then
 	PYTHON_BIN=$(which python)
 elif test_python python3; then
 	PYTHON_BIN=$(which python3)
+elif test_python python3.8; then
+	PYTHON_BIN=$(which python3.8)
 fi
 
 if [[ -z ${PYTHON_BIN} ]]; then
