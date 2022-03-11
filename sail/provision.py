@@ -637,7 +637,8 @@ def _destroy_environment():
 
 @cli.command()
 @click.option('--provider-token', help='Your DigitalOcean API token, must be read-write. You can set a default token with: sail config provider-token <token>')
-def sizes(provider_token):
+@click.option('--json', 'as_json', is_flag=True)
+def sizes(provider_token, as_json):
 	'''Get available droplet sizes'''
 	root = util.find_root()
 
@@ -665,8 +666,10 @@ def sizes(provider_token):
 				disk=size.disk,
 			))
 
-	# JSON
-	# print(json.dumps([s.__dict__ for s in sizes]))
+	if as_json:
+		click.echo(json.dumps([s.__dict__ for s in sizes]))
+		return
+
 	width, height = os.get_terminal_size()
 	slug_max_length = max([len(s.slug) for s in sizes])
 	price_max_length = max([len(str(int(s.price))) for s in sizes]) + 1
