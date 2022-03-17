@@ -200,7 +200,7 @@ def curl(ctx, command):
 	command = list(command)
 	command = ['-s', '-v', '-H', 'X-Sail-Profile: %s' % config['profile_key']] + command
 
-	util.heading('Running cURL with profiling headers', err=True)
+	util.heading('Running cURL with profiling headers')
 
 	# TODO: Maybe add the SAIL_NOCACHE query var
 	p = subprocess.Popen(['curl'] + command, stdout=subprocess.PIPE,
@@ -211,7 +211,7 @@ def curl(ctx, command):
 	if p.returncode != 0:
 		raise util.SailException('An error occurred in cURL. Please try again.')
 
-	matches = re.search(r'^<\s*X-Sail-Profile: (.+)$', stderr, re.MULTILINE)
+	matches = re.search(r'^<\s*X-Sail-Profile: (.+)$', stderr, re.MULTILINE | re.IGNORECASE)
 	if not matches:
 		raise util.SailException('Could not find profile filename from headers')
 
