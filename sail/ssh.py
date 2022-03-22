@@ -206,7 +206,9 @@ def run(command, root):
 	if not as_root:
 		command = util.join(['sudo', '-u', 'www-data', 'bash', '-c', command])
 
-	os.execlp('ssh', 'ssh', '-tt',
+	extra_args = '-vtt' if util.debug() else '-tt'
+
+	os.execlp('ssh', 'ssh', extra_args,
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
