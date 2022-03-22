@@ -248,6 +248,9 @@ def rsync(args, source, destination, default_filters=True, extend_filters=[]):
 		dlog('Rsync stdout: %s' % stdout)
 		dlog('Rsync stderr: %s' % stderr)
 
+	if 'WARNING: UNPROTECTED PRIVATE KEY FILE' in stderr:
+		raise SailException('Unprotected private key file. Please fix permissions and try again.')
+
 	return (p.returncode, stdout, stderr)
 
 def connection():
