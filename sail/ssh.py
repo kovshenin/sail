@@ -177,7 +177,9 @@ def shell(root):
 	if not as_root:
 		command = 'sudo -u www-data bash -c "cd %s; bash"' % util.remote_path('/public')
 
-	os.execlp('ssh', 'ssh', '-tt',
+	extra_args = '-vtt' if util.debug() else '-tt'
+
+	os.execlp('ssh', 'ssh', extra_args,
 		'-i', '%s/.sail/ssh.key' % root,
 		'-o', 'UserKnownHostsFile="%s/.sail/known_hosts"' % root,
 		'-o', 'IdentitiesOnly=yes',
