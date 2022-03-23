@@ -23,6 +23,12 @@ swap:
   filename: /swapfile
   size: 2147483648
 
+write_files:
+  - path: /etc/ssh/sshd_config.d/sail.conf
+    content: |
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+
 runcmd:
   - [ ufw, allow, ssh ]
   - [ ufw, allow, http ]
