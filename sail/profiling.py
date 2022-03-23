@@ -439,13 +439,16 @@ def _render_view_symbol(stdscr, data, totals, symbol, selected=1, sort=2):
 		'mysql_query',
 		'curl_exec',
 		'mysqli::query',
-		'{closure}',
 	]
 
 	if '#' in symbol:
 		item['label'], args = symbol.split('#', 1)
 
-		if item['label'] in expand_meta_for:
+		expand = True if item['label'] in expand_meta_for else False
+		if item['label'].endswith('{closure}'):
+			expand = True
+
+		if expand:
 			meta = []
 			for line in textwrap.wrap(args, cols - 4):
 				meta.append({'meta': line})
