@@ -337,6 +337,14 @@ def sizeof_fmt(num, suffix="B"):
 	return f'{num:.1f}Yi{suffix}'
 
 ## Formatting:
+is_silent = False
+def silent(make_silent=None):
+	global is_silent
+	if make_silent is not None:
+		is_silent = make_silent
+		loader(suspend=is_silent)
+
+	return is_silent
 
 label_w = 0
 def label_width(width):
@@ -348,16 +356,20 @@ def label(label, fg='green'):
 	return click.style(label.rjust(label_w), fg=fg)
 
 def success(message, padding=True):
+	if silent(): return
 	if padding: click.echo()
 	click.echo(click.style('Success: ', fg='green') + message)
 	if padding: click.echo()
 
 def failure(message):
+	if silent(): return
 	click.echo(click.style('Error: ', fg='red') + message)
 
 def heading(message, padding=True):
+	if silent(): return
 	if padding: click.echo()
 	click.echo(message)
 
 def item(message):
+	if silent(): return
 	click.secho('  ' + message, fg='bright_black')

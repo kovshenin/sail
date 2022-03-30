@@ -23,11 +23,15 @@ from cryptography.hazmat.primitives import serialization
 @click.option('--namespace', default='default', help='The namespace to use for the new application')
 @click.option('--environment', help='Initialize the application into an existing environment')
 @click.option('--blueprint', 'blueprint', default='default.yaml', help='Apply a blueprint after init, defaults to: default.yaml')
+@click.option('--json', 'as_json', is_flag=True, help='Suspend regular output and print results in JSON format')
 @click.option('--force', '-f', is_flag=True)
 @click.pass_context
-def init(ctx, provider_token, email, size, region, force, namespace, environment, blueprint):
+def init(ctx, provider_token, email, size, region, force, namespace, environment, blueprint, as_json):
 	'''Initialize and provision a new project'''
 	root = util.find_root()
+
+	if as_json:
+		util.silent(True)
 
 	if root and os.path.exists(root + '/.sail'):
 		raise util.SailException('This ship has already sailed. Pick another one or remove the .sail directory.')
@@ -174,7 +178,14 @@ def init(ctx, provider_token, email, size, region, force, namespace, environment
 			util.item('Could not initialize Premium')
 
 	util.heading('Initialization successful')
-	_success(passwords['wp'])
+
+	if as_json:
+		_config = util.config()
+		_config.update({'password': passwords['wp']})
+		click.echo(json.dumps(_config))
+		return
+	else:
+		_success(passwords['wp'])
 
 def _success(wp_password):
 	config = util.config()
