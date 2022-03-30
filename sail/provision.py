@@ -554,10 +554,14 @@ def _install(passwords):
 @click.option('--yes', '-y', is_flag=True, help='Force yes on the are-you-sure prompt')
 @click.option('--environment', is_flag=True, help='Force destroy environment, even if other namespaces exist')
 @click.option('--skip-dns', is_flag=True, help='Do not attempt to delete DNS records for associated domains')
-def destroy(yes, environment, skip_dns):
+@click.option('--json', 'as_json', is_flag=True, help='Suspend regular output and print results in JSON format')
+def destroy(yes, environment, skip_dns, as_json):
 	'''Destroy an application namespace and/or the environment'''
 	root = util.find_root()
 	config = util.config()
+
+	if as_json:
+		util.silent(True)
 
 	if not yes:
 		click.confirm('All application data will be scrubbed and irretrievable. Are you sure?', abort=True)
@@ -606,6 +610,9 @@ def destroy(yes, environment, skip_dns):
 	shutil.rmtree(root + '/.sail')
 
 	util.success('Destroyed successfully')
+
+	if as_json:
+		click.echo(json.dumps({'success': True}))
 
 def _destroy_namespace():
 	config = util.config()
