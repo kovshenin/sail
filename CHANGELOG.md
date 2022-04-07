@@ -5,10 +5,18 @@
 * Added: New `commands` section for Blueprints to run arbitrary commands via SSH
 * Added: New `--json` flag for `sail regions`, added some colors
 * Added: New `--json` flag for `sail sizes` and improved output
+* Added: New `--json` flog for `sail init` and `sail destroy`, along with some util updates
+* Added: ClientAliveInterval setting for `sshd` to keep SSH sessions running
 * Fixed: Bug in `sail db import` which didn't allow the database import to complete
 * Fixed: Renewals of certs in Certbot should trigger Nginx reload
+* Fixed: Avoid dots in generated cron.d filenames as run-parts does not run them
+* Fixed: Python error when running `sail profile curl`, also ignore case on X-Sail-Profile search
+* Changed: Update xhprof PHP module for better closure support
 * Changed: Bumped minimum Python version to 3.8 in install script, added support for python3.8 binary
 * Changed: Removed PrettyTable dependency
+* Changed: Updated dependencies: paramiko, jinja2, fabric, click
+* Changed: Better error messages in Rsync when key permissions are too open
+* Changed: More verbose output for piped SSH commands when running in debug mode
 
 ## [0.10.5] - 2022-02-08
 
