@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.10.6] - 2022-04-07
 
 * Added: New `commands` section for Blueprints to run arbitrary commands via SSH
 * Added: New `--json` flag for `sail regions`, added some colors
