@@ -1,7 +1,7 @@
 from sail import cli, util
 
 import click, uuid, io, json
-import shlex
+import shlex, hashlib
 
 @cli.group()
 def cron():
@@ -63,7 +63,7 @@ def delete(id):
 	util.item('Updating .sail/config.json')
 	util.update_config(config)
 
-	util.item('Generating /etc/cron.d/sail-%s' % config['namespace'])
+	util.item('Generating /etc/cron.d entry')
 	_generate_cron()
 
 	util.success('Cron job delete successfully')
@@ -125,7 +125,7 @@ def add(schedule, command, root, quiet):
 	util.update_config(config)
 
 	if not quiet:
-		util.item('Generating /etc/cron.d/sail-%s' % config['namespace'])
+		util.item('Generating /etc/cron.d entry')
 
 	_generate_cron()
 
@@ -138,8 +138,11 @@ def _generate_cron():
 
 	cron_data = config.get('cron', {})
 
+	c.run('rm /etc/cron.d/sail-%s' % config['namespace'], warn=True) # back-compat
+	filename = 'sail-%s-%s' % (config['namespace'].replace('.', '_'), hashlib.md5(config['namespace'].encode('utf8')).hexdigest()[:8])
+
 	if len(cron_data) < 1:
-		c.run('rm /etc/cron.d/sail-%s' % config['namespace'])
+		c.run(f'rm /etc/cron.d/{filename}', warn=True)
 		return
 
 	contents = []
@@ -155,8 +158,8 @@ def _generate_cron():
 	# Cron needs an empty line before EOF.
 	contents.append('')
 
-	c.put(io.StringIO('\n'.join(contents)), '/etc/cron.d/sail-%s' % config['namespace'])
-	c.run('chmod 0600 /etc/cron.d/sail-%s' % config['namespace'])
+	c.put(io.StringIO('\n'.join(contents)), f'/etc/cron.d/{filename}')
+	c.run(f'chmod 0600 /etc/cron.d/{filename}')
 
 @cron.command()
 @click.argument('id', nargs=1)
