@@ -87,8 +87,9 @@ def _get_deployignore_filters():
 @click.option('--with-uploads', is_flag=True, help='Include the wp-content/uploads directory')
 @click.option('--dry-run', is_flag=True, help='Show changes about to be deployed to production')
 @click.option('--skip-hooks', '--no-verify', is_flag=True, help='Do not run pre-deploy hooks')
+@click.option('--redeploy', is_flag=True, help='Redeploy to an existing release directory')
 @click.pass_context
-def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
+def deploy(ctx, with_uploads, dry_run, path, skip_hooks, redeploy):
 	'''Deploy your working copy to production. If path is not specified then all application files are deployed.'''
 	root = util.find_root()
 	config = util.config()
@@ -126,12 +127,24 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 
 		exit()
 
-	util.item('Preparing release directory')
 	c = util.connection()
 	remote_path = util.remote_path()
 
-	c.run('mkdir -p %s/releases/%s' % (remote_path, release))
-	c.run('rsync -rogtl %s/public/ %s/releases/%s' % (remote_path, remote_path, release))
+	if redeploy:
+		try:
+			_current = c.run('readlink %s/public' % remote_path).stdout.strip().split('/')[-1]
+			if not _current:
+				raise Exception()
+		except:
+			raise util.SailException('Could not determine current release')
+
+		util.item(f'Overwriting existing release: {_current}')
+		release = _current
+
+	else:
+		util.item('Preparing release directory')
+		c.run('mkdir -p %s/releases/%s' % (remote_path, release))
+		c.run('rsync -rogtl %s/public/ %s/releases/%s' % (remote_path, remote_path, release))
 
 	util.item('Uploading application files to production')
 
@@ -167,13 +180,16 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks):
 
 	util.item('Deploying release: %s' % release)
 
-	util.item('Updating symlinks')
-	c.run('sudo -u www-data ln -sfn %s/uploads %s/releases/%s/wp-content/uploads' % (remote_path, remote_path, release))
-	c.run('sudo -u www-data ln -sfn %s/releases/%s %s/public' % (remote_path, release, remote_path))
+	if not redeploy:
+		util.item('Updating symlinks')
+		c.run('sudo -u www-data ln -sfn %s/uploads %s/releases/%s/wp-content/uploads' % (remote_path, remote_path, release))
+		c.run('sudo -u www-data ln -sfn %s/releases/%s %s/public' % (remote_path, release, remote_path))
 
-	util.item('Reloading services')
-	c.run('nginx -s reload')
-	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
+		util.item('Reloading services')
+		c.run('nginx -s reload')
+		c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
+	else:
+		util.item('Nothing to update/reload in redeploy')
 
 	releases = c.run('ls %s/releases' % remote_path)
 	releases = re.findall('\d+', releases.stdout)

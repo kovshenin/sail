@@ -1,11 +1,15 @@
 # Changelog
 
+## Unreleased
+
+* Added: New `--redeploy` flag to `sail deploy` to ovewrite existing release directory
+
 ## [0.10.6] - 2022-04-07
 
 * Added: New `commands` section for Blueprints to run arbitrary commands via SSH
 * Added: New `--json` flag for `sail regions`, added some colors
 * Added: New `--json` flag for `sail sizes` and improved output
-* Added: New `--json` flog for `sail init` and `sail destroy`, along with some util updates
+* Added: New `--json` flag for `sail init` and `sail destroy`, along with some util updates
 * Added: ClientAliveInterval setting for `sshd` to keep SSH sessions running
 * Fixed: Bug in `sail db import` which didn't allow the database import to complete
 * Fixed: Renewals of certs in Certbot should trigger Nginx reload
