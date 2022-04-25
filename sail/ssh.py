@@ -115,7 +115,7 @@ def listcmd(as_json):
 	data = _list(c)
 
 	if as_json:
-		click.echo(json.dumps(data.keys()))
+		click.echo(json.dumps(list(data.keys())))
 		return
 
 	click.echo()
