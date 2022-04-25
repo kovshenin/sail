@@ -1,8 +1,10 @@
 from sail import cli, util
 
 import click, pathlib, json
-import os, shlex, subprocess, io
+import os, shlex, subprocess, io, time
 import requests
+
+from datetime import datetime
 
 @cli.group(invoke_without_command=True)
 @click.option('--root', is_flag=True, help='Login as the root user')
@@ -19,8 +21,11 @@ def key():
 
 @key.command()
 @click.argument('path', nargs=1)
-def add(path, quiet=False):
+@click.option('--label', help='Provide an optional label for this key')
+def add(path, label=None, quiet=False):
 	'''Add an SSH key to the production server by filename or GitHub URL'''
+	config = util.config()
+
 	if not quiet: util.heading('Adding SSH keys')
 
 	c = util.connection()
@@ -33,6 +38,8 @@ def add(path, quiet=False):
 			raise util.SailException('Could not fetch keys from GitHub')
 
 		keys = r.text.strip().split('\n')
+		if not label:
+			label = path
 	else:
 		path = pathlib.Path(path)
 		if not path.exists() or not path.is_file():
@@ -72,9 +79,18 @@ def add(path, quiet=False):
 		if not quiet: util.item('Added %s' % fingerprint)
 		c.run(util.join(['echo', key]) + ' >> /root/.ssh/authorized_keys', hide=True)
 
+		config['ssh_key_meta'][fingerprint] = {
+			'created': int(time.time()),
+			'label': label,
+		}
+
+	if not quiet: util.item('Updating .sail/config.json')
+	util.update_config(config)
+
 	if not quiet: util.success('Done')
 
 def _list(c):
+	config = util.config()
 	keys = io.BytesIO()
 	c.get('/root/.ssh/authorized_keys', keys)
 
@@ -99,7 +115,10 @@ def _list(c):
 		except:
 			continue
 
-		data[fp] = {'fingerprint': fp, 'key': line}
+		data[fp] = {'fingerprint': fp, 'key': line, 'label': None}
+
+		if config['ssh_key_meta'].get(fp):
+			data[fp]['label'] = config['ssh_key_meta'][fp]['label']
 
 	return data
 
@@ -107,6 +126,8 @@ def _list(c):
 @click.option('--json', 'as_json', is_flag=True, help='Output in JSON format')
 def listcmd(as_json):
 	'''List currently authorized SSH keys on the production server'''
+	config = util.config()
+
 	if not as_json:
 		util.heading('Listing SSH keys')
 		util.item('Gathering remote SSH keys')
@@ -115,19 +136,36 @@ def listcmd(as_json):
 	data = _list(c)
 
 	if as_json:
-		click.echo(json.dumps(list(data.keys())))
+		click.echo(json.dumps(data))
 		return
 
 	click.echo()
-	for fingerprint, key in data.items():
-		click.echo('  ' + fingerprint)
+	util.label_width(8)
 
-	click.echo()
+	for fingerprint, key in data.items():
+		key_label = 'None'
+		key_created = 'Unknown'
+		if config['ssh_key_meta'].get(fingerprint):
+			key_label = config['ssh_key_meta'][fingerprint]['label']
+			key_created = datetime.fromtimestamp(config['ssh_key_meta'][fingerprint]['created'])
+
+		label = util.label('Hash:')
+		click.echo(f'{label} {fingerprint}')
+
+		label = util.label('Label:')
+		click.echo(f'{label} {key_label}')
+
+		label = util.label('Added:')
+		click.echo(f'{label} {key_created}')
+
+		click.echo()
 
 @key.command()
 @click.argument('hash', nargs=1)
 def delete(hash):
 	'''Delete an authorized SSH key from the production server'''
+	config = util.config()
+
 	root = util.find_root()
 	with open('%s/.sail/ssh.key.pub' % root, 'r') as f:
 		sail_pub_key = f.read()
@@ -162,6 +200,11 @@ def delete(hash):
 
 	regex = key.replace('/', '\/')
 	c.run(util.join(['sed', '-i', '/^%s/d' % regex, '/root/.ssh/authorized_keys']), hide=True)
+
+	if config['ssh_key_meta'].get(fp):
+		del config['ssh_key_meta'][fp]
+		util.item('Updating .sail/config.json')
+		util.update_config(config)
 
 	util.success('Removed key: %s' % fp)
 

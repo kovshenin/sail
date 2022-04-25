@@ -149,6 +149,9 @@ def config():
 	if 'namespace' not in _config:
 		_config['namespace'] = 'default'
 
+	if 'ssh_key_meta' not in _config:
+		_config['ssh_key_meta'] = {}
+
 	return _config
 
 loader_i = 0
