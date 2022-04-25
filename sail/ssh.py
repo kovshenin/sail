@@ -2,7 +2,7 @@ from sail import cli, util
 
 import click, pathlib, json
 import os, shlex, subprocess, io, time
-import requests
+import requests, hashlib, base64
 
 from datetime import datetime
 
@@ -50,24 +50,18 @@ def add(path, label=None, quiet=False):
 
 	to_add = {}
 
-	for _key in keys:
-		items = _key.split()
+	for line in keys:
+		items = line.split()
 		if items[0] not in ['ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521'
 			'ssh-ed25519', 'ssh-dss', 'ssh-rsa']:
 			raise util.SailException('Unsupported key type: %s' % items[0])
 
-		type = items[0]
-		key = items[1]
-
 		try:
-			r = c.run(util.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
-				+ ' <<<' + util.join([_key]), hide=True)
-
-			size, fp, _ = r.stdout.split(maxsplit=2)
+			fp = _fingerprint(line)
 		except:
 			raise util.SailException('Provided public key is invalid')
 
-		to_add[fp] = _key
+		to_add[fp] = line
 
 	existing = _list(c)
 
@@ -105,13 +99,8 @@ def _list(c):
 			'ssh-ed25519', 'ssh-dss', 'ssh-rsa']:
 			continue
 
-		type = items[0]
-		key = items[1]
 		try:
-			r = c.run(util.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
-				+ ' <<<' + util.join([line]), hide=True)
-
-			size, fp, _ = r.stdout.split(maxsplit=2)
+			fp = _fingerprint(line)
 		except:
 			continue
 
@@ -175,10 +164,7 @@ def delete(hash):
 
 	c = util.connection()
 	try:
-		r = c.run(util.join(['ssh-keygen', '-E', 'md5', '-lf', '/dev/stdin'])
-			+ ' <<<' + util.join([sail_pub_key]), hide=True)
-
-		_, sail_fp, _ = r.stdout.split(maxsplit=2)
+		sail_fp = _fingerprint(sail_pub_key)
 	except:
 		raise util.SailException('Could not compute hash of local Sail key')
 
@@ -260,3 +246,8 @@ def run(command, root):
 		'root@%s' % config['hostname'],
 		command
 	)
+
+def _fingerprint(line):
+	key = base64.b64decode(line.strip().split()[1].encode('ascii'))
+	fp_plain = hashlib.md5(key).hexdigest()
+	return 'MD5:' + ':'.join(a+b for a,b in zip(fp_plain[::2], fp_plain[1::2]))
