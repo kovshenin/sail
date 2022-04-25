@@ -1,4 +1,4 @@
-from sail import cli, util, deploy, domains, blueprints, cron, __version__
+from sail import cli, util, deploy, domains, blueprints, cron, ssh, __version__
 
 import sail
 import json
@@ -374,6 +374,14 @@ def _provision(provider_token, size, region):
 	config['ip'] = droplet.ip_address
 	config['droplet_id'] = droplet.id
 	config['key_id'] = key.id
+
+	# Add Sail's key metadata
+	sail_fp = ssh._fingerprint(public_key)
+	config['ssh_key_meta'][sail_fp] = {
+		'created': int(time.time()),
+		'label': '.sail/ssh.key',
+	}
+
 	util.update_config(config)
 
 	util.item('Waiting for SSH')
