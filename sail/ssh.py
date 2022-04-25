@@ -76,6 +76,7 @@ def add(path, label=None, quiet=False):
 		config['ssh_key_meta'][fingerprint] = {
 			'created': int(time.time()),
 			'label': label,
+			'protected': False,
 		}
 
 	if not quiet: util.item('Updating .sail/config.json')

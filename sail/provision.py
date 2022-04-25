@@ -380,6 +380,7 @@ def _provision(provider_token, size, region):
 	config['ssh_key_meta'][sail_fp] = {
 		'created': int(time.time()),
 		'label': '.sail/ssh.key',
+		'protected': True,
 	}
 
 	util.update_config(config)
