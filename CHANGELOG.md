@@ -3,6 +3,8 @@
 ## Unreleased
 
 * Added: New `--redeploy` flag to `sail deploy` to ovewrite existing release directory
+* Added: Support for `--label` in `sail ssh key add` and the relevant output it `sail ssh key list`
+* Fixed: The `--json` flag in `sail ssh key list` threw an error
 
 ## [0.10.6] - 2022-04-07
 
