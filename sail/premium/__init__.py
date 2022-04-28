@@ -16,9 +16,12 @@ def premium_init():
 		if not is_premium:
 			raise Exception('Not premium, nothing to init.')
 
-		from sail.premium import backups, monitor
+		_premium_force_init()
 	except:
 		pass
+
+def _premium_force_init():
+	from sail.premium import backups, monitor
 
 @cli.group()
 def premium():
