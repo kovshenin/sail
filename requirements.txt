@@ -4,6 +4,6 @@ PyYAML==6.0
 fabric==2.7.0
 paramiko==2.10.3
 python-digitalocean==1.17.0
-Jinja2==3.1.1
+Jinja2==3.1.2
 tldextract==3.2.1
 packaging==21.3
