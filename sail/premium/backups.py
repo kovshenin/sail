@@ -58,8 +58,9 @@ def restore(ctx, path, yes, skip_db, skip_uploads):
 @backup.command()
 @click.option('--local', is_flag=True, help='Force a local backup instead of remote')
 @click.option('--description', help='Provide an optional description for this backup')
+@click.option('--nowait', is_flag=True, help='Do not wait for the remote task to complete and exit early')
 @click.pass_context
-def create(ctx, local, description):
+def create(ctx, local, description, nowait):
 	'''Backup your production files and database to a remote or local location.'''
 	config = util.config()
 
@@ -79,6 +80,10 @@ def create(ctx, local, description):
 
 	task_id = request['task_id']
 
+	if nowait:
+		util.success('Request received, exiting (nowait)')
+		return
+
 	util.item('Request received, waiting for task to complete')
 	data = util.wait_for_task(task_id, 3600, 10)
 
@@ -96,7 +101,7 @@ def list_cmd(as_json):
 
 	if as_json:
 		click.echo(json.dumps(backups))
-		return		
+		return
 
 	width, height = os.get_terminal_size()
 	i = 0
