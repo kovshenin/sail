@@ -86,12 +86,17 @@ def create(ctx, local, description):
 	util.success('Remote backup created successfully')
 
 @backup.command(name='list')
-def list_cmd():
+@click.option('--json', 'as_json', is_flag=True, help='Return results as a JSON object')
+def list_cmd(as_json):
 	'''List available managed backups'''
 	if not util.premium():
 		raise util.SailException('Premium features are not enabled for this application. Learn more: https://sailed.io/premium/')
 
 	backups = util.request('/premium/backups/list/')
+
+	if as_json:
+		click.echo(json.dumps(backups))
+		return		
 
 	width, height = os.get_terminal_size()
 	i = 0
