@@ -80,7 +80,7 @@ def enable(ctx, force, email, license doing_init=False):
 		f.write(public_key)
 	os.chmod('%s/.sail/premium.key.pub' % root, 0o644)
 
-	ctx.invoke(ssh.add, path='%s/.sail/premium.key.pub' % root, quiet=True)
+	ctx.invoke(ssh.add, path='%s/.sail/premium.key.pub' % root, label='.sail/premium.key' quiet=True)
 
 	util.item('Verifying connection')
 	response = util.request('/premium/enable/', json={
