@@ -30,7 +30,7 @@ def premium():
 @click.option('--email', help='The admin e-mail address. You can set the default e-mail address with: sail config email <email>')
 @click.option('--license', help='The premium license key. You can set a default key with: sail config premium <license>')
 @click.pass_context
-def enable(ctx, force, email, license doing_init=False):
+def enable(ctx, force, email, license, doing_init=False):
 	'''Provision premium features for this application.'''
 	config = util.config()
 	root = util.find_root()
@@ -80,7 +80,7 @@ def enable(ctx, force, email, license doing_init=False):
 		f.write(public_key)
 	os.chmod('%s/.sail/premium.key.pub' % root, 0o644)
 
-	ctx.invoke(ssh.add, path='%s/.sail/premium.key.pub' % root, label='.sail/premium.key' quiet=True)
+	ctx.invoke(ssh.add, path='%s/.sail/premium.key.pub' % root, label='.sail/premium.key', quiet=True)
 
 	util.item('Verifying connection')
 	response = util.request('/premium/enable/', json={
