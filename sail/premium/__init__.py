@@ -27,13 +27,19 @@ def premium():
 
 @premium.command()
 @click.option('--force', is_flag=True, help='Force enable routine, even if already premium.')
+@click.option('--email', help='The admin e-mail address. You can set the default e-mail address with: sail config email <email>')
+@click.option('--license', help='The premium license key. You can set a default key with: sail config premium <license>')
 @click.pass_context
-def enable(ctx, force, doing_init=False):
+def enable(ctx, force, email, license doing_init=False):
 	'''Provision premium features for this application.'''
 	config = util.config()
 	root = util.find_root()
-	license = util.get_sail_default('premium')
-	email = util.get_sail_default('email')
+
+	if not license:
+		license = util.get_sail_default('premium')
+
+	if not email:
+		email = util.get_sail_default('email')
 
 	util.heading('Setting up Sail Premium')
 
