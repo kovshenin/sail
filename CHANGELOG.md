@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* Added: New `--redeploy` flag to `sail deploy` to ovewrite existing release directory
+* Added: New `--redeploy` flag to `sail deploy` to overwrite existing release directory
 * Added: Support for `--label` in `sail ssh key add`
 * Changed: Improved output of `sail ssh key list` with key metadata
 * Changed: Improved the speed of all SSH key operations by computing fingerprints locally
@@ -53,7 +53,7 @@
 
 ## [0.10.3] - 2021-12-27
 
-* Added: A default.yaml blueprint, with Surge cache and fail2ban pre-insalled
+* Added: A default.yaml blueprint, with Surge cache and fail2ban pre-installed
 * Added: Quite a few colors to most of the Sail commands, better output formatting, output utils
 * Changed: Increased default upload/post max size from 2/8M to 128M in PHP
 * Changed: Increased client_max_body_size from 32M to 128M in Nginx
@@ -88,7 +88,7 @@
 * Changed: `sail domain delete` will now attempt to delete the DNS zone only if no more records exist in that zone
 * Changed: `sail domain delete` now accepts a `--zone` flag which forces a DNS zone delete (and orphaned subdomains form config.json)
 * Added: Support for the Mailgun EU region in `mailgun.yaml` blueprint
-* Added: Support for a `.deployignore` file to remove certain patters from deployment
+* Added: Support for a `.deployignore` file to remove certain patterns from deployment
 
 ## [0.10.0] - 2021-11-10
 
