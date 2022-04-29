@@ -20,8 +20,9 @@ def backup(ctx):
 @click.option('--yes', '-y', is_flag=True, help='Skip the AYS message and force yes')
 @click.option('--skip-db', is_flag=True, help='Do not import the database')
 @click.option('--skip-uploads', is_flag=True, help='Do not import uploads')
+@click.option('--nowait', is_flag=True, help='Do not wait for the remote task to complete and exit early')
 @click.pass_context
-def restore_compat(ctx, path, yes, skip_db, skip_uploads):
+def restore_compat(ctx, path, yes, skip_db, skip_uploads, nowait):
 	'''Restore your application files, uploads and database from a local or remote backup'''
 	return ctx.forward(restore)
 
@@ -30,8 +31,9 @@ def restore_compat(ctx, path, yes, skip_db, skip_uploads):
 @click.option('--yes', '-y', is_flag=True, help='Skip the AYS message and force yes')
 @click.option('--skip-db', is_flag=True, help='Do not import the database')
 @click.option('--skip-uploads', is_flag=True, help='Do not import uploads')
+@click.option('--nowait', is_flag=True, help='Do not wait for the remote task to complete and exit early')
 @click.pass_context
-def restore(ctx, path, yes, skip_db, skip_uploads):
+def restore(ctx, path, yes, skip_db, skip_uploads, nowait):
 	'''Restore your application files, uploads and database from a local or remote backup'''
 	config = util.config()
 
@@ -48,6 +50,10 @@ def restore(ctx, path, yes, skip_db, skip_uploads):
 	})
 
 	task_id = request['task_id']
+
+	if nowait:
+		util.success('Request received, exiting (nowait)')
+		return
 
 	util.item('Request received, waiting for task to complete')
 	data = util.wait_for_task(task_id, 3600, 10)
@@ -152,8 +158,9 @@ def list_cmd(as_json):
 
 @backup.command()
 @click.argument('timestamp', nargs=1, required=True)
+@click.option('--nowait', is_flag=True, help='Do not wait for the remote task to complete and exit early')
 @click.pass_context
-def export(ctx, timestamp):
+def export(ctx, timestamp, nowait):
 	'''Export a remote backup to a downloadable .tar.gz archive'''
 	config = util.config()
 
@@ -165,6 +172,10 @@ def export(ctx, timestamp):
 	})
 
 	task_id = request['task_id']
+
+	if nowait:
+		util.success('Request received, exiting (nowait)')
+		return
 
 	util.item('Request received, waiting for task to complete')
 	data = util.wait_for_task(task_id, 3600, 10)
