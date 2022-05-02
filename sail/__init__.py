@@ -7,6 +7,13 @@ API_BASE = 'https://sailed.io/api/1.1'
 DEFAULT_IMAGE = 'ubuntu-20-04-x64'
 TEMPLATES_PATH = os.path.join(os.path.dirname(__file__), 'templates')
 
+# Suppress blowfish warning until resolved: https://github.com/paramiko/paramiko/issues/2038
+import warnings
+from cryptography.utils import CryptographyDeprecationWarning
+with warnings.catch_warnings():
+	warnings.filterwarnings('ignore', category=CryptographyDeprecationWarning)
+	import paramiko
+
 from sail import util
 
 import click
