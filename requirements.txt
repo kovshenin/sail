@@ -1,5 +1,5 @@
 click==8.1.2
-requests==2.27.1
+requests==2.28.0
 PyYAML==6.0
 fabric==2.7.0
 paramiko==2.10.3
