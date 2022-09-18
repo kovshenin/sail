@@ -359,6 +359,7 @@ def _bp_fail2ban(jails):
 	# Make sure configs directory exists and permissions ok
 	c.run('chown www-data. %s/public/wp-content/mu-plugins/0-sail-auth-syslog.php' % remote_path)
 	c.run('sudo -u www-data mkdir -p /var/www/configs')
+	c.run('systemctl start fail2ban')
 	c.run('fail2ban-client reload')
 
 def _bp_define_constants(constants):
