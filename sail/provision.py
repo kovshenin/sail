@@ -436,8 +436,11 @@ def _configure():
 	c.put(sail.TEMPLATES_PATH + '/nginx.shared.conf', '/etc/nginx/conf.d/extras/sail.conf', preserve_mode=False)
 	c.put(sail.TEMPLATES_PATH + '/nginx.certbot.conf', '/etc/nginx/conf.d/extras/certbot.conf', preserve_mode=False)
 	c.put(sail.TEMPLATES_PATH + '/prepend.php', '/etc/sail/prepend.php', preserve_mode=False)
-	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/fpm/php.ini', preserve_mode=False)
-	c.put(sail.TEMPLATES_PATH + '/php.ini', '/etc/php/7.4/cli/php.ini', preserve_mode=False)
+
+	php_config = pathlib.Path(c.run('php -r "echo PHP_CONFIG_FILE_PATH;"').stdout).parent # /etc/php/8.1
+	c.put(sail.TEMPLATES_PATH + '/php.ini', str(php_config / 'fpm/php.ini'), preserve_mode=False)
+	c.put(sail.TEMPLATES_PATH + '/php.ini', str(php_config / 'cli/php.ini'), preserve_mode=False)
+
 	c.put(sail.TEMPLATES_PATH + '/mariadb.cnf', '/etc/mysql/mariadb.conf.d/90-sail.cnf', preserve_mode=False)
 	c.put(sail.TEMPLATES_PATH + '/logrotate.conf', '/etc/logrotate.d/sail', preserve_mode=False)
 
@@ -557,7 +560,10 @@ def _install(passwords):
 
 	# Reload services
 	c.run('systemctl reload nginx.service')
-	c.run('systemctl reload php7.4-fpm.service')
+
+	php_config = pathlib.Path(c.run('php -r "echo PHP_CONFIG_FILE_PATH;"').stdout).parent # /etc/php/8.1
+	php_version = php_config.name
+	c.run(f'systemctl reload php{php_version}-fpm.service')
 
 @cli.command()
 @click.option('--yes', '-y', is_flag=True, help='Force yes on the are-you-sure prompt')

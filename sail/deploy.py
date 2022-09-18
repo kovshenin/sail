@@ -187,7 +187,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks, redeploy):
 
 		util.item('Reloading services')
 		c.run('nginx -s reload')
-		c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
+		c.run('kill -s USR2 $(cat /var/run/php/php-fpm.pid)')
 	else:
 		util.item('Nothing to update/reload in redeploy')
 
@@ -261,7 +261,7 @@ def rollback(release=None, releases=False):
 
 	util.item('Reloading services')
 	c.run('nginx -s reload')
-	c.run('kill -s USR2 $(cat /var/run/php/php7.4-fpm.pid)')
+	c.run('kill -s USR2 $(cat /var/run/php/php-fpm.pid)')
 
 	util.success('Successfully rolled back to %s' % release)
 
