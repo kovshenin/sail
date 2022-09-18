@@ -276,7 +276,7 @@ def _copy_environment(environment):
 
 	util.item('Writing server keys to .sail/known_hosts')
 	with open('%s/.sail/known_hosts' % root, 'w+') as f:
-		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', config['ip'],
+		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa,ed25519', '-H', config['ip'],
 			config['hostname']], stdout=f, stderr=subprocess.DEVNULL)
 
 def _provision(provider_token, size, region):
@@ -400,7 +400,7 @@ def _provision(provider_token, size, region):
 
 	util.item('Writing server keys to .sail/known_hosts')
 	with open('%s/.sail/known_hosts' % root, 'w+') as f:
-		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa', '-H', config['ip'],
+		r = subprocess.run(['ssh-keyscan', '-t', 'rsa,ecdsa,ed25519', '-H', config['ip'],
 			config['hostname']], stdout=f, stderr=subprocess.DEVNULL)
 
 def _configure():
