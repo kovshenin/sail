@@ -456,8 +456,9 @@ def _configure():
 	c.run('systemctl restart mariadb.service')
 
 	# Get xhprof
-	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.6-sail/xhprof.so.gz -o /tmp/xhprof.so.gz')
-	c.run('gunzip /tmp/xhprof.so.gz && mv /tmp/xhprof.so /usr/lib/php/20190902/xhprof.so')
+	extension_dir = c.run('php -r "echo ini_get(\\\"extension_dir\\\");"').stdout
+	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.7-sail/xhprof-20210902.so.gz -o /tmp/xhprof.so.gz')
+	c.run(f'gunzip /tmp/xhprof.so.gz && mv /tmp/xhprof.so {extension_dir}/xhprof.so')
 
 	# Get dhparams
 	c.run('curl -L https://raw.githubusercontent.com/certbot/certbot/4abd81e2186eddc67551d61a8260440bd177d18d/certbot/certbot/ssl-dhparams.pem -o /etc/nginx/conf.d/extras/ssl-dhparams.pem')
