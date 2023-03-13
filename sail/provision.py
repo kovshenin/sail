@@ -467,7 +467,7 @@ def _configure():
 	c.run('chown -R www-data. /var/www')
 
 	# Make sure any sshd configs are applied
-	c.run('systemctl restart sshd.service')
+	c.run('systemctl restart ssh.service')
 
 def _install(passwords):
 	config = util.config()
