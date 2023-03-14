@@ -1,12 +1,13 @@
 from sail import cli, util
 
-import requests, json, os, subprocess, time, io
+import requests, json, os, subprocess, time, io, re
 import click
 import tldextract
 import digitalocean
-import urllib
+import urllib, pathlib, hashlib, shutil
 import shlex
-import re
+
+from datetime import datetime
 
 @cli.group()
 def domain():
@@ -111,7 +112,6 @@ def make_https(domains, agree_tos):
 	if not domains:
 		raise util.SailException('At least one domain is required')
 
-	groups = []
 	domains, subdomains = _parse_domains(domains)
 
 	util.heading('Requesting and installing SSL for domains')
@@ -120,19 +120,7 @@ def make_https(domains, agree_tos):
 		if domain.fqdn not in [d['name'] for d in config['domains']]:
 			raise util.SailException('Domain %s does not exist, please add it first' % domain.fqdn)
 
-	for domain in domains:
-		if domain.fqdn not in groups:
-			groups.append(domain.fqdn)
-
-	for subdomain in subdomains:
-		if subdomain.fqdn in groups or subdomain.registered_domain in groups:
-			continue
-
-		# Parent domain exists
-		if subdomain.registered_domain in [d['name'] for d in config['domains']]:
-			groups.append(subdomain.registered_domain)
-		else:
-			groups.append(subdomain.fqdn)
+	groups = _get_groups(domains, subdomains)
 
 	c = util.connection()
 	_doms, _subs = _parse_domains([d['name'] for d in config['domains'] if d['internal'] != True])
@@ -172,7 +160,7 @@ def make_https(domains, agree_tos):
 @domain.command()
 @click.option('--skip-dns', is_flag=True, help='Do not add or update DNS records')
 @click.argument('domains', nargs=-1)
-def add(domains, skip_dns):
+def add(domains, skip_dns, quiet_success=False):
 	'''Add a new domain, with DNS records pointing to your site'''
 	config = util.config()
 
@@ -279,7 +267,10 @@ def add(domains, skip_dns):
 			util.item('Adding new DNS record for %s' % subdomain.fqdn)
 			do_domain.create_new_domain_record(name=subdomain.subdomain, type='A', data=config['ip'])
 
-	util.success('Domain name added')
+	# Can be invoked from another context, avoid blending multiple
+	# success messages together.
+	if not quiet_success:
+		util.success('Domain name(s) added')
 
 @domain.command()
 @click.option('--skip-dns', is_flag=True, help='Do not delete DNS records')
@@ -328,6 +319,209 @@ def delete(domains, skip_dns, zone):
 	_delete_dns_records(domains, subdomains, force_delete_zones=zone)
 
 	util.success('Domain deleted')
+
+@domain.command()
+def export():
+	'''Export domain configuration and SSL certificates to a local archive.'''
+	root = util.find_root()
+	config = util.config()
+	c = util.connection()
+
+	rsync_args = ['-rtl']
+	backups_dir = pathlib.Path(root + '/.backups')
+	backups_dir.mkdir(parents=True, exist_ok=True)
+	filename = datetime.now().strftime('%Y-%m-%d-%H%M%S.domains.tar.gz')
+	target = pathlib.Path(backups_dir / filename)
+
+	progress_dir = pathlib.Path(backups_dir / ('.%s.progress' % hashlib.sha256(os.urandom(32)).hexdigest()[:8]))
+	progress_dir.mkdir()
+	(progress_dir / 'live').mkdir()
+	(progress_dir / 'renewal').mkdir()
+
+	# Get all non-internal domains, split into registered domains and subdomains.
+	# Then split into groups as this is how we register them with Certbot.
+	domains = [d for d in config['domains'] if not d['internal']]
+	_domains, _subdomains = _parse_domains([d['name'] for d in domains])
+	groups = _get_groups(_domains, _subdomains)
+
+	if len(domains) < 1 or len(groups) < 1:
+		raise util.SailException('Could not find any domains to export.')
+
+	util.heading('Exporting domains')
+
+	# Available certificates.
+	certs = c.run('ls /etc/letsencrypt/live/').stdout.split()
+
+	for group in groups:
+		if not group in certs:
+			util.item('Skipping group without certificate: %s' % group)
+			continue
+
+		# Copy certificates and renewal configuration for group.
+		util.item('Copying /etc/letsencrypt/live/%s' % group)
+
+		source = 'root@%s:/etc/letsencrypt/live/%s' % (config['hostname'], group)
+		destination = '%s/live/' % progress_dir
+		returncode, stdout, stderr = util.rsync(rsync_args, source, destination, default_filters=False)
+
+		if returncode != 0:
+			shutil.rmtree(progress_dir)
+			raise util.SailException('An error occurred during export. Please try again.')
+
+		util.item('Copying /etc/letsencrypt/renewal/%s.conf' % group)
+
+		source = 'root@%s:/etc/letsencrypt/renewal/%s.conf' % (config['hostname'], group)
+		destination = '%s/renewal/' % progress_dir
+		returncode, stdout, stderr = util.rsync(rsync_args, source, destination, default_filters=False)
+
+		if returncode != 0:
+			shutil.rmtree(progress_dir)
+			raise util.SailException('An error occurred during export. Please try again.')
+
+	# The account is configured in renewals so make sure to bring it over.
+	util.item('Copying /etc/letsencrypts/accounts')
+
+	source = 'root@%s:/etc/letsencrypt/accounts' % config['hostname']
+	destination = '%s/' % progress_dir
+	returncode, stdout, stderr = util.rsync(rsync_args, source, destination, default_filters=False)
+
+	if returncode != 0:
+		shutil.rmtree(progress_dir)
+		raise util.SailException('An error occurred during export. Please try again.')
+
+	# Dump domains configuration to a JSON file.
+	util.item('Writing configuration to domains.json')
+	with open('%s/domains.json' % progress_dir, 'w+') as f:
+		json.dump(domains, f, indent='\t')
+
+	util.item('Archiving and compressing files')
+
+	p = subprocess.Popen([
+		'tar', ('-cvzf' if util.debug() else '-czf'), target.resolve(), '-C', progress_dir.resolve(), '.'
+	])
+
+	while p.poll() is None:
+		pass
+
+	if p.returncode != 0:
+		shutil.rmtree(progress_dir)
+		raise util.SailException('An error occurred during export. Please try again.')
+
+	shutil.rmtree(progress_dir)
+
+	util.success('Export completed at .backups/%s' % filename)
+
+@domain.command(name='import')
+@click.argument('path', nargs=1, required=True)
+@click.pass_context
+def import_cmd(ctx, path):
+	'''Import domains and SSL certificates from an export archive.'''
+	root = util.find_root()
+	config = util.config()
+	c = util.connection()
+
+	path = pathlib.Path(path).resolve()
+	if not path.exists():
+		raise util.SailException('File does not exist')
+
+	if not path.name.endswith('.domains.tar.gz'):
+		raise util.SailException('This does not look like a .domains.tar.gz file')
+
+	util.heading('Importing domains and SSL certificates')
+
+	rsync_args = ['-rtl']
+	backups_dir = pathlib.Path(root + '/.backups')
+	backups_dir.mkdir(parents=True, exist_ok=True)
+	progress_dir = pathlib.Path(backups_dir / ('.%s.progress' % hashlib.sha256(os.urandom(32)).hexdigest()[:8]))
+	progress_dir.mkdir()
+
+	util.item('Extracting domain export files')
+
+	p = subprocess.Popen([
+		'tar', ('-xzvf' if util.debug() else '-xzf'), path.resolve(), '--directory', progress_dir.resolve()
+	])
+
+	while p.poll() is None:
+		util.loader()
+
+	if p.returncode != 0:
+		shutil.rmtree(progress_dir)
+		raise util.SailException('An error occurred during backup. Please try again.')
+
+	for x in progress_dir.iterdir():
+		if x.name not in ['domains.json', 'live', 'renewal', 'accounts']:
+			shutil.rmtree(progress_dir)
+			raise util.SailException('Unexpected file in domains export: %s' % x.name)
+
+	util.item('Reading domains.json configuration')
+	with open('%s/domains.json' % progress_dir, 'r') as f:
+		domains = json.load(f)
+
+	_domains, _subdomains = _parse_domains([d['name'] for d in domains])
+	groups = _get_groups(_domains, _subdomains)
+	certs = [i.name for i in (progress_dir / 'live').iterdir()]
+
+	for group in groups:
+		if not group in certs:
+			util.item('Skipping group without certificate: %s' % group)
+			continue
+
+		# Copy certificates and renewal configuration for group.
+		util.item('Writing /etc/letsencrypt/live/%s' % group)
+
+		source = '%s/live/%s' % (progress_dir, group)
+		destination = 'root@%s:/etc/letsencrypt/live/%s' % (config['hostname'], group)
+		returncode, stdout, stderr = util.rsync(rsync_args, source, destination, default_filters=False)
+
+		if returncode != 0:
+			shutil.rmtree(progress_dir)
+			raise util.SailException('An error occurred during import. Please try again.')
+
+		util.item('Writing /etc/letsencrypt/renewal/%s.conf' % group)
+
+		source = '%s/renewal/%s.conf' % (progress_dir, group)
+		destination = 'root@%s:/etc/letsencrypt/renewal/%s.conf' % (config['hostname'], group)
+		returncode, stdout, stderr = util.rsync(rsync_args, source, destination, default_filters=False)
+
+		if returncode != 0:
+			shutil.rmtree(progress_dir)
+			raise util.SailException('An error occurred during import. Please try again.')
+
+	util.item('Writing /etc/letsencrypts/accounts')
+	source = '%s/accounts' % progress_dir
+	destination = 'root@%s:/etc/letsencrypt/accounts' % config['hostname']
+	returncode, stdout, stderr = util.rsync(rsync_args, source, destination, default_filters=False)
+
+	if returncode != 0:
+		shutil.rmtree(progress_dir)
+		raise util.SailException('An error occurred during import. Please try again.')
+
+	names = [d['name'] for d in domains]
+	ctx.invoke(add, domains=names, quiet_success=True)
+
+	util.heading('Cleaning up')
+
+	# The add command will set https to False by default for any
+	# new domains, but we may have existing SSL certificates for these.
+	util.item('Setting HTTPS flags')
+	https_names = [d['name'] for d in domains if d['https']]
+	config = util.config()
+	config_modified = False
+
+	for i, domain in enumerate(config['domains']):
+		if not domain['https'] and domain['name'] in https_names:
+			config['domains'][i]['https'] = True
+			config_modified = True
+
+	if config_modified:
+		util.update_config(config)
+
+	# TODO: Invoke make_primary if current primary is internal.
+
+	util.item('Removing temporary files')
+	shutil.rmtree(progress_dir)
+
+	util.success('Domains and SSL certificates have been imported.')
 
 def _delete_dns_records(domains, subdomains, force_delete_zones=False):
 	config = util.config()
@@ -464,3 +658,24 @@ def _parse_domains(input_domains):
 		domains.append(ex)
 
 	return domains, subdomains
+
+def _get_groups(domains, subdomains):
+	'''Returns a list of domains and subdomains grouped by their registered domain (if any)'''
+	config = util.config()
+	groups = []
+
+	for domain in domains:
+		if domain.fqdn not in groups:
+			groups.append(domain.fqdn)
+
+	for subdomain in subdomains:
+		if subdomain.fqdn in groups or subdomain.registered_domain in groups:
+			continue
+
+		# Parent domain exists
+		if subdomain.registered_domain in [d['name'] for d in config['domains']]:
+			groups.append(subdomain.registered_domain)
+		else:
+			groups.append(subdomain.fqdn)
+
+	return groups
