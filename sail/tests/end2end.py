@@ -603,7 +603,7 @@ class TestEnd2End(unittest.TestCase):
 
 		result = self.runner.invoke(cli, ['diff', '--raw'])
 		self.assertEqual(result.exit_code, 0)
-		diff = result.output.split('\n')
+		diff = [i.strip() for i in result.output.split('\n')]
 
 		self.assertIn('not-ignored.txt', diff)
 		self.assertIn('important.sql', diff)
