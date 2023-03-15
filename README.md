@@ -29,7 +29,7 @@ instructions. Community support is available in [our Slack workspace](https://jo
 
 Commands:
 
-	admin      Open your default web browser to the wp-login.php location
+	admin      Open your default web browser to wp-admin. Logs in automatically if supported
 	backup     Create, restore and manage application backups
 	blueprint  Run a blueprint file against your application
 	config     Set reusable config variables

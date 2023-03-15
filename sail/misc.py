@@ -74,7 +74,7 @@ def wp(command):
 
 @cli.command()
 def admin():
-	'''Open your default web browser to the wp-login.php location of your site'''
+	'''Open your default web browser to wp-admin. Logs in automatically if supported'''
 	config = util.config()
 	c = util.connection()
 
