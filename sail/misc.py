@@ -76,6 +76,7 @@ def wp(command):
 def admin():
 	'''Open your default web browser to the wp-login.php location of your site'''
 	config = util.config()
+	c = util.connection()
 
 	primary = [d for d in config['domains'] if d['primary']]
 	if len(primary) < 1:
@@ -83,7 +84,17 @@ def admin():
 
 	primary = primary[0]
 	url = ('https://' if primary.get('https') else 'http://') + primary['name']
-	webbrowser.open(url + '/wp-login.php')
+	email = config['email']
+
+	command = ['wp', 'sail', 'remote-login', '--email=%s' % email]
+	try:
+		r = c.run('sudo -u www-data bash -c "cd %s; %s"' % (util.remote_path('/public'), util.join(command)))
+		r = json.loads(r.stdout.strip())
+	except:
+		webbrowser.open(url + '/wp-login.php')
+		return
+
+	webbrowser.open(url + '/?_sail_remote_login=%s&id=%d' % (r.get('key'), r.get('id')))
 
 @cli.command()
 @click.option('--nginx', is_flag=True)
