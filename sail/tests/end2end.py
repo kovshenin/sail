@@ -8,6 +8,7 @@ import click
 import unittest
 import subprocess
 import requests
+import hashlib
 import json
 from click.testing import CliRunner
 from unittest.mock import Mock, patch
@@ -33,6 +34,7 @@ class TestEnd2End(unittest.TestCase):
 		cls.fs = cls.runner.isolated_filesystem()
 		cls.fs.__enter__()
 		cls.home = None
+		cls.domain = 'saildemo-%s.org' % hashlib.sha256(os.urandom(32)).hexdigest()[:8]
 
 	@classmethod
 	def tearDownClass(cls):
@@ -478,32 +480,32 @@ class TestEnd2End(unittest.TestCase):
 	@unittest.skipIf(work_in_progress, 'Work in progress!')
 	def test_014_blueprint_dns(self):
 		# Make sure domain doesn't exist.
-		result = self.runner.invoke(cli, ['domain', 'delete', 'saildemo.com', '--zone'])
+		result = self.runner.invoke(cli, ['domain', 'delete', self.domain, '--zone'])
 
-		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
+		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=%s' % self.domain])
 		self.assertEqual(result.exit_code, 1)
 		self.assertIn('domain does not exist', result.stderr)
 
-		result = self.runner.invoke(cli, ['domain', 'add', 'saildemo.com'])
+		result = self.runner.invoke(cli, ['domain', 'add', self.domain])
 		self.assertEqual(result.exit_code, 0)
 
-		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
+		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=%s' % self.domain])
 		self.assertEqual(result.exit_code, 0)
 		self.assertNotIn('domain does not exist', result.stderr)
 
-		self.assertIn('Creating A record for foo.saildemo.com', result.output)
-		self.assertIn('Creating A record for bar.saildemo.com', result.output)
-		self.assertIn('Creating MX record for baz.saildemo.com', result.output)
-		self.assertIn('Creating CNAME record for qux.saildemo.com', result.output)
+		self.assertIn('Creating A record for foo.%s' % self.domain, result.output)
+		self.assertIn('Creating A record for bar.%s' % self.domain, result.output)
+		self.assertIn('Creating MX record for baz.%s' % self.domain, result.output)
+		self.assertIn('Creating CNAME record for qux.%s' % self.domain, result.output)
 		self.assertIn('Blueprint applied successfully', result.output)
 
 		# Applying again should not alter the records.
-		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=saildemo.com'])
+		result = self.runner.invoke(cli, ['blueprint', 'test_dns.yaml', '--domain=%s' % self.domain])
 		self.assertEqual(result.exit_code, 0)
-		self.assertIn('Skipping A record for foo.saildemo.com', result.output)
-		self.assertIn('Skipping A record for bar.saildemo.com', result.output)
-		self.assertIn('Skipping MX record for baz.saildemo.com', result.output)
-		self.assertIn('Skipping CNAME record for qux.saildemo.com', result.output)
+		self.assertIn('Skipping A record for foo.%s' % self.domain, result.output)
+		self.assertIn('Skipping A record for bar.%s' % self.domain, result.output)
+		self.assertIn('Skipping MX record for baz.%s' % self.domain, result.output)
+		self.assertIn('Skipping CNAME record for qux.%s' % self.domain, result.output)
 		self.assertIn('Blueprint applied successfully', result.output)
 
 	@unittest.skipIf(work_in_progress, 'Work in progress!')
@@ -646,7 +648,7 @@ class TestEnd2End(unittest.TestCase):
 
 	def test_999_destroy(self):
 		# Remove domains, then destroy.
-		result = self.runner.invoke(cli, ['domain', 'delete', 'saildemo.com', '--zone'])
+		result = self.runner.invoke(cli, ['domain', 'delete', self.domain, '--zone'])
 		self.assertEqual(result.exit_code, 0)
 
 		result = self.runner.invoke(cli, ['destroy', '-y'])
