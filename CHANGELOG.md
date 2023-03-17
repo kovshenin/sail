@@ -2,11 +2,21 @@
 
 ## Unreleased
 
+## [0.10.7] - 2023-03-17
+
+* Added: New `sail domain export` and `sail domain import` commands
+* Added: Remote login for `sail admin`
 * Added: New `--redeploy` flag to `sail deploy` to overwrite existing release directory
 * Added: Support for `--label` in `sail ssh key add`
 * Changed: Improved output of `sail ssh key list` with key metadata
 * Changed: Improved the speed of all SSH key operations by computing fingerprints locally
+* Changed: Default image is now Ubuntu 22.10 with PHP 8.1
+* Changed: Updated various libraries
+* Changed: Various small enhancements and changes for premium
 * Fixed: The `--json` flag in `sail ssh key list` threw an error
+* Fixed: Make sure fail2ban is running before reloading
+* Fixed: Suppress paramiko cryptography library for older versions
+* Fixed: Improved some failing tests
 
 ## [0.10.6] - 2022-04-07
 
