@@ -78,6 +78,8 @@ def admin():
 	config = util.config()
 	c = util.connection()
 
+	util.heading('Logging in to wp-admin')
+
 	primary = [d for d in config['domains'] if d['primary']]
 	if len(primary) < 1:
 		raise util.SailException('Could not find primary domain')
@@ -86,15 +88,33 @@ def admin():
 	url = ('https://' if primary.get('https') else 'http://') + primary['name']
 	email = config['email']
 
+	util.item('Running remote-login')
 	command = ['wp', 'sail', 'remote-login', '--email=%s' % email]
 	try:
 		r = c.run('sudo -u www-data bash -c "cd %s; %s"' % (util.remote_path('/public'), util.join(command)))
 		r = json.loads(r.stdout.strip())
+		url = url + '/?_sail_remote_login=%s&id=%d' % (r['key'], r['id'])
 	except:
-		webbrowser.open(url + '/wp-login.php')
+		util.item('Remote login failed')
+		url = url + '/wp-login.php'
+		util.item('Login URL: %s' % url)
+
+		if webbrowser.open(url):
+			util.success('Browser window opened at wp-login.')
+		else:
+			util.item('Could not open browser window')
+			util.item('Login URL: %s' % url)
+			click.echo()
+
 		return
 
-	webbrowser.open(url + '/?_sail_remote_login=%s&id=%d' % (r.get('key'), r.get('id')))
+	util.item('Remote login success')
+	if webbrowser.open(url):
+		util.success('Browser window opened at wp-admin.')
+	else:
+		util.item('Could not open browser window')
+		util.item('Login URL (valid for 30s): %s' % url)
+		click.echo()
 
 @cli.command()
 @click.option('--nginx', is_flag=True)
