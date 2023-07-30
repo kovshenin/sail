@@ -203,7 +203,7 @@ def reset_password():
 	root = util.find_root()
 	config = util.config()
 
-	util.heading('Reseting database password')
+	util.heading('Resetting database password')
 	util.item('Generating new password')
 	password = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(48))
 	c = util.connection()

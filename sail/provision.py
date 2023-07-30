@@ -597,7 +597,7 @@ def destroy(yes, environment, skip_dns, as_json):
 	except:
 		pass
 
-	# It's the only namespace, destoy the environment
+	# It's the only namespace, destroy the environment
 	if len(namespaces) < 1 or namespaces == [config['namespace']]:
 		environment = True
 	elif not environment and config['namespace'] == 'default':

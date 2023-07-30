@@ -317,7 +317,7 @@ def add(subject):
 		click.echo('Verify using: sail monitor contact verify %s <code>' % subject)
 		click.echo()
 	elif request['status'] == 'ready':
-		util.success('Contact added sucessfully, pre-verified', padding=False)
+		util.success('Contact added successfully, pre-verified', padding=False)
 	else:
 		util.failure('Could not add this contact')
 
