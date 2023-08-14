@@ -1,4 +1,4 @@
-click==8.1.3
+click==8.1.6
 requests==2.31.0
 PyYAML==6.0
 fabric==3.2.1
