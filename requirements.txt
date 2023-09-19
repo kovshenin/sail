@@ -1,7 +1,7 @@
 click==8.1.3
 requests==2.31.0
 PyYAML==6.0.1
-fabric==3.2.1
+fabric==3.2.2
 paramiko==3.3.1
 python-digitalocean==1.17.0
 Jinja2==3.1.2
