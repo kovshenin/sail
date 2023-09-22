@@ -1,6 +1,6 @@
 __title__ = 'sail'
 __description__ = 'CLI tool to deploy and manage WordPress applications on DigitalOcean'
-__version__ = '0.10.8-dev'
+__version__ = '0.10.8'
 __author__ = 'Konstantin Kovshenin'
 __author_email__ = 'kovshenin@gmail.com'
 __url__ = 'https://sailed.io'
