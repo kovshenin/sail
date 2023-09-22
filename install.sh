@@ -35,7 +35,9 @@ test_python() {
 	version_ge "$(major_minor "${python_version_output##* }")" "$(major_minor "${REQUIRED_PYTHON_VERSION}")"
 }
 
-command sudo -l mkdir &>/dev/null || abort "This installer requires root or sudo."
+if [ "$UID" -eq 0 ]; then
+	command sudo -l mkdir &>/dev/null || abort "This installer requires root or sudo."
+fi
 
 OS="$(uname)"
 if [[ "${OS}" != "Linux" ]] && [[ "${OS}" != "Darwin" ]]; then
