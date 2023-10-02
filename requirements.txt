@@ -6,5 +6,5 @@ paramiko==3.3.1
 python-digitalocean==1.17.0
 Jinja2==3.1.2
 tldextract==3.6.0
-packaging==23.1
+packaging==23.2
 decorator==5.1.1
