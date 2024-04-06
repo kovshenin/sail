@@ -90,8 +90,7 @@ $SUDO git checkout "${TARGET_VERSION}" || abort "Could not find target version: 
 $SUDO $PYTHON_BIN -m venv "${INSTALL_DIR}/.env" || abort "Could not initialize a Python venv."
 $SUDO .env/bin/python -m ensurepip --upgrade || abort "Could not ensure pip."
 $SUDO .env/bin/pip install pip --upgrade || abort "Could not upgrade pip."
-$SUDO .env/bin/pip install -r requirements.txt || abort "Could not install dependencies."
-$SUDO .env/bin/python setup.py install || abort "Something went wrong during setup.py install."
+$SUDO .env/bin/pip install . || abort "Could not install project."
 
 $SUDO rm "${BIN_DIR}/sail"
 $SUDO ln -s "${INSTALL_DIR}/.env/bin/sail" "${BIN_DIR}/sail" || abort "Could not symlink ${INSTALL_DIR}"

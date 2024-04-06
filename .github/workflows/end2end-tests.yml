@@ -15,8 +15,7 @@ jobs:
       - shell: bash
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python setup.py install
+          python -m pip install .
           sail --version
       - shell: bash
         env:
