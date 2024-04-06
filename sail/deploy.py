@@ -195,7 +195,7 @@ def deploy(ctx, with_uploads, dry_run, path, skip_hooks, redeploy):
 		util.item('Nothing to update/reload in redeploy')
 
 	releases = c.run('ls %s/releases' % remote_path)
-	releases = re.findall('\d+', releases.stdout)
+	releases = re.findall(r'\d+', releases.stdout)
 	releases = [int(i) for i in releases]
 
 	keep = util.get_sail_default('keep')
@@ -227,7 +227,7 @@ def rollback(release=None, releases=False):
 		util.heading('Fetching available releases')
 
 		_releases = c.run('ls %s/releases' % remote_path)
-		_releases = re.findall('\d+', _releases.stdout)
+		_releases = re.findall(r'\d+', _releases.stdout)
 
 		if len(_releases) < 1:
 			raise util.SailException('Could not find any releases')
