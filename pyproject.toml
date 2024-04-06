@@ -1,0 +1,33 @@
+[project]
+name = "sailed.io"
+version = "0.10.8"
+description = "CLI tool to deploy and manage WordPress applications on DigitalOcean"
+readme = "README.md"
+authors = [{ name = "Konstantin Kovshenin", email = "kovshenin@gmail.com" }]
+dependencies = [
+    "click==8.1.7",
+    "decorator==5.1.1",
+    "fabric==3.2.2",
+    "Jinja2==3.1.2",
+    "packaging==23.1",
+    "paramiko==3.3.1",
+    "python-digitalocean==1.17.0",
+    "PyYAML==6.0.1",
+    "requests==2.31.0",
+    "tldextract==3.6.0",
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://sailed.io"
+
+[project.scripts]
+sail = "sail:cli"
+
+[tool.flit.module]
+name = "sail"
+
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
