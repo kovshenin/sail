@@ -54,12 +54,16 @@ class TestEnd2End(unittest.TestCase):
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('Option api-base set', result.output)
 
+		print(api_base)
+
 		# Delete a premium config if one is set
 		result = self.runner.invoke(cli, ['config', 'premium', '--delete'])
 		# We don't care about the result here.
 
 	def test_001_init(self):
 		result = self.runner.invoke(cli, ['init'])
+		print(result)
+		print(result.output)
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('The ship has sailed!', result.output)
 
