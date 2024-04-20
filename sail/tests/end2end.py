@@ -61,9 +61,10 @@ class TestEnd2End(unittest.TestCase):
 		# We don't care about the result here.
 
 	def test_001_init(self):
-		result = self.runner.invoke(cli, ['init'])
+		result = self.runner.invoke(cli, ['-d', 'init'])
 		print(result)
 		print(result.output)
+		print(result.stderr)
 		self.assertEqual(result.exit_code, 0)
 		self.assertIn('The ship has sailed!', result.output)
 
