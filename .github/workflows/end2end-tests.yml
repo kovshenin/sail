@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - end2end
 
 jobs:
   test:

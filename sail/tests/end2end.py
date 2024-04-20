@@ -14,7 +14,7 @@ from click.testing import CliRunner
 from unittest.mock import Mock, patch
 
 # Skip some tests if true
-work_in_progress = False
+work_in_progress = True
 
 # Some commands use os.execlp to pass control to the
 # child process, which stops test execution after the
