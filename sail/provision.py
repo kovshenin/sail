@@ -469,7 +469,7 @@ def _configure():
 
 	# Get xhprof
 	extension_dir = c.run('php -r "echo ini_get(\\\"extension_dir\\\");"').stdout
-	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.7-sail/xhprof-20210902.so.gz -o /tmp/xhprof.so.gz')
+	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.9-sail/xhprof-20230831.so.gz -o /tmp/xhprof.so.gz')
 	c.run(f'gunzip /tmp/xhprof.so.gz && mv /tmp/xhprof.so {extension_dir}/xhprof.so')
 
 	# Get dhparams
