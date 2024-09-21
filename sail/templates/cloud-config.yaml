@@ -1,11 +1,11 @@
 #cloud-config
-apt_update: true
+package_update: true
 packages:
   - php-fpm
   - php-imagick
   - php-curl
   - php-redis
-  - php-mysqli
+  - php-mysql
   - php-mbstring
   - php-xml
   - php-zip
