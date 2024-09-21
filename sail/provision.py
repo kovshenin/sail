@@ -531,7 +531,7 @@ def _install(passwords):
 	c.run('mysql -e "GRANT ALL PRIVILEGES ON \\`wordpress_%s\\`.* TO \\`wordpress_%s\\`@localhost;"' % (config['namespace'], config['namespace']))
 
 	util.item('Downloading and installing WordPress')
-	wp = 'sudo -u www-data wp --path=%s/releases/1337 ' % remote_path
+	wp = f'cd {remote_path} && sudo -u www-data wp --path={remote_path}/releases/1337 '
 	admin_user = config['email'].split('@')[0]
 
 	c.run(wp + 'core download')
