@@ -521,7 +521,7 @@ def _install(passwords):
 	c.run('mkdir -p %s/releases/1337' % remote_path)
 	c.run('mkdir -p %s/uploads' % remote_path)
 	c.run('mkdir -p %s/profiles' % remote_path)
-	c.run('chown -R www-data. %s' % remote_path)
+	c.run('chown -R www-data:www-data %s' % remote_path)
 
 	# Create a MySQL database
 	util.item('Setting up the MySQL database')
