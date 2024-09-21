@@ -317,10 +317,22 @@ def _provision(provider_token, size, region):
 
 	try:
 		key.create()
-		key.load()
 	except Exception as e:
-		print(e)
 		raise util.SailException('Could not upload SSH key. Make sure token is RW.')
+
+	# There seems to sometimes be some replication lag between
+	# the key being created, and the key being loadable on DO,
+	# let's give it a few tries here before giving up.
+	def wait_for_key():
+		try:
+			key.load()
+			return True
+		except digitalocean.NotFoundError:
+			pass
+
+		return False
+
+	util.wait(wait_for_key, timeout=10, interval=1)
 
 	util.item('Creating a new Droplet')
 
