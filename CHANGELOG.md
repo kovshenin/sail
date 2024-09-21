@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## [0.10.8] - 2023-09-22
+
+* Changed: Set the default Ubuntu image to 22.04 LTS
+* Changed: Updated dependencies: fabric, requests, paramiko, packaging, pyyaml, click, tldextract
+* Fixed: Some typos
+
 ## [0.10.7] - 2023-03-17
 
 * Added: New `sail domain export` and `sail domain import` commands

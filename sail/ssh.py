@@ -185,7 +185,7 @@ def delete(hash):
 	fp = list(existing.keys())[index]
 	key = existing[fp]['key']
 
-	regex = key.replace('/', '\/')
+	regex = key.replace('/', r'\/')
 	c.run(util.join(['sed', '-i', '/^%s/d' % regex, '/root/.ssh/authorized_keys']), hide=True)
 
 	if config['ssh_key_meta'].get(fp):

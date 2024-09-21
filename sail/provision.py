@@ -317,10 +317,22 @@ def _provision(provider_token, size, region):
 
 	try:
 		key.create()
-		key.load()
 	except Exception as e:
-		print(e)
 		raise util.SailException('Could not upload SSH key. Make sure token is RW.')
+
+	# There seems to sometimes be some replication lag between
+	# the key being created, and the key being loadable on DO,
+	# let's give it a few tries here before giving up.
+	def wait_for_key():
+		try:
+			key.load()
+			return True
+		except digitalocean.NotFoundError:
+			pass
+
+		return False
+
+	util.wait(wait_for_key, timeout=10, interval=1)
 
 	util.item('Creating a new Droplet')
 
@@ -421,7 +433,7 @@ def _configure():
 
 	def wait_for_cloud_init():
 		try:
-			r = c.run('cloud-init status -l')
+			r = c.run('cloud-init status -l', warn=True)
 			return 'status: done' in r.stdout
 		except:
 			pass
@@ -457,7 +469,7 @@ def _configure():
 
 	# Get xhprof
 	extension_dir = c.run('php -r "echo ini_get(\\\"extension_dir\\\");"').stdout
-	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.7-sail/xhprof-20210902.so.gz -o /tmp/xhprof.so.gz')
+	c.run('curl -L https://github.com/kovshenin/xhprof/releases/download/0.10.9-sail/xhprof-20230831.so.gz -o /tmp/xhprof.so.gz')
 	c.run(f'gunzip /tmp/xhprof.so.gz && mv /tmp/xhprof.so {extension_dir}/xhprof.so')
 
 	# Get dhparams
@@ -509,7 +521,7 @@ def _install(passwords):
 	c.run('mkdir -p %s/releases/1337' % remote_path)
 	c.run('mkdir -p %s/uploads' % remote_path)
 	c.run('mkdir -p %s/profiles' % remote_path)
-	c.run('chown -R www-data. %s' % remote_path)
+	c.run('chown -R www-data:www-data %s' % remote_path)
 
 	# Create a MySQL database
 	util.item('Setting up the MySQL database')
@@ -519,7 +531,7 @@ def _install(passwords):
 	c.run('mysql -e "GRANT ALL PRIVILEGES ON \\`wordpress_%s\\`.* TO \\`wordpress_%s\\`@localhost;"' % (config['namespace'], config['namespace']))
 
 	util.item('Downloading and installing WordPress')
-	wp = 'sudo -u www-data wp --path=%s/releases/1337 ' % remote_path
+	wp = f'cd {remote_path} && sudo -u www-data wp --path={remote_path}/releases/1337 '
 	admin_user = config['email'].split('@')[0]
 
 	c.run(wp + 'core download')
@@ -597,7 +609,7 @@ def destroy(yes, environment, skip_dns, as_json):
 	except:
 		pass
 
-	# It's the only namespace, destoy the environment
+	# It's the only namespace, destroy the environment
 	if len(namespaces) < 1 or namespaces == [config['namespace']]:
 		environment = True
 	elif not environment and config['namespace'] == 'default':
