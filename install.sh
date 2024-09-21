@@ -9,11 +9,14 @@ abort() {
 	exit 1
 }
 
-SUDO=""
-if [ ! "$UID" -eq 0 ]; then
-	sudo -l mkdir &>/dev/null || abort "This installer requires root or sudo."
-	SUDO="sudo "
-fi
+maybe_sudo() {
+	if [ "$UID" -eq 0 ]; then
+		command "${@}"
+		return
+	fi
+
+	sudo "${@}"
+}
 
 major_minor() {
 	echo "${1%%.*}.$(
@@ -26,16 +29,20 @@ version_ge() {
 	[[ "${1%.*}" -gt "${2%.*}" ]] || [[ "${1%.*}" -eq "${2%.*}" && "${1#*.}" -ge "${2#*.}" ]]
 }
 
-OS="$(uname)"
-if [[ "${OS}" != "Linux" ]] && [[ "${OS}" != "Darwin" ]]; then
-	abort "Sail CLI is only supported on macOS and Linux. Windows users can use Sail via WSL."
-fi
-
 test_python() {
 	local python_version_output
 	python_version_output="$("$1" --version 2>/dev/null)"
 	version_ge "$(major_minor "${python_version_output##* }")" "$(major_minor "${REQUIRED_PYTHON_VERSION}")"
 }
+
+if [ "$UID" -ne 0 ]; then
+	sudo -l mkdir &>/dev/null || abort "This installer requires root or sudo."
+fi
+
+OS="$(uname)"
+if [[ "${OS}" != "Linux" ]] && [[ "${OS}" != "Darwin" ]]; then
+	abort "Sail CLI is only supported on macOS and Linux. Windows users can use Sail via WSL."
+fi
 
 git --version || abort "Sail CLI requires Git."
 curl --version || abort "Sail CLI requires the cURL binary."
@@ -64,10 +71,10 @@ if [ -d $INSTALL_DIR ]; then
 	fi
 
 	echo "An existing Sail CLI installation found in ${INSTALL_DIR}. Reinstalling..."
-	$SUDO rm -rf $INSTALL_DIR || abort "Could not delete ${INSTALL_DIR}. Are you root?"
+	maybe_sudo rm -rf $INSTALL_DIR || abort "Could not delete ${INSTALL_DIR}. Are you root?"
 fi
 
-$SUDO mkdir $INSTALL_DIR || abort "Could not create directory ${INSTALL_DIR}. Are you root?"
+maybe_sudo mkdir $INSTALL_DIR || abort "Could not create directory ${INSTALL_DIR}. Are you root?"
 cd $INSTALL_DIR || abort "Could not enter directory ${INSTALL_DIR}. Make sure you have correct permissions."
 TARGET_VERSION=$(curl --silent "https://api.github.com/repos/kovshenin/sail/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
@@ -83,17 +90,17 @@ if [ ! -z $REQUESTED_VERSION ]; then
 	TARGET_VERSION=$REQUESTED_VERSION
 fi
 
-$SUDO git clone https://github.com/kovshenin/sail.git . || abort "Could not clone Git repository."
-$SUDO git fetch --all --tags || abort "Could not fetch tags from Git repository."
-$SUDO git checkout "${TARGET_VERSION}" || abort "Could not find target version: ${TARGET_VERSION}."
+maybe_sudo git clone https://github.com/kovshenin/sail.git . || abort "Could not clone Git repository."
+maybe_sudo git fetch --all --tags || abort "Could not fetch tags from Git repository."
+maybe_sudo git checkout "${TARGET_VERSION}" || abort "Could not find target version: ${TARGET_VERSION}."
 
-$SUDO $PYTHON_BIN -m venv "${INSTALL_DIR}/.env" || abort "Could not initialize a Python venv."
-$SUDO .env/bin/python -m ensurepip --upgrade || abort "Could not ensure pip."
-$SUDO .env/bin/pip install pip --upgrade || abort "Could not upgrade pip."
-$SUDO .env/bin/pip install . || abort "Could not install project."
+maybe_sudo $PYTHON_BIN -m venv "${INSTALL_DIR}/.env" || abort "Could not initialize a Python venv."
+maybe_sudo .env/bin/python -m ensurepip --upgrade || abort "Could not ensure pip."
+maybe_sudo .env/bin/pip install pip --upgrade || abort "Could not upgrade pip."
+maybe_sudo .env/bin/pip install . || abort "Could not install project."
 
-$SUDO rm "${BIN_DIR}/sail"
-$SUDO ln -s "${INSTALL_DIR}/.env/bin/sail" "${BIN_DIR}/sail" || abort "Could not symlink ${INSTALL_DIR}"
+maybe_sudo rm "${BIN_DIR}/sail"
+maybe_sudo ln -s "${INSTALL_DIR}/.env/bin/sail" "${BIN_DIR}/sail" || abort "Could not symlink ${INSTALL_DIR}"
 
 sail_version=$("${BIN_DIR}/sail" --version) || abort "Could not determine Sail CLI version. Install might be corrupted."
 
