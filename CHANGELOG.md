@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## [0.10.9] - 2024-09-21
+
+* Changed: PHP 8.3 is now default
+* Changed: Updated xhprof extension for PHP 8.3 support
+* Changed: Updated default Ubuntu image to 24.04 LTS
+* Changed: Migrated to pyproject.toml
+* Changed: Updated various dependencies
+* Changed: Improved the install.sh script
+* Fixed: Explicit set of CWD when invoking WP-CLI functions via sudo
+* Fixed: Allow cloud-init to succeed with a warning
+* Fixed: Improved SSH upload key handling on DigitalOcean
+* Fixed: Python 3.12 compatibility
+
 ## [0.10.8] - 2023-09-22
 
 * Changed: Set the default Ubuntu image to 22.04 LTS
