@@ -433,7 +433,7 @@ def _configure():
 
 	def wait_for_cloud_init():
 		try:
-			r = c.run('cloud-init status -l')
+			r = c.run('cloud-init status -l', warn=True)
 			return 'status: done' in r.stdout
 		except:
 			pass
