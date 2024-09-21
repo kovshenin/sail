@@ -66,7 +66,7 @@ $PYTHON_BIN -m ensurepip --version || abort "Sail CLI requires the python3-venv 
 
 if [ -d $INSTALL_DIR ]; then
 	# Make sure it's a Sail CLI installation
-	if [ ! -f "$INSTALL_DIR/sail.py" ]; then
+	if [ ! -f "$INSTALL_DIR/sail/__init__.py" ]; then
 		abort "The ${INSTALL_DIR} directory exists and doesn't look like a Sail CLI installation."
 	fi
 
