@@ -1,6 +1,6 @@
 [project]
 name = "sailed.io"
-version = "0.10.8"
+version = "0.10.9"
 description = "CLI tool to deploy and manage WordPress applications on DigitalOcean"
 readme = "README.md"
 authors = [{ name = "Konstantin Kovshenin", email = "kovshenin@gmail.com" }]
