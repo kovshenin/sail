@@ -12,7 +12,7 @@ dependencies = [
     "invoke==2.2.0",
     "Jinja2==3.1.4",
     "packaging==24.1",
-    "paramiko==3.4.0",
+    "paramiko==3.5.0",
     "python-digitalocean==1.17.0",
     "PyYAML==6.0.1",
     "requests==2.32.3",
