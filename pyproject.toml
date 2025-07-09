@@ -16,7 +16,7 @@ dependencies = [
     "python-digitalocean==1.17.0",
     "PyYAML==6.0.2",
     "requests==2.32.3",
-    "tldextract==5.1.2",
+    "tldextract==5.3.0",
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.8"
