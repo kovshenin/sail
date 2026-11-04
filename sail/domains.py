@@ -126,36 +126,40 @@ def make_https(domains, agree_tos):
 	_doms, _subs = _parse_domains([d['name'] for d in config['domains'] if d['internal'] != True])
 
 	for group in groups:
-		names = []
-		names.extend([d.fqdn for d in _doms if d.fqdn == group])
-		names.extend([s.fqdn for s in _subs if s.registered_domain == group or s.fqdn == group])
-
-		util.item('Requesting certificate for %s' % group)
-		args = ['certbot', '-n', 'certonly', '-m', config['email'], '--agree-tos',
-			'--standalone', '--http-01-port', '8088', '--expand',
-		]
-
-		for name in names:
-			args.append('-d')
-			args.append(name)
-
-		try:
-			c.run(util.join(args))
-		except Exception as e:
-			util.dlog(e)
-			raise util.SailException('Could not obtain SSL certificate for %s. Use --debug for more info.' % group)
-
-		# Update .sail/config.json
-		for i, d in enumerate(config['domains']):
-			if d['name'] in names:
-				config['domains'][i]['https'] = True
-
-		util.update_config(config)
+		_request_group_certificate(c, group, _doms, _subs, config)
 
 	util.item('Generating nginx configuration')
 	_update_nginx_config()
 
 	util.success('SSL certificates installed. Don\'t forget to: sail domain make-primary')
+
+def _request_group_certificate(c, group, domains, subdomains, config):
+	'''Request a group's certificate and record its HTTPS domains'''
+	names = []
+	names.extend([d.fqdn for d in domains if d.fqdn == group])
+	names.extend([s.fqdn for s in subdomains if s.registered_domain == group or s.fqdn == group])
+
+	util.item('Requesting certificate for %s' % group)
+	args = ['certbot', '-n', 'certonly', '-m', config['email'], '--agree-tos',
+		'--standalone', '--http-01-port', '8088', '--expand',
+	]
+
+	for name in names:
+		args.append('-d')
+		args.append(name)
+
+	try:
+		c.run(util.join(args))
+	except Exception as e:
+		util.dlog(e)
+		raise util.SailException("Could not obtain SSL certificate for %s. Use 'sail --debug domain make-https' with the same domains for more info." % group)
+
+	# Update .sail/config.json
+	for i, d in enumerate(config['domains']):
+		if d['name'] in names:
+			config['domains'][i]['https'] = True
+
+	util.update_config(config)
 
 @domain.command()
 @click.option('--skip-dns', is_flag=True, help='Do not add or update DNS records')
